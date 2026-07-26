@@ -1197,7 +1197,7 @@ export default function Landing() {
           if (!remoteData.heroBtnPrimary || remoteData.heroBtnPrimary === 'Sign Up Now') {
             remoteData.heroBtnPrimary = 'Register Now';
           }
-          if (!remoteData.heroBgImage || remoteData.heroBgImage.includes('unsplash.com')) {
+          if (!remoteData.heroBgImage || remoteData.heroBgImage.includes('unsplash.com') || remoteData.heroBgImage.startsWith('data:image')) {
             remoteData.heroBgImage = './hero_banner_hd.png';
           }
           
