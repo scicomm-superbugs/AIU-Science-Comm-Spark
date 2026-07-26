@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
-import { db, firestore, getCollectionName, useLiveCollection, getFirebaseAuth } from './db';
+import { db, firestore, getCollectionName, useLiveCollection, getFirebaseAuth, uploadFile } from './db';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { MapPin, BookOpen, Users, Settings, ClipboardCheck, LayoutDashboard, LogOut, Moon, Sun, Menu, X, ChevronDown, GraduationCap, Bell, AlertTriangle, Calendar, FileText, Globe } from 'lucide-react';
+import { MapPin, BookOpen, Users, Settings, ClipboardCheck, LayoutDashboard, LogOut, Moon, Sun, Menu, X, ChevronDown, GraduationCap, Bell, AlertTriangle, Calendar, FileText, Globe, Camera } from 'lucide-react';
 import { FT_FACULTY, FT_ROLE_LABELS, FT_ROLE_COLORS, isFacultyRole, isJudgeRole, isCompetitorRole, FT_DEFAULT_REQUIRED_HOURS } from './ftConstants';
 import { getUserConflicts } from './ftConflictUtils';
 import bcrypt from 'bcryptjs';
@@ -21,6 +21,7 @@ export default function FTLayout() {
   const [meDoc, setMeDoc] = useState(null);
   const userRole = user?.role || 'competitor';
 
+  const avatarFileRef = useRef(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileForm, setProfileForm] = useState({
     name: '',
@@ -29,6 +30,7 @@ export default function FTLayout() {
     universityId: '',
     title: '',
     role: '',
+    avatar: '',
     password: '',
     confirmPassword: ''
   });
@@ -327,6 +329,17 @@ export default function FTLayout() {
     })();
   }, [user?.id, meDoc?.name, meDoc?.universityId, meDoc?.email, meDoc?.department, registrations]);
 
+  const handleAvatarFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await uploadFile(file, 'avatars');
+      setProfileForm(prev => ({ ...prev, avatar: base64 }));
+    } catch (err) {
+      setProfileError('Failed to process image: ' + err.message);
+    }
+  };
+
   useEffect(() => {
     if (meDoc) {
       setProfileForm({
@@ -336,6 +349,7 @@ export default function FTLayout() {
         universityId: meDoc.universityId || '',
         title: meDoc.title || '',
         role: meDoc.role || '',
+        avatar: meDoc.avatar || meDoc.avatarUrl || '',
         password: '',
         confirmPassword: ''
       });
@@ -349,6 +363,11 @@ export default function FTLayout() {
 
     if (!profileForm.email || !profileForm.email.includes('@')) {
       setProfileError('Please enter a valid email address.');
+      return;
+    }
+
+    if (!profileForm.username || !profileForm.username.trim()) {
+      setProfileError('Please enter a valid username.');
       return;
     }
 
@@ -369,9 +388,11 @@ export default function FTLayout() {
         name: profileForm.name.trim(),
         username: profileForm.username.trim(),
         email: profileForm.email.trim(),
-        universityId: isCompetitorRole(profileForm.role) ? profileForm.universityId.trim() : '',
-        title: (profileForm.role !== 'competitor' && profileForm.role !== 'user') ? profileForm.title.trim() : '',
+        universityId: profileForm.universityId ? profileForm.universityId.trim() : '',
+        title: (profileForm.title || '').trim(),
         role: profileForm.role,
+        avatar: profileForm.avatar || null,
+        avatarUrl: profileForm.avatar || null,
         updatedAt: new Date().toISOString()
       };
 
@@ -388,7 +409,8 @@ export default function FTLayout() {
         ...prev,
         username: updates.username,
         name: updates.name,
-        role: updates.role
+        role: updates.role,
+        avatar: updates.avatar
       }));
 
       setProfileSuccess('Profile updated successfully!');
@@ -920,6 +942,56 @@ export default function FTLayout() {
                 </div>
               )}
 
+              {/* Profile Avatar Upload & Preview Section */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.5rem', marginTop: '0.25rem' }}>
+                <div style={{ position: 'relative', width: '92px', height: '92px', marginBottom: '0.75rem' }}>
+                  {profileForm.avatar ? (
+                    <img 
+                      src={profileForm.avatar} 
+                      alt="Profile Avatar" 
+                      style={{ width: '92px', height: '92px', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--ft-primary)', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' }} 
+                    />
+                  ) : (
+                    <div style={{ width: '92px', height: '92px', borderRadius: '50%', background: 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.2rem', fontWeight: 800, border: '3px solid #ffffff', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' }}>
+                      {(profileForm.name || 'U').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => avatarFileRef.current?.click()}
+                    style={{ position: 'absolute', bottom: '0', right: '0', background: '#be123c', color: '#fff', border: '2px solid #fff', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}
+                    title="Upload New Profile Picture"
+                  >
+                    <Camera size={15} />
+                  </button>
+                </div>
+                <input 
+                  ref={avatarFileRef} 
+                  type="file" 
+                  accept="image/*" 
+                  style={{ display: 'none' }} 
+                  onChange={handleAvatarFileChange} 
+                />
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => avatarFileRef.current?.click()}
+                    style={{ background: 'var(--ft-bg-card-hover, #f1f5f9)', color: 'var(--ft-text-primary, #1e293b)', border: '1px solid var(--ft-border, #cbd5e1)', padding: '0.35rem 0.85rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                  >
+                    <Camera size={13} /> Change Picture
+                  </button>
+                  {profileForm.avatar && (
+                    <button
+                      type="button"
+                      onClick={() => setProfileForm(prev => ({ ...prev, avatar: '' }))}
+                      style={{ background: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3', padding: '0.35rem 0.85rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}
+                    >
+                      Remove Photo
+                    </button>
+                  )}
+                </div>
+              </div>
+
               <div className="ft-input-group">
                 <label className="ft-label">Full Name *</label>
                 <input 
@@ -930,6 +1002,7 @@ export default function FTLayout() {
                   onChange={e => setProfileForm({ ...profileForm, name: e.target.value })} 
                 />
               </div>
+
               <div className="ft-input-group">
                 <label className="ft-label">Username *</label>
                 <input 
@@ -940,6 +1013,7 @@ export default function FTLayout() {
                   onChange={e => setProfileForm({ ...profileForm, username: e.target.value })} 
                 />
               </div>
+
               <div className="ft-input-group">
                 <label className="ft-label">University Email *</label>
                 <input 
@@ -951,26 +1025,25 @@ export default function FTLayout() {
                 />
               </div>
 
-              {isCompetitorRole(profileForm.role) ? (
+              <div className="ft-input-group">
+                <label className="ft-label">Title / Role Title *</label>
+                <input 
+                  type="text" 
+                  className="ft-input" 
+                  value={profileForm.title} 
+                  onChange={e => setProfileForm({ ...profileForm, title: e.target.value })} 
+                  placeholder="e.g. System Administrator (Master) 👑, Researcher, Student"
+                />
+              </div>
+
+              {isCompetitorRole(profileForm.role) && (
                 <div className="ft-input-group">
-                  <label className="ft-label">University ID Number *</label>
+                  <label className="ft-label">University ID Number</label>
                   <input 
                     type="text" 
                     className="ft-input" 
-                    required 
                     value={profileForm.universityId} 
                     onChange={e => setProfileForm({ ...profileForm, universityId: e.target.value })} 
-                  />
-                </div>
-              ) : (
-                <div className="ft-input-group">
-                  <label className="ft-label">Judge Title *</label>
-                  <input 
-                    type="text" 
-                    className="ft-input" 
-                    required 
-                    value={profileForm.title} 
-                    onChange={e => setProfileForm({ ...profileForm, title: e.target.value })} 
                   />
                 </div>
               )}
