@@ -130,6 +130,9 @@ const DEFAULT_CONTENT = {
     'Stage 2: Long Video (YouTube) – up to 3 min',
     'Stage 3: Live Science Show – 5 min on stage'
   ],
+  track1Pill1: '📱 Reels (90s)',
+  track1Pill2: '▶️ YouTube (3m)',
+  track1Pill3: '🎭 Grand Stage',
   track2Label: 'Track 2',
   track2Title: 'Science Journalism',
   track2Stages: [
@@ -137,6 +140,9 @@ const DEFAULT_CONTENT = {
     'Stage 2: Write & Publish Article',
     'Stage 3: Live Journalism Show'
   ],
+  track2Pill1: '🎙️ Research & Pitch',
+  track2Pill2: '📰 Article Publication',
+  track2Pill3: '🎤 Live Talk Show',
   // Timeline
   timelineSectionTitle: 'COMPETITION TIMELINE',
   timelineTrack1Nodes: [
@@ -445,7 +451,6 @@ export function EditableText({ value, onChange, editing, tag: Tag = 'span', styl
         minWidth: '20px',
         boxSizing: 'border-box'
       }}
-      dangerouslySetInnerHTML={{ __html: formattedHTML }}
     />
   );
 }
@@ -2592,15 +2597,15 @@ export default function Landing() {
                   padding: '0.85rem 1rem', marginBottom: '1.25rem', boxShadow: '0 2px 10px rgba(126, 34, 206, 0.04)'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', fontWeight: 800, color: '#6b21a8' }}>
-                    <span>📱</span> Reels (90s)
+                    <EditableText value={content.track1Pill1 || '📱 Reels (90s)'} onChange={(v) => updateField('track1Pill1', v)} editing={E} />
                   </div>
                   <ChevronRight size={16} style={{ color: '#c084fc' }} />
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', fontWeight: 800, color: '#6b21a8' }}>
-                    <span>▶️</span> YouTube (3m)
+                    <EditableText value={content.track1Pill2 || '▶️ YouTube (3m)'} onChange={(v) => updateField('track1Pill2', v)} editing={E} />
                   </div>
                   <ChevronRight size={16} style={{ color: '#c084fc' }} />
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', fontWeight: 800, color: '#6b21a8' }}>
-                    <span>🎭</span> Grand Stage
+                    <EditableText value={content.track1Pill3 || '🎭 Grand Stage'} onChange={(v) => updateField('track1Pill3', v)} editing={E} />
                   </div>
                 </div>
 
@@ -2726,15 +2731,15 @@ export default function Landing() {
                   padding: '0.85rem 1rem', marginBottom: '1.25rem', boxShadow: '0 2px 10px rgba(225, 29, 72, 0.04)'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', fontWeight: 800, color: '#9f1239' }}>
-                    <span>🎙️</span> Research & Pitch
+                    <EditableText value={content.track2Pill1 || '🎙️ Research & Pitch'} onChange={(v) => updateField('track2Pill1', v)} editing={E} />
                   </div>
                   <ChevronRight size={16} style={{ color: '#fb7185' }} />
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', fontWeight: 800, color: '#9f1239' }}>
-                    <span>📰</span> Article Publication
+                    <EditableText value={content.track2Pill2 || '📰 Article Publication'} onChange={(v) => updateField('track2Pill2', v)} editing={E} />
                   </div>
                   <ChevronRight size={16} style={{ color: '#fb7185' }} />
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', fontWeight: 800, color: '#9f1239' }}>
-                    <span>🎤</span> Live Talk Show
+                    <EditableText value={content.track2Pill3 || '🎤 Live Talk Show'} onChange={(v) => updateField('track2Pill3', v)} editing={E} />
                   </div>
                 </div>
 
