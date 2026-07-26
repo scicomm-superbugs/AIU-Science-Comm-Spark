@@ -2081,11 +2081,11 @@ export default function Landing() {
                 aspectRatio: '16/10', boxShadow: '0 12px 35px rgba(0,0,0,0.12)',
                 background: '#090d16'
               }}>
-                {/* Slide Image */}
+                {/* Current Slide Image */}
                 <img
                   src={content.aboutSlides[activeSlide % content.aboutSlides.length]?.img}
                   alt={content.aboutSlides[activeSlide % content.aboutSlides.length]?.title || 'About Slide'}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'all 0.5s ease' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'all 0.4s ease' }}
                 />
 
                 {/* Gradient Overlay & Text Caption */}
@@ -2111,7 +2111,7 @@ export default function Landing() {
                   />
                 </div>
 
-                {/* Prev / Next Arrows */}
+                {/* Navigation Arrows */}
                 <button
                   onClick={() => setActiveSlide((prev) => (prev - 1 + content.aboutSlides.length) % content.aboutSlides.length)}
                   style={{
@@ -2153,31 +2153,77 @@ export default function Landing() {
                   ))}
                 </div>
 
-                {/* Edit Controls for Active Slide */}
+                {/* Edit Photo Overlay Button for Active Slide */}
                 {E && (
                   <div style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', zIndex: 20 }}>
                     <EditableImage
-                      src={null}
+                      src={content.aboutSlides[activeSlide % content.aboutSlides.length]?.img}
                       onUpload={(base64) => updateNestedArray('aboutSlides', activeSlide % content.aboutSlides.length, 'img', base64)}
                       onRemove={() => removeArrayItem('aboutSlides', activeSlide % content.aboutSlides.length)}
                       editing={true}
-                      alt="Change slide"
-                      style={{ width: '36px', height: '36px', borderRadius: '8px' }}
+                      alt="Change active slide photo"
+                      style={{ width: '42px', height: '42px', borderRadius: '10px' }}
                     />
                   </div>
                 )}
               </div>
             ) : null}
 
-            {/* Admin Add New Slide Button */}
+            {/* Admin Gallery Slides Management Panel */}
             {E && (
-              <div style={{ marginTop: '0.75rem', textAlign: 'center' }}>
-                <button
-                  onClick={() => addArrayItem('aboutSlides', { img: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1200&q=80', title: 'New Slide Title', caption: 'Slide caption description' })}
-                  style={{ background: '#f8fafc', color: '#be123c', border: '1.5px dashed #fecdd3', padding: '0.45rem 1.2rem', borderRadius: '10px', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
-                >
-                  <Plus size={14} /> Add Gallery Slide
-                </button>
+              <div style={{ marginTop: '0.85rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '0.75rem 1rem' }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.6rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>📸 Gallery Slides Manager ({content.aboutSlides?.length || 0} Slides)</span>
+                  <button
+                    onClick={() => addArrayItem('aboutSlides', { img: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1200&q=80', title: 'New Slide Title', caption: 'Slide description' })}
+                    style={{ background: '#be123c', color: '#fff', border: 'none', padding: '0.35rem 0.8rem', borderRadius: '8px', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                  >
+                    <Plus size={13} /> Add New Slide
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '0.6rem' }}>
+                  {(content.aboutSlides || []).map((slide, sIdx) => {
+                    const isActive = sIdx === (activeSlide % content.aboutSlides.length);
+                    return (
+                      <div
+                        key={sIdx}
+                        onClick={() => setActiveSlide(sIdx)}
+                        style={{
+                          border: isActive ? '2px solid #be123c' : '1px solid #cbd5e1',
+                          borderRadius: '10px', overflow: 'hidden', background: '#ffffff',
+                          cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease',
+                          boxShadow: isActive ? '0 4px 12px rgba(190,18,60,0.2)' : 'none'
+                        }}
+                      >
+                        <div style={{ height: '60px', width: '100%', position: 'relative', background: '#090d16' }}>
+                          <img src={slide.img} alt={`Slide ${sIdx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <div style={{ position: 'absolute', top: '4px', left: '4px', background: 'rgba(0,0,0,0.65)', color: '#fff', padding: '1px 5px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 800 }}>
+                            #{sIdx + 1}
+                          </div>
+                        </div>
+
+                        <div style={{ padding: '0.4rem', display: 'flex', gap: '0.3rem', justifyContent: 'center', background: '#ffffff' }}>
+                          <EditableImage
+                            src={slide.img}
+                            onUpload={(base64) => updateNestedArray('aboutSlides', sIdx, 'img', base64)}
+                            editing={true}
+                            alt={`Change slide ${sIdx + 1}`}
+                            style={{ width: '28px', height: '28px', borderRadius: '6px' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); removeArrayItem('aboutSlides', sIdx); }}
+                            style={{ background: '#fff1f2', color: '#ef4444', border: '1px solid #fecdd3', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            title="Delete slide"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
