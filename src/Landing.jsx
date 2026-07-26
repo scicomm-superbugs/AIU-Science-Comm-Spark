@@ -8,7 +8,8 @@ import {
   Pencil, Save, X, Upload, Trash2, Image as ImageIcon, Menu, ZoomIn, ZoomOut
 } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
-import { firestore, getCollectionName, uploadFile } from './db';
+import { firestore, getCollectionName, uploadFile, getFirebaseAuth } from './db';
+import { signInAnonymously } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import './scicommspark.css';
 
@@ -1178,6 +1179,14 @@ export default function Landing() {
 
   // ── Load from LocalStorage & Real-time Firestore Sync ──
   useEffect(() => {
+    // Ensure anonymous Firebase Auth session for public visitors without accounts
+    try {
+      const auth = getFirebaseAuth();
+      if (auth && !auth.currentUser) {
+        signInAnonymously(auth).catch(err => console.warn('Anonymous session error:', err));
+      }
+    } catch (e) {}
+
     const ref = doc(firestore, getCollectionName('landing_content'), 'main');
 
     const unsubscribe = onSnapshot(ref, (snap) => {
@@ -1188,7 +1197,7 @@ export default function Landing() {
             remoteData.heroBtnPrimary = 'Register Now';
           }
           
-          // Direct real-time listener update across ALL browsers & devices globally!
+          // Direct real-time listener update across ALL browsers & devices globally for all visitors!
           setContent(prev => ({ ...DEFAULT_CONTENT, ...prev, ...remoteData }));
           try {
             localStorage.setItem('scicomm_landing_content', JSON.stringify(remoteData));
