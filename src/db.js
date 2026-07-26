@@ -35,24 +35,25 @@ export const getFirebaseAuth = () => {
   return authInstance;
 };
 
-const compressImageToBase64 = (file, maxWidth = 3840, quality = 0.96) => {
+const compressImageToBase64 = (file, maxWidth = 1200, quality = 0.80) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = (event) => {
-      // Preserve full original HD/4K resolution directly for files up to 10MB
-      if (file.size < 10 * 1024 * 1024) {
-        return resolve(event.target.result);
-      }
       const img = new Image();
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let width = img.width;
         let height = img.height;
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
+        if (width > maxWidth || height > maxWidth) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxWidth) / height);
+            height = maxWidth;
+          }
         }
         canvas.width = width;
         canvas.height = height;

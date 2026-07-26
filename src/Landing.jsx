@@ -1301,7 +1301,7 @@ export default function Landing() {
     setEditMode(false);
   };
 
-  const compressBase64 = async (str, maxDimension = 1600, quality = 0.85, isPng = false) => {
+  const compressBase64 = async (str, maxDimension = 1200, quality = 0.78, isPng = false) => {
     if (!str || typeof str !== 'string' || !str.startsWith('data:image')) return str;
 
     return new Promise((resolve) => {
@@ -1331,7 +1331,7 @@ export default function Landing() {
           // PNG image re-encoding
           resolve(canvas.toDataURL('image/png'));
         } else {
-          // JPEG compression
+          // JPEG compression (~30KB per image)
           resolve(canvas.toDataURL('image/jpeg', quality));
         }
       };
@@ -1339,7 +1339,7 @@ export default function Landing() {
     });
   };
 
-  const optimizeLandingContent = async (data, maxDim = 1600, qual = 0.85) => {
+  const optimizeLandingContent = async (data, maxDim = 1200, qual = 0.78) => {
     const clone = structuredClone(data);
 
     if (clone.navLogo) clone.navLogo = await compressBase64(clone.navLogo, maxDim, qual, true);
@@ -1396,7 +1396,7 @@ export default function Landing() {
       clone.collaborators = await Promise.all(
         clone.collaborators.map(async (col) => ({
           ...col,
-          logo: await compressBase64(col.logo, 800, qual, true)
+          logo: await compressBase64(col.logo, 600, qual, true)
         }))
       );
     }
@@ -1440,15 +1440,15 @@ export default function Landing() {
         updatedAt: timestamp
       };
 
-      // 1. Optimize & compress all Base64 photos
-      let sanitized = sanitizeForFirestore(await optimizeLandingContent(payloadToSave, 1600, 0.85));
+      // 1. Optimize & compress all Base64 photos (~30KB per image)
+      let sanitized = sanitizeForFirestore(await optimizeLandingContent(payloadToSave, 1200, 0.78));
       sanitized.updatedAt = timestamp;
 
-      // 2. Ensure payload size is strictly under Firestore's 1MB limit
+      // 2. Ensure payload size is strictly under Firestore's 1MB limit (target < 750KB)
       let jsonStr = JSON.stringify(sanitized);
-      if (jsonStr.length > 850000) {
-        console.warn(`Payload size (${jsonStr.length} bytes) near 1MB Firestore limit. Performing second-pass compression...`);
-        sanitized = sanitizeForFirestore(await optimizeLandingContent(payloadToSave, 1200, 0.75));
+      if (jsonStr.length > 700000) {
+        console.warn(`Payload size (${jsonStr.length} bytes) near Firestore 1MB limit. Running second-pass compression...`);
+        sanitized = sanitizeForFirestore(await optimizeLandingContent(payloadToSave, 900, 0.70));
         sanitized.updatedAt = timestamp;
         jsonStr = JSON.stringify(sanitized);
       }
