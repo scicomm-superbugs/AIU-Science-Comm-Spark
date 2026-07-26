@@ -1192,29 +1192,42 @@ export default function Landing() {
       if (cached) {
         localContent = JSON.parse(cached);
         if (localContent.heroBtnPrimary === 'Sign Up Now') localContent.heroBtnPrimary = 'Register Now';
-        localTime = localContent.updatedAt || 0;
+        localTime = Number(localContent.updatedAt) || 0;
         setContent(prev => ({ ...prev, ...localContent }));
       }
     } catch (e) {
       console.warn('LocalStorage read error:', e);
     }
 
-    // 2. Sync from Firestore with timestamp resolution
+    // 2. Sync from Firestore with smart timestamp resolution
     (async () => {
       try {
         const ref = doc(firestore, getCollectionName('landing_content'), 'main');
         const snap = await getDoc(ref);
         if (snap.exists()) {
-          const data = snap.data();
-          if (!data.heroBtnPrimary || data.heroBtnPrimary === 'Sign Up Now') {
-            data.heroBtnPrimary = 'Register Now';
+          const remoteData = snap.data();
+          if (!remoteData.heroBtnPrimary || remoteData.heroBtnPrimary === 'Sign Up Now') {
+            remoteData.heroBtnPrimary = 'Register Now';
           }
-          setContent(prev => ({ ...prev, ...data }));
-          try {
-            localStorage.setItem('scicomm_landing_content', JSON.stringify(data));
-          } catch (e) {
-            console.warn('LocalStorage write error:', e);
+          const remoteTime = Number(remoteData.updatedAt) || 0;
+
+          // Only overwrite local state if remote Firestore data is strictly NEWER or EQUAL
+          if (remoteTime >= localTime) {
+            setContent(prev => ({ ...prev, ...remoteData }));
+            try {
+              localStorage.setItem('scicomm_landing_content', JSON.stringify(remoteData));
+            } catch (e) {
+              console.warn('LocalStorage write error:', e);
+            }
+          } else if (localContent) {
+            // Local content has newer edits that failed to sync to Firestore earlier. Re-sync to Firestore now!
+            console.log('Local content is newer than Firestore. Re-syncing local edits to Firestore...');
+            setDoc(ref, localContent).catch(err => console.warn('Background Firestore re-sync error:', err));
           }
+        } else if (localContent) {
+          // Document doesn't exist in Firestore yet, seed it with localContent
+          setDoc(doc(firestore, getCollectionName('landing_content'), 'main'), localContent)
+            .catch(err => console.warn('Background Firestore seed error:', err));
         }
       } catch (err) {
         console.warn('Failed to load landing content from Firestore:', err);
