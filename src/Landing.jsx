@@ -1171,26 +1171,6 @@ export default function Landing() {
     return () => clearInterval(timer);
   }, [content.hallOfFameChampions, editMode]);
 
-  // Auto-play Trainers gallery (moves by 1 trainer automatically every 3.2s)
-  useEffect(() => {
-    if (editMode || trainerPaused) return;
-    const list = content.workshops || DEFAULT_CONTENT.workshops;
-    if (!list || list.length <= 1) return;
-
-    const timer = setInterval(() => {
-      if (trainerContainerRef.current) {
-        const el = trainerContainerRef.current;
-        if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 20) {
-          el.scrollTo({ left: 0, behavior: 'smooth' });
-        } else {
-          el.scrollBy({ left: 264, behavior: 'smooth' });
-        }
-      }
-    }, 3200);
-
-    return () => clearInterval(timer);
-  }, [content.workshops, editMode, trainerPaused]);
-
   // ── Load from LocalStorage & Real-time Firestore Sync ──
   useEffect(() => {
     const ref = doc(firestore, getCollectionName('landing_content'), 'main');
