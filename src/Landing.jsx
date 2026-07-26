@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { firestore, getCollectionName, uploadFile } from './db';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import './scicommspark.css';
 
 /* ─────────────────────────── DEFAULT CONTENT ─────────────────────────── */
@@ -1191,50 +1191,46 @@ export default function Landing() {
     return () => clearInterval(timer);
   }, [content.workshops, editMode, trainerPaused]);
 
-  // ── Load from LocalStorage & Firestore ──
+  // ── Load from LocalStorage & Real-time Firestore Sync ──
   useEffect(() => {
-    (async () => {
-      try {
-        let localTime = Number(contentRef.current?.updatedAt) || 0;
-        let localContent = contentRef.current;
-        try {
-          const cached = localStorage.getItem('scicomm_landing_content');
-          if (cached) {
-            localContent = JSON.parse(cached);
-            localTime = Math.max(localTime, Number(localContent.updatedAt) || 0);
-          }
-        } catch (e) {}
+    const ref = doc(firestore, getCollectionName('landing_content'), 'main');
 
-        const ref = doc(firestore, getCollectionName('landing_content'), 'main');
-        const snap = await getDoc(ref);
+    const unsubscribe = onSnapshot(ref, (snap) => {
+      try {
         if (snap.exists()) {
           const remoteData = snap.data();
           if (!remoteData.heroBtnPrimary || remoteData.heroBtnPrimary === 'Sign Up Now') {
             remoteData.heroBtnPrimary = 'Register Now';
           }
+          let localTime = Number(contentRef.current?.updatedAt) || 0;
+          try {
+            const cached = localStorage.getItem('scicomm_landing_content');
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              localTime = Math.max(localTime, Number(parsed.updatedAt) || 0);
+            }
+          } catch (e) {}
+
           const remoteTime = Number(remoteData.updatedAt) || 0;
 
-          // Only overwrite local state if remote Firestore data is strictly NEWER
-          const isRemoteNewer = remoteTime > 0 && remoteTime > localTime;
-          if (isRemoteNewer) {
-            console.log('Remote Firestore data is newer. Updating state...');
+          // Update local state whenever Firestore has newer or matching content
+          if (remoteTime >= localTime || localTime === 0) {
             setContent(prev => ({ ...prev, ...remoteData }));
             try {
               localStorage.setItem('scicomm_landing_content', JSON.stringify(remoteData));
             } catch (e) {}
-          } else if (localContent) {
-            console.log('Local content is newer or remote has no timestamp. Retaining local content...');
-            setContent(prev => ({ ...prev, ...localContent }));
-            setDoc(ref, localContent).catch(err => console.warn('Background Firestore sync error:', err));
           }
-        } else if (localContent) {
-          setDoc(doc(firestore, getCollectionName('landing_content'), 'main'), localContent)
-            .catch(err => console.warn('Background Firestore seed error:', err));
+        } else if (contentRef.current) {
+          setDoc(ref, contentRef.current).catch(err => console.warn('Background Firestore seed error:', err));
         }
       } catch (err) {
-        console.warn('Failed to load landing content from Firestore:', err);
+        console.warn('Firestore onSnapshot handler error:', err);
       }
-    })();
+    }, (err) => {
+      console.warn('Firestore real-time listener error:', err);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // ── Auto slide timer for About Gallery ──
@@ -1459,7 +1455,7 @@ export default function Landing() {
         updatedAt: Date.now()
       };
 
-      // 1. Optimize & compress all Base64 photos to keep total payload under 250KB
+      // 1. Optimize & compress all Base64 photos to keep total payload under 200KB
       const optimized = await optimizeLandingContent(payloadToSave);
       const sanitized = sanitizeForFirestore(optimized);
       sanitized.updatedAt = Date.now();
@@ -1473,24 +1469,16 @@ export default function Landing() {
         console.warn('LocalStorage save warning:', e);
       }
 
-      // 3. Save to Firestore with a 7s max timeout
-      const firestorePromise = (async () => {
-        const ref = doc(firestore, getCollectionName('landing_content'), 'main');
-        await setDoc(ref, sanitized);
-      })();
-
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Firestore write timeout')), 7000)
-      );
-
-      await Promise.race([firestorePromise, timeoutPromise]);
+      // 3. Save directly to Firestore for global access across all devices
+      const ref = doc(firestore, getCollectionName('landing_content'), 'main');
+      await setDoc(ref, sanitized);
 
       setSavedContent(null);
       setEditMode(false);
-      alert('✅ All changes saved permanently!');
+      alert('✅ All changes saved & published globally to all users on every device!');
     } catch (err) {
-      console.warn('Firestore save completed with local fallback:', err);
-      // Fallback: save optimized & sanitized to LocalStorage so admin changes are NEVER lost
+      console.warn('Firestore global save error:', err);
+      // Fallback: save to LocalStorage so changes are never lost locally, and attempt background re-sync
       const fallbackPayload = sanitizeForFirestore({
         ...contentRef.current,
         updatedAt: Date.now()
@@ -1500,9 +1488,12 @@ export default function Landing() {
       } catch (e) {
         console.warn('LocalStorage fallback write error:', e);
       }
+      const ref = doc(firestore, getCollectionName('landing_content'), 'main');
+      setDoc(ref, fallbackPayload).catch(e => console.warn('Background Firestore sync retry error:', e));
+
       setSavedContent(null);
       setEditMode(false);
-      alert('✅ All changes saved locally!');
+      alert('✅ Changes saved locally & queued for global sync!');
     } finally {
       setSaving(false);
     }
