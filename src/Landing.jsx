@@ -23,7 +23,7 @@ const DEFAULT_CONTENT = {
   heroTagline1: 'Science deserves to be told...',
   heroTagline2: 'Are you ready to tell its story?',
   heroDescription: 'Join SciComm Spark Competition and turn complex ideas into simple, engaging, and impactful stories for everyone.',
-  heroBgImage: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1600&q=80',
+  heroBgImage: './hero_banner_hd.png',
   heroBtnPrimary: 'Register Now',
   heroBtnSecondary: 'Learn More',
   heroWidth: '850px',
@@ -1196,6 +1196,9 @@ export default function Landing() {
           const remoteData = snap.data();
           if (!remoteData.heroBtnPrimary || remoteData.heroBtnPrimary === 'Sign Up Now') {
             remoteData.heroBtnPrimary = 'Register Now';
+          }
+          if (!remoteData.heroBgImage || remoteData.heroBgImage.includes('unsplash.com')) {
+            remoteData.heroBgImage = './hero_banner_hd.png';
           }
           
           // Direct real-time listener update across ALL browsers & devices globally for all visitors!
