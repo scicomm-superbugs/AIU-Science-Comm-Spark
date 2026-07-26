@@ -339,6 +339,13 @@ export function EditableText({ value, onChange, editing, tag: Tag = 'span', styl
     }
   };
 
+  const handleInput = (e) => {
+    if (onChange) {
+      const html = cleanHTML(e.currentTarget.innerHTML);
+      onChange(html);
+    }
+  };
+
   const handlePaste = (e) => {
     e.preventDefault();
     // Extract pure plain text (stripping external fonts, colors, line heights, etc.)
@@ -417,6 +424,7 @@ export function EditableText({ value, onChange, editing, tag: Tag = 'span', styl
       suppressContentEditableWarning
       onFocus={() => setIsFocused(true)}
       onBlur={handleBlur}
+      onInput={handleInput}
       onPaste={handlePaste}
       onKeyDown={(e) => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
@@ -1112,6 +1120,12 @@ export default function Landing() {
   const isAdmin = user?.role === 'master' || user?.role === 'admin';
   const [editMode, setEditMode] = useState(false);
   const [content, setContent] = useState(structuredClone(DEFAULT_CONTENT));
+  const contentRef = useRef(content);
+
+  useEffect(() => {
+    contentRef.current = content;
+  }, [content]);
+
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
   const [savedContent, setSavedContent] = useState(null); // snapshot before editing
 
@@ -1169,19 +1183,23 @@ export default function Landing() {
 
   // ── Load from LocalStorage & Firestore ──
   useEffect(() => {
+    let localContent = null;
+    let localTime = 0;
+
     // 1. Instant sync from localStorage
     try {
       const cached = localStorage.getItem('scicomm_landing_content');
       if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.heroBtnPrimary === 'Sign Up Now') parsed.heroBtnPrimary = 'Register Now';
-        setContent(prev => ({ ...prev, ...parsed }));
+        localContent = JSON.parse(cached);
+        if (localContent.heroBtnPrimary === 'Sign Up Now') localContent.heroBtnPrimary = 'Register Now';
+        localTime = localContent.updatedAt || 0;
+        setContent(prev => ({ ...prev, ...localContent }));
       }
     } catch (e) {
       console.warn('LocalStorage read error:', e);
     }
 
-    // 2. Sync from Firestore
+    // 2. Sync from Firestore with timestamp resolution
     (async () => {
       try {
         const ref = doc(firestore, getCollectionName('landing_content'), 'main');
@@ -1402,11 +1420,22 @@ export default function Landing() {
   };
 
   const saveChanges = async () => {
+    // 0. Force any focused element to blur so its last edits are committed
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
+
     setSaving(true);
     try {
+      const payloadToSave = {
+        ...contentRef.current,
+        updatedAt: Date.now()
+      };
+
       // 1. Optimize & compress all Base64 photos to keep total payload under 250KB
-      const optimized = await optimizeLandingContent(content);
+      const optimized = await optimizeLandingContent(payloadToSave);
       const sanitized = sanitizeForFirestore(optimized);
+      sanitized.updatedAt = Date.now();
 
       setContent(sanitized);
 
@@ -1435,9 +1464,12 @@ export default function Landing() {
     } catch (err) {
       console.warn('Firestore save completed with local fallback:', err);
       // Fallback: save optimized & sanitized to LocalStorage so admin changes are NEVER lost
-      const sanitized = sanitizeForFirestore(content);
+      const fallbackPayload = sanitizeForFirestore({
+        ...contentRef.current,
+        updatedAt: Date.now()
+      });
       try {
-        localStorage.setItem('scicomm_landing_content', JSON.stringify(sanitized));
+        localStorage.setItem('scicomm_landing_content', JSON.stringify(fallbackPayload));
       } catch (e) {
         console.warn('LocalStorage fallback write error:', e);
       }
@@ -1656,14 +1688,7 @@ export default function Landing() {
             <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 20 }}>
               <EditableImage
                 src={null}
-                onUpload={(base64) => {
-                  updateField('heroBgImage', base64);
-                  try {
-                    const cached = JSON.parse(localStorage.getItem('scicomm_landing_content') || '{}');
-                    cached.heroBgImage = base64;
-                    localStorage.setItem('scicomm_landing_content', JSON.stringify(cached));
-                  } catch (e) { console.warn('Cache error:', e); }
-                }}
+                onUpload={(base64) => updateField('heroBgImage', base64)}
                 onRemove={() => updateField('heroBgImage', DEFAULT_CONTENT.heroBgImage)}
                 editing={true}
                 alt="Change hero background"
