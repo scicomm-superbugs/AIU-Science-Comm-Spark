@@ -1295,7 +1295,7 @@ export default function Landing() {
     setEditMode(false);
   };
 
-  const compressBase64 = async (str, maxDimension = 3840, quality = 0.95, isPng = false) => {
+  const compressBase64 = async (str, maxDimension = 3840, quality = 0.98, isPng = false) => {
     if (!str || typeof str !== 'string' || !str.startsWith('data:image')) return str;
 
     return new Promise((resolve) => {
@@ -1327,7 +1327,7 @@ export default function Landing() {
         if (isPng || str.startsWith('data:image/png')) {
           resolve(canvas.toDataURL('image/png'));
         } else {
-          resolve(canvas.toDataURL('image/jpeg', quality));
+          resolve(canvas.toDataURL('image/jpeg', 0.98));
         }
       };
       img.onerror = () => resolve(str);
@@ -1708,9 +1708,9 @@ export default function Landing() {
         }}>
           {/* Background Image */}
           <div style={{
-            position: 'absolute', inset: 0, opacity: 0.55,
-            backgroundImage: `linear-gradient(to right, rgba(9,13,22,0.92) 0%, rgba(9,13,22,0.65) 45%, rgba(9,13,22,0.2) 100%), url('${content.heroBgImage}')`,
-            backgroundSize: 'cover', backgroundPosition: 'center', filter: 'contrast(1.15) brightness(1.05)'
+            position: 'absolute', inset: 0, opacity: 0.65,
+            backgroundImage: `linear-gradient(to right, rgba(9,13,22,0.92) 0%, rgba(9,13,22,0.65) 45%, rgba(9,13,22,0.15) 100%), url('${content.heroBgImage}')`,
+            backgroundSize: 'cover', backgroundPosition: 'center'
           }} />
 
           {/* Edit background image button */}

@@ -35,13 +35,13 @@ export const getFirebaseAuth = () => {
   return authInstance;
 };
 
-const compressImageToBase64 = (file, maxWidth = 2500, quality = 0.92) => {
+const compressImageToBase64 = (file, maxWidth = 3840, quality = 0.96) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = (event) => {
-      // If file is under 1.5MB, use full original resolution directly for maximum high quality
-      if (file.size < 1.5 * 1024 * 1024) {
+      // Preserve full original HD/4K resolution directly for files up to 10MB
+      if (file.size < 10 * 1024 * 1024) {
         return resolve(event.target.result);
       }
       const img = new Image();
@@ -60,7 +60,7 @@ const compressImageToBase64 = (file, maxWidth = 2500, quality = 0.92) => {
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
+        resolve(canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/jpeg', quality));
       };
       img.onerror = () => reject(new Error('Failed to load image for compression'));
     };
