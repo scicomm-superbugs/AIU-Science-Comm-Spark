@@ -1607,18 +1607,18 @@ export default function Landing() {
             style={{
               color: '#be123c',
               background: 'rgba(190, 18, 60, 0.08)',
-              padding: '0.3rem 0.8rem',
+              padding: '0.35rem 0.9rem',
               borderRadius: '20px',
               textDecoration: 'none',
               fontWeight: 900,
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.3rem',
+              gap: '0.35rem',
               border: '1px solid rgba(190, 18, 60, 0.25)',
               boxShadow: '0 2px 8px rgba(190, 18, 60, 0.12)'
             }}
           >
-            <Newspaper size={14} /> News <ExternalLink size={12} />
+            <BookOpen size={14} /> Journal <ExternalLink size={12} />
           </a>
         </div>
 
@@ -1675,7 +1675,7 @@ export default function Landing() {
             onClick={() => setMobileMenuOpen(false)}
             style={{ color: '#be123c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 900 }}
           >
-            <Newspaper size={18} /> News & Portal <ExternalLink size={14} />
+            <BookOpen size={18} /> Journal <ExternalLink size={14} />
           </a>
 
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
@@ -3680,8 +3680,8 @@ export default function Landing() {
         </section>
       )}
 
-      {/* ═══════════ SECTION: LATEST NEWS & PORTAL ═══════════ */}
-      <section id="news" className="landing-section" style={{ padding: '1.5rem 2rem 2.5rem' }}>
+      {/* ═══════════ SECTION: OFFICIAL SCIENCE JOURNAL SHOWCASE ═══════════ */}
+      <section id="journal" className="landing-section" style={{ padding: '1.5rem 2rem 2.5rem' }}>
         <div style={{
           background: 'linear-gradient(135deg, #090d16 0%, #1e1b4b 50%, #0f172a 100%)',
           borderRadius: '28px',
@@ -3691,17 +3691,17 @@ export default function Landing() {
           position: 'relative',
           overflow: 'hidden'
         }}>
-          {/* Header */}
+          {/* Header & Main Call to Action */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2.5rem' }}>
             <div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(244, 63, 94, 0.15)', color: '#f43f5e', border: '1px solid rgba(244, 63, 94, 0.3)', padding: '0.3rem 0.9rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-                <Newspaper size={14} /> LATEST NEWS & PORTAL
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', background: 'rgba(244, 63, 94, 0.15)', color: '#f43f5e', border: '1px solid rgba(244, 63, 94, 0.3)', padding: '0.35rem 0.95rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.85rem' }}>
+                <BookOpen size={15} /> OFFICIAL SCIENCE JOURNAL
               </div>
-              <h2 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#ffffff', margin: 0, fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.02em' }}>
-                SciComm Spark News & Articles
+              <h2 style={{ fontSize: '2.3rem', fontWeight: 900, color: '#ffffff', margin: 0, fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.02em' }}>
+                Explore Our Science Journal
               </h2>
-              <p style={{ color: '#94a3b8', fontSize: '0.95rem', margin: '0.5rem 0 0', fontWeight: 500, maxWidth: '650px' }}>
-                Explore articles, competition announcements, research stories, and expert science communication guides at Alamein International University.
+              <p style={{ color: '#94a3b8', fontSize: '0.98rem', margin: '0.65rem 0 0', fontWeight: 500, maxWidth: '680px', lineHeight: 1.6 }}>
+                Read published research articles, scientific stories, student projects, and competition highlights in the official Alamein International University Science Communication Journal.
               </p>
             </div>
             <a
@@ -3712,80 +3712,80 @@ export default function Landing() {
                 background: 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
                 color: '#ffffff',
                 textDecoration: 'none',
-                padding: '0.75rem 1.75rem',
+                padding: '0.85rem 2rem',
                 borderRadius: '25px',
                 fontWeight: 900,
-                fontSize: '0.92rem',
+                fontSize: '0.98rem',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-                boxShadow: '0 8px 24px rgba(244, 63, 94, 0.4)',
+                gap: '0.6rem',
+                boxShadow: '0 8px 24px rgba(244, 63, 94, 0.45)',
                 transition: 'all 0.25s ease'
               }}
             >
-              Explore Full News Portal <ExternalLink size={16} />
+              Visit Our Journal <ExternalLink size={18} />
             </a>
           </div>
 
-          {/* News Cards Grid */}
+          {/* 3 Journal Highlight Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-            <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '20px', padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '20px', padding: '1.65rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#38bdf8', marginBottom: '0.5rem', textTransform: 'uppercase' }}>COMPETITION UPDATE</div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.75rem', lineHeight: 1.35 }}>
-                  SciComm Spark 2nd Edition Registration Open
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#38bdf8', marginBottom: '0.5rem', textTransform: 'uppercase' }}>RESEARCH PAPERS</div>
+                <h3 style={{ fontSize: '1.18rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.75rem', lineHeight: 1.35 }}>
+                  Scientific Articles & Research
                 </h3>
-                <p style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.5, marginBottom: '1.25rem' }}>
-                  Register your team to participate in Egypt's premier science communication competition at Alamein International University.
+                <p style={{ fontSize: '0.88rem', color: '#94a3b8', lineHeight: 1.55, marginBottom: '1.25rem' }}>
+                  Explore peer-reviewed articles, research summaries, and scientific breakdowns published by student researchers and mentors.
                 </p>
               </div>
               <a
                 href="https://scicomm-superbugs.github.io/Portal/#/aiuscicomm/explore"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: '#f43f5e', textDecoration: 'none', fontWeight: 800, fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                style={{ color: '#f43f5e', textDecoration: 'none', fontWeight: 800, fontSize: '0.88rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
               >
-                Read Announcement <ArrowRight size={14} />
+                Browse Articles <ExternalLink size={14} />
               </a>
             </div>
 
-            <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '20px', padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '20px', padding: '1.65rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#a855f7', marginBottom: '0.5rem', textTransform: 'uppercase' }}>EXPERT WORKSHOPS</div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.75rem', lineHeight: 1.35 }}>
-                  Expert Training & Mentorship Schedule
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#a855f7', marginBottom: '0.5rem', textTransform: 'uppercase' }}>SCIENCE STORIES</div>
+                <h3 style={{ fontSize: '1.18rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.75rem', lineHeight: 1.35 }}>
+                  Popular Science & Media Features
                 </h3>
-                <p style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.5, marginBottom: '1.25rem' }}>
-                  Discover upcoming workshops led by top science communicators, geologists, and media creators across Egypt.
+                <p style={{ fontSize: '0.88rem', color: '#94a3b8', lineHeight: 1.55, marginBottom: '1.25rem' }}>
+                  Read engaging pop science stories, video scripts, and multimedia features created to make complex science accessible to everyone.
                 </p>
               </div>
               <a
                 href="https://scicomm-superbugs.github.io/Portal/#/aiuscicomm/explore"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: '#f43f5e', textDecoration: 'none', fontWeight: 800, fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                style={{ color: '#f43f5e', textDecoration: 'none', fontWeight: 800, fontSize: '0.88rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
               >
-                Read Details <ArrowRight size={14} />
+                Read Science Stories <ExternalLink size={14} />
               </a>
             </div>
 
-            <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '20px', padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '20px', padding: '1.65rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#4ade80', marginBottom: '0.5rem', textTransform: 'uppercase' }}>PORTAL EXPLORER</div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.75rem', lineHeight: 1.35 }}>
-                  Alamein Science Communication Portal
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#4ade80', marginBottom: '0.5rem', textTransform: 'uppercase' }}>COMPETITION SHOWCASE</div>
+                <h3 style={{ fontSize: '1.18rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.75rem', lineHeight: 1.35 }}>
+                  SciComm Spark Featured Works
                 </h3>
-                <p style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.5, marginBottom: '1.25rem' }}>
-                  Access full articles, research highlights, student projects, and interactive science communications online.
+                <p style={{ fontSize: '0.88rem', color: '#94a3b8', lineHeight: 1.55, marginBottom: '1.25rem' }}>
+                  Discover winning submissions, participant highlights, and outstanding projects from the SciComm Spark competition.
                 </p>
               </div>
               <a
                 href="https://scicomm-superbugs.github.io/Portal/#/aiuscicomm/explore"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: '#f43f5e', textDecoration: 'none', fontWeight: 800, fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                style={{ color: '#f43f5e', textDecoration: 'none', fontWeight: 800, fontSize: '0.88rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
               >
-                Explore News Portal <ExternalLink size={14} />
+                Visit Journal Portal <ExternalLink size={14} />
               </a>
             </div>
           </div>
@@ -3834,9 +3834,9 @@ export default function Landing() {
             href="https://scicomm-superbugs.github.io/Portal/#/aiuscicomm/explore"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#f43f5e', textDecoration: 'none', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+            style={{ color: '#f43f5e', textDecoration: 'none', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
           >
-            <Newspaper size={14} /> News Portal <ExternalLink size={12} />
+            <BookOpen size={14} /> Science Journal <ExternalLink size={12} />
           </a>
           <span>•</span>
           {content.footerLinks.map((link, lIdx) => (
