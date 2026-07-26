@@ -1119,7 +1119,19 @@ export default function Landing() {
 
   const isAdmin = user?.role === 'master' || user?.role === 'admin';
   const [editMode, setEditMode] = useState(false);
-  const [content, setContent] = useState(structuredClone(DEFAULT_CONTENT));
+  const [content, setContent] = useState(() => {
+    try {
+      const cached = localStorage.getItem('scicomm_landing_content');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.heroBtnPrimary === 'Sign Up Now') parsed.heroBtnPrimary = 'Register Now';
+        return { ...structuredClone(DEFAULT_CONTENT), ...parsed };
+      }
+    } catch (e) {
+      console.warn('Initial localStorage read warning:', e);
+    }
+    return structuredClone(DEFAULT_CONTENT);
+  });
   const contentRef = useRef(content);
 
   useEffect(() => {
@@ -1168,11 +1180,9 @@ export default function Landing() {
     const timer = setInterval(() => {
       if (trainerContainerRef.current) {
         const el = trainerContainerRef.current;
-        // If near the end of scrolling, wrap back smoothly to beginning (left: 0)
         if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 20) {
           el.scrollTo({ left: 0, behavior: 'smooth' });
         } else {
-          // Scroll forward by 1 trainer card (264px)
           el.scrollBy({ left: 264, behavior: 'smooth' });
         }
       }
@@ -1183,25 +1193,18 @@ export default function Landing() {
 
   // ── Load from LocalStorage & Firestore ──
   useEffect(() => {
-    let localContent = null;
-    let localTime = 0;
-
-    // 1. Instant sync from localStorage
-    try {
-      const cached = localStorage.getItem('scicomm_landing_content');
-      if (cached) {
-        localContent = JSON.parse(cached);
-        if (localContent.heroBtnPrimary === 'Sign Up Now') localContent.heroBtnPrimary = 'Register Now';
-        localTime = Number(localContent.updatedAt) || 0;
-        setContent(prev => ({ ...prev, ...localContent }));
-      }
-    } catch (e) {
-      console.warn('LocalStorage read error:', e);
-    }
-
-    // 2. Sync from Firestore with smart timestamp resolution
     (async () => {
       try {
+        let localTime = Number(contentRef.current?.updatedAt) || 0;
+        let localContent = contentRef.current;
+        try {
+          const cached = localStorage.getItem('scicomm_landing_content');
+          if (cached) {
+            localContent = JSON.parse(cached);
+            localTime = Math.max(localTime, Number(localContent.updatedAt) || 0);
+          }
+        } catch (e) {}
+
         const ref = doc(firestore, getCollectionName('landing_content'), 'main');
         const snap = await getDoc(ref);
         if (snap.exists()) {
@@ -1211,21 +1214,20 @@ export default function Landing() {
           }
           const remoteTime = Number(remoteData.updatedAt) || 0;
 
-          // Only overwrite local state if remote Firestore data is strictly NEWER or EQUAL
-          if (remoteTime >= localTime) {
+          // Only overwrite local state if remote Firestore data is strictly NEWER
+          const isRemoteNewer = remoteTime > 0 && remoteTime > localTime;
+          if (isRemoteNewer) {
+            console.log('Remote Firestore data is newer. Updating state...');
             setContent(prev => ({ ...prev, ...remoteData }));
             try {
               localStorage.setItem('scicomm_landing_content', JSON.stringify(remoteData));
-            } catch (e) {
-              console.warn('LocalStorage write error:', e);
-            }
+            } catch (e) {}
           } else if (localContent) {
-            // Local content has newer edits that failed to sync to Firestore earlier. Re-sync to Firestore now!
-            console.log('Local content is newer than Firestore. Re-syncing local edits to Firestore...');
-            setDoc(ref, localContent).catch(err => console.warn('Background Firestore re-sync error:', err));
+            console.log('Local content is newer or remote has no timestamp. Retaining local content...');
+            setContent(prev => ({ ...prev, ...localContent }));
+            setDoc(ref, localContent).catch(err => console.warn('Background Firestore sync error:', err));
           }
         } else if (localContent) {
-          // Document doesn't exist in Firestore yet, seed it with localContent
           setDoc(doc(firestore, getCollectionName('landing_content'), 'main'), localContent)
             .catch(err => console.warn('Background Firestore seed error:', err));
         }
@@ -1255,7 +1257,11 @@ export default function Landing() {
 
   // ── Content mutators ──
   const updateField = useCallback((key, value) => {
-    setContent(prev => ({ ...prev, [key]: value }));
+    setContent(prev => {
+      const next = { ...prev, [key]: value, updatedAt: Date.now() };
+      try { localStorage.setItem('scicomm_landing_content', JSON.stringify(next)); } catch (e) {}
+      return next;
+    });
   }, []);
 
   const updateNestedArray = useCallback((arrayKey, index, field, value) => {
@@ -1263,14 +1269,18 @@ export default function Landing() {
       const currentList = prev[arrayKey] || DEFAULT_CONTENT[arrayKey] || [];
       const arr = [...currentList];
       arr[index] = { ...arr[index], [field]: value };
-      return { ...prev, [arrayKey]: arr };
+      const next = { ...prev, [arrayKey]: arr, updatedAt: Date.now() };
+      try { localStorage.setItem('scicomm_landing_content', JSON.stringify(next)); } catch (e) {}
+      return next;
     });
   }, []);
 
   const addArrayItem = useCallback((arrayKey, newItem) => {
     setContent(prev => {
       const currentList = prev[arrayKey] || DEFAULT_CONTENT[arrayKey] || [];
-      return { ...prev, [arrayKey]: [...currentList, newItem] };
+      const next = { ...prev, [arrayKey]: [...currentList, newItem], updatedAt: Date.now() };
+      try { localStorage.setItem('scicomm_landing_content', JSON.stringify(next)); } catch (e) {}
+      return next;
     });
   }, []);
 
@@ -1278,7 +1288,9 @@ export default function Landing() {
     setContent(prev => {
       const currentList = prev[arrayKey] || DEFAULT_CONTENT[arrayKey] || [];
       const updated = currentList.filter((_, i) => i !== index);
-      return { ...prev, [arrayKey]: updated };
+      const next = { ...prev, [arrayKey]: updated, updatedAt: Date.now() };
+      try { localStorage.setItem('scicomm_landing_content', JSON.stringify(next)); } catch (e) {}
+      return next;
     });
   }, []);
 
@@ -1289,7 +1301,9 @@ export default function Landing() {
       if (targetIndex < 0 || targetIndex >= arr.length) return prev;
       const [moved] = arr.splice(index, 1);
       arr.splice(targetIndex, 0, moved);
-      return { ...prev, [arrayKey]: arr };
+      const next = { ...prev, [arrayKey]: arr, updatedAt: Date.now() };
+      try { localStorage.setItem('scicomm_landing_content', JSON.stringify(next)); } catch (e) {}
+      return next;
     });
   }, []);
 
