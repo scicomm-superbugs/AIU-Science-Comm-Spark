@@ -3850,6 +3850,35 @@ export default function Landing() {
         <button onClick={() => navigate(user ? '/dashboard' : '/login')} style={{ background: 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)', color: '#ffffff', border: 'none', padding: '0.65rem 1.6rem', borderRadius: '25px', fontWeight: 900, fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', boxShadow: '0 4px 16px rgba(225,29,72,0.4)' }}>
           {content.footerBtn}
         </button>
+
+        {/* ─── DEVELOPER & DESIGNER CREDIT SUB-FOOTER BAR ─── */}
+        <div style={{
+          width: '100%',
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+          marginTop: '1.25rem',
+          paddingTop: '1rem',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          textAlign: 'center',
+          fontSize: '0.82rem',
+          color: '#94a3b8',
+          fontWeight: 600,
+          letterSpacing: '0.02em'
+        }}>
+          <span>
+            Designed &amp; Programmed with ❤️ by{' '}
+            <span style={{
+              color: '#ffffff',
+              fontWeight: 800,
+              background: 'linear-gradient(90deg, #f43f5e 0%, #fb7185 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}>
+              Abdullah Amr Maged
+            </span>
+          </span>
+        </div>
       </footer>
 
     </div>
