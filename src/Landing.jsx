@@ -1315,7 +1315,7 @@ export default function Landing() {
     setEditMode(false);
   };
 
-  const compressBase64 = async (str, maxDimension = 320, quality = 0.75, isPng = false) => {
+  const compressBase64 = async (str, maxDimension = 3840, quality = 0.95, isPng = false) => {
     if (!str || typeof str !== 'string' || !str.startsWith('data:image')) return str;
 
     return new Promise((resolve) => {
@@ -1323,6 +1323,9 @@ export default function Landing() {
       img.src = str;
       img.onload = () => {
         let { width, height } = img;
+        if (width <= maxDimension && height <= maxDimension) {
+          return resolve(str);
+        }
         if (width > maxDimension || height > maxDimension) {
           if (width > height) {
             height = Math.round((height * maxDimension) / width);
@@ -1338,7 +1341,7 @@ export default function Landing() {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, width, height);
         ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'medium';
+        ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, width, height);
 
         if (isPng || str.startsWith('data:image/png')) {
@@ -1354,32 +1357,32 @@ export default function Landing() {
   const optimizeLandingContent = async (data) => {
     const clone = structuredClone(data);
 
-    if (clone.navLogo) clone.navLogo = await compressBase64(clone.navLogo, 300, 0.8, true);
-    if (clone.heroLogo) clone.heroLogo = await compressBase64(clone.heroLogo, 400, 0.8, true);
-    if (clone.footerLogo) clone.footerLogo = await compressBase64(clone.footerLogo, 300, 0.8, true);
-    if (clone.heroBgImage) clone.heroBgImage = await compressBase64(clone.heroBgImage, 600, 0.7, false);
+    if (clone.navLogo) clone.navLogo = await compressBase64(clone.navLogo, 3840, 0.95, true);
+    if (clone.heroLogo) clone.heroLogo = await compressBase64(clone.heroLogo, 3840, 0.95, true);
+    if (clone.footerLogo) clone.footerLogo = await compressBase64(clone.footerLogo, 3840, 0.95, true);
+    if (clone.heroBgImage) clone.heroBgImage = await compressBase64(clone.heroBgImage, 3840, 0.95, false);
 
-    // Compress Trainers / Workshops photos (<15KB each)
+    // Keep full resolution for Trainers / Workshops photos
     if (Array.isArray(clone.workshops)) {
       clone.workshops = await Promise.all(
         clone.workshops.map(async (t) => ({
           ...t,
-          img: await compressBase64(t.img, 320, 0.75, false)
+          img: await compressBase64(t.img, 3840, 0.95, false)
         }))
       );
     }
 
-    // Compress Leadership Team photos (<15KB each)
+    // Keep full resolution for Leadership Team photos
     if (Array.isArray(clone.teamMembers)) {
       clone.teamMembers = await Promise.all(
         clone.teamMembers.map(async (tm) => ({
           ...tm,
-          img: await compressBase64(tm.img, 320, 0.75, false)
+          img: await compressBase64(tm.img, 3840, 0.95, false)
         }))
       );
     }
 
-    // Compress Hall of Fame Champions photos (<15KB each)
+    // Keep full resolution for Hall of Fame Champions photos
     if (Array.isArray(clone.hallOfFameChampions)) {
       clone.hallOfFameChampions = await Promise.all(
         clone.hallOfFameChampions.map(async (c) => {
@@ -1388,7 +1391,7 @@ export default function Landing() {
             updatedMembers = await Promise.all(
               c.members.map(async (m) => ({
                 ...m,
-                img: m.img ? await compressBase64(m.img, 320, 0.75, false) : ''
+                img: m.img ? await compressBase64(m.img, 3840, 0.95, false) : ''
               }))
             );
           }
@@ -1399,29 +1402,29 @@ export default function Landing() {
       );
     }
 
-    // Compress Gallery images
+    // Keep full resolution for Gallery images
     if (Array.isArray(clone.galleryImages)) {
       clone.galleryImages = await Promise.all(
-        clone.galleryImages.map((img) => compressBase64(img, 450, 0.75, false))
+        clone.galleryImages.map((img) => compressBase64(img, 3840, 0.95, false))
       );
     }
 
-    // Compress Partner / Collaborator logos
+    // Keep full resolution for Partner / Collaborator logos
     if (Array.isArray(clone.collaborators)) {
       clone.collaborators = await Promise.all(
         clone.collaborators.map(async (col) => ({
           ...col,
-          logo: await compressBase64(col.logo, 300, 0.8, true)
+          logo: await compressBase64(col.logo, 3840, 0.95, true)
         }))
       );
     }
 
-    // Compress About Slides images
+    // Keep full resolution for About Slides images
     if (Array.isArray(clone.aboutSlides)) {
       clone.aboutSlides = await Promise.all(
         clone.aboutSlides.map(async (slide) => ({
           ...slide,
-          img: await compressBase64(slide.img, 500, 0.75, false)
+          img: await compressBase64(slide.img, 3840, 0.95, false)
         }))
       );
     }
@@ -1617,6 +1620,26 @@ export default function Landing() {
           <a href="#collaborators" onClick={(e) => { e.preventDefault(); document.getElementById('collaborators')?.scrollIntoView({ behavior: 'smooth' }); }} style={{ color: 'inherit', textDecoration: 'none' }}>Partners</a>
           <a href="#gallery" style={{ color: 'inherit', textDecoration: 'none' }}>Gallery</a>
           <a href="#contact" style={{ color: 'inherit', textDecoration: 'none' }}>Contact</a>
+          <a
+            href="https://scicomm-superbugs.github.io/Portal/#/aiuscicomm/explore"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: '#be123c',
+              background: 'rgba(190, 18, 60, 0.08)',
+              padding: '0.3rem 0.8rem',
+              borderRadius: '20px',
+              textDecoration: 'none',
+              fontWeight: 900,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+              border: '1px solid rgba(190, 18, 60, 0.25)',
+              boxShadow: '0 2px 8px rgba(190, 18, 60, 0.12)'
+            }}
+          >
+            <Newspaper size={14} /> News <ExternalLink size={12} />
+          </a>
         </div>
 
         {/* Right Action Buttons */}
@@ -1665,6 +1688,15 @@ export default function Landing() {
           <a href="#collaborators" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); document.getElementById('collaborators')?.scrollIntoView({ behavior: 'smooth' }); }} style={{ color: 'inherit', textDecoration: 'none' }}>Partners</a>
           <a href="#gallery" onClick={() => setMobileMenuOpen(false)} style={{ color: 'inherit', textDecoration: 'none' }}>Gallery</a>
           <a href="#contact" onClick={() => setMobileMenuOpen(false)} style={{ color: 'inherit', textDecoration: 'none' }}>Contact</a>
+          <a
+            href="https://scicomm-superbugs.github.io/Portal/#/aiuscicomm/explore"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ color: '#be123c', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 900 }}
+          >
+            <Newspaper size={18} /> News & Portal <ExternalLink size={14} />
+          </a>
 
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
             {user ? (
@@ -3668,6 +3700,118 @@ export default function Landing() {
         </section>
       )}
 
+      {/* ═══════════ SECTION: LATEST NEWS & PORTAL ═══════════ */}
+      <section id="news" className="landing-section" style={{ padding: '1.5rem 2rem 2.5rem' }}>
+        <div style={{
+          background: 'linear-gradient(135deg, #090d16 0%, #1e1b4b 50%, #0f172a 100%)',
+          borderRadius: '28px',
+          padding: '3rem 2.5rem',
+          color: '#ffffff',
+          boxShadow: '0 20px 50px rgba(15, 23, 42, 0.3)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2.5rem' }}>
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(244, 63, 94, 0.15)', color: '#f43f5e', border: '1px solid rgba(244, 63, 94, 0.3)', padding: '0.3rem 0.9rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+                <Newspaper size={14} /> LATEST NEWS & PORTAL
+              </div>
+              <h2 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#ffffff', margin: 0, fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.02em' }}>
+                SciComm Spark News & Articles
+              </h2>
+              <p style={{ color: '#94a3b8', fontSize: '0.95rem', margin: '0.5rem 0 0', fontWeight: 500, maxWidth: '650px' }}>
+                Explore articles, competition announcements, research stories, and expert science communication guides at Alamein International University.
+              </p>
+            </div>
+            <a
+              href="https://scicomm-superbugs.github.io/Portal/#/aiuscicomm/explore"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                background: 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
+                color: '#ffffff',
+                textDecoration: 'none',
+                padding: '0.75rem 1.75rem',
+                borderRadius: '25px',
+                fontWeight: 900,
+                fontSize: '0.92rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                boxShadow: '0 8px 24px rgba(244, 63, 94, 0.4)',
+                transition: 'all 0.25s ease'
+              }}
+            >
+              Explore Full News Portal <ExternalLink size={16} />
+            </a>
+          </div>
+
+          {/* News Cards Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+            <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '20px', padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#38bdf8', marginBottom: '0.5rem', textTransform: 'uppercase' }}>COMPETITION UPDATE</div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.75rem', lineHeight: 1.35 }}>
+                  SciComm Spark 2nd Edition Registration Open
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+                  Register your team to participate in Egypt's premier science communication competition at Alamein International University.
+                </p>
+              </div>
+              <a
+                href="https://scicomm-superbugs.github.io/Portal/#/aiuscicomm/explore"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#f43f5e', textDecoration: 'none', fontWeight: 800, fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+              >
+                Read Announcement <ArrowRight size={14} />
+              </a>
+            </div>
+
+            <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '20px', padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#a855f7', marginBottom: '0.5rem', textTransform: 'uppercase' }}>EXPERT WORKSHOPS</div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.75rem', lineHeight: 1.35 }}>
+                  Expert Training & Mentorship Schedule
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+                  Discover upcoming workshops led by top science communicators, geologists, and media creators across Egypt.
+                </p>
+              </div>
+              <a
+                href="https://scicomm-superbugs.github.io/Portal/#/aiuscicomm/explore"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#f43f5e', textDecoration: 'none', fontWeight: 800, fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+              >
+                Read Details <ArrowRight size={14} />
+              </a>
+            </div>
+
+            <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '20px', padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#4ade80', marginBottom: '0.5rem', textTransform: 'uppercase' }}>PORTAL EXPLORER</div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.75rem', lineHeight: 1.35 }}>
+                  Alamein Science Communication Portal
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+                  Access full articles, research highlights, student projects, and interactive science communications online.
+                </p>
+              </div>
+              <a
+                href="https://scicomm-superbugs.github.io/Portal/#/aiuscicomm/explore"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#f43f5e', textDecoration: 'none', fontWeight: 800, fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+              >
+                Explore News Portal <ExternalLink size={14} />
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ═══════════ BOTTOM FOOTER BAR ═══════════ */}
       <footer id="contact" style={{
         background: '#0a0f1d', color: '#ffffff', padding: '1.5rem 2rem',
@@ -3706,6 +3850,15 @@ export default function Landing() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>
+          <a
+            href="https://scicomm-superbugs.github.io/Portal/#/aiuscicomm/explore"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#f43f5e', textDecoration: 'none', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+          >
+            <Newspaper size={14} /> News Portal <ExternalLink size={12} />
+          </a>
+          <span>•</span>
           {content.footerLinks.map((link, lIdx) => (
             <span key={lIdx}>
               {lIdx > 0 && <span style={{ marginRight: '1.25rem' }}>•</span>}
