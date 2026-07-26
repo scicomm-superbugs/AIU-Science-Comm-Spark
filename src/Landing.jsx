@@ -306,6 +306,7 @@ const DEFAULT_CONTENT = {
 function parseMarkdownToHTML(str) {
   if (typeof str !== 'string') return str || '';
   let html = str.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/<b>(.*?)<\/b>/gi, '<strong>$1</strong>');
   // Strip external inline style="", color="", and span tags that override website default fonts & colors
   html = html.replace(/\s*style="[^"]*"/gi, '');
   html = html.replace(/\s*color="[^"]*"/gi, '');
@@ -2025,7 +2026,7 @@ export default function Landing() {
                 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#be123c', lineHeight: 1.3, marginBottom: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}
               />
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.88rem', fontWeight: 750, color: '#1e293b' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.88rem', fontWeight: 500, color: '#1e293b' }}>
                 {(content.aboutHighlights || DEFAULT_CONTENT.aboutHighlights).map((item, hIdx) => (
                   <div key={hIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', position: 'relative' }}>
                     <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: item.bg || '#ffe4e6', color: item.color || '#be123c', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', flexShrink: 0 }}>
@@ -2043,7 +2044,7 @@ export default function Landing() {
                       onChange={(v) => updateNestedArray('aboutHighlights', hIdx, 'text', v)}
                       editing={E}
                       tag="span"
-                      style={{ flex: 1 }}
+                      style={{ flex: 1, fontWeight: 500 }}
                     />
                     {E && (
                       <button
