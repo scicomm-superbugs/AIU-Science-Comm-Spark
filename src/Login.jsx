@@ -733,6 +733,39 @@ export default function Login() {
         ) : (
           /* Standard Sign-In Form */
           <>
+            {/* Primary Google Sign-In Button */}
+            <button 
+              onClick={handleGoogleLogin} 
+              disabled={isLoggingIn}
+              style={{ 
+                width: '100%', 
+                padding: '12px 16px', 
+                background: 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)', 
+                color: '#ffffff',
+                border: 'none', 
+                borderRadius: '12px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: '12px', 
+                cursor: 'pointer', 
+                fontWeight: 800, 
+                fontSize: '0.95rem',
+                boxShadow: '0 4px 14px rgba(190, 18, 60, 0.3)',
+                marginBottom: '1.25rem',
+                transition: 'all 0.25s ease'
+              }}
+            >
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: 20, height: 20, background: '#fff', borderRadius: '50%', padding: '2px' }} />
+              Continue with Google Account 🚀
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', margin: '1rem 0' }}>
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ft-border)' }}></div>
+              <span style={{ padding: '0 10px', color: 'var(--ft-text-muted)', fontSize: '12px', fontWeight: 700 }}>OR SIGN IN WITH USERNAME</span>
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ft-border)' }}></div>
+            </div>
+
             <form onSubmit={handleSubmit}>
               <div className="ft-input-group">
                 <label className="ft-label">Username or Email</label>
@@ -776,43 +809,10 @@ export default function Login() {
                 </button>
               </div>
 
-              <button type="submit" className="ft-btn ft-btn-primary ft-w-full" style={{ padding: '0.8rem 1.5rem', marginBottom: '1rem' }} disabled={isLoggingIn}>
-                {isLoggingIn ? 'Signing in...' : 'Sign In'}
+              <button type="submit" className="ft-btn ft-btn-secondary ft-w-full" style={{ padding: '0.75rem 1.5rem', marginBottom: '1rem' }} disabled={isLoggingIn}>
+                {isLoggingIn ? 'Signing in...' : 'Sign In with Password'}
               </button>
             </form>
-
-            <div style={{ display: 'flex', alignItems: 'center', margin: '1rem 0' }}>
-              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ft-border)' }}></div>
-              <span style={{ padding: '0 10px', color: 'var(--ft-text-muted)', fontSize: '12px', fontWeight: 600 }}>OR</span>
-              <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--ft-border)' }}></div>
-            </div>
-
-            <button 
-              onClick={handleGoogleLogin} 
-              disabled={isLoggingIn}
-              style={{ 
-                width: '100%', 
-                padding: '10px', 
-                background: 'var(--ft-bg-card)', 
-                border: '1.5px solid var(--ft-border)', 
-                borderRadius: 'var(--ft-radius)', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                gap: '10px', 
-                cursor: 'pointer', 
-                fontWeight: 600, 
-                color: 'var(--ft-text-secondary)',
-                boxShadow: 'var(--ft-shadow-sm)',
-                marginBottom: '1rem',
-                transition: 'background 0.25s'
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--ft-bg-card-hover)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'var(--ft-bg-card)'}
-            >
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: 18, height: 18 }} />
-              Sign in with Google
-            </button>
             
             <div style={{ textAlign: 'center', fontSize: '0.85rem', marginTop: '1.5rem', color: 'var(--ft-text-secondary)', fontWeight: 500 }}>
               Don't have an account? <Link to="/register" style={{ fontWeight: 700, color: 'var(--ft-primary)', textDecoration: 'none' }}>Register here</Link>

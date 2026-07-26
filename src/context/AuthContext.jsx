@@ -1,9 +1,49 @@
 import { createContext, useState, useEffect, useContext } from 'react';
-import { db, getFirebaseAuth } from '../db';
+import { db, firestore, getCollectionName, getFirebaseAuth } from '../db';
 import { signInAnonymously, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { collection, query, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import bcrypt from 'bcryptjs';
 
 const AuthContext = createContext(null);
+
+const isAdminEmail = (email) => {
+  if (!email || typeof email !== 'string') return false;
+  const clean = email.trim().toLowerCase();
+  return clean === 'abdullah.amr.makky@gamil.com' || clean === 'abdullah.amr.makky@gmail.com';
+};
+
+const purgeObsoleteUsers = async () => {
+  try {
+    const sciCol = getCollectionName('scientists');
+    const q = query(collection(firestore, sciCol));
+    const snap = await getDocs(q);
+    for (const d of snap.docs) {
+      const data = d.data();
+      const docId = d.id;
+      const username = (data.username || '').toLowerCase();
+      const name = (data.name || '').toLowerCase();
+      const empId = (data.employeeId || '').toUpperCase();
+      const compId = (data.competitorIdNumber || '').toUpperCase();
+
+      const isObsolete =
+        username === 'abdullah.amr871' ||
+        docId === 'C-952' ||
+        empId === 'C-952' ||
+        compId.includes('C-952') ||
+        (name.includes('system administrator') && !isAdminEmail(data.googleEmail) && !isAdminEmail(data.email));
+
+      if (isObsolete) {
+        await deleteDoc(doc(firestore, sciCol, docId));
+        if (localStorage.getItem('ft_userId') === docId || sessionStorage.getItem('ft_userId') === docId) {
+          localStorage.removeItem('ft_userId');
+          sessionStorage.removeItem('ft_userId');
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Purge obsolete users suppressed:', err);
+  }
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -13,6 +53,9 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        // Run background purge for obsolete/test users (C-952, abdullah.amr871)
+        await purgeObsoleteUsers();
+
         const storedUserId = localStorage.getItem('ft_userId') || sessionStorage.getItem('ft_userId');
         if (storedUserId) {
           const scientist = await db.scientists.get(String(storedUserId));
@@ -122,6 +165,42 @@ export const AuthProvider = ({ children }) => {
         scientist = await db.scientists.where('username').equals(userEmail).first();
       }
 
+      // Check if this is the Master Admin Email (abdullah.amr.makky@gamil.com / gmail.com)
+      if (isAdminEmail(userEmail)) {
+        if (scientist) {
+          // Force update existing record to Master Admin status
+          await db.scientists.update(scientist.id, {
+            role: 'master',
+            title: 'System Administrator (Master) 👑',
+            accountStatus: 'active',
+            completedProfile: true,
+            googleEmail: userEmail,
+            updatedAt: new Date().toISOString()
+          });
+          scientist = await db.scientists.get(scientist.id);
+        } else {
+          // Auto-create Master Admin account instantly
+          const newId = await db.scientists.add({
+            username: 'abdullah.amr',
+            email: userEmail,
+            googleEmail: userEmail,
+            name: displayName || 'Abdullah Amr Maged',
+            avatar: photo || null,
+            avatarUrl: photo || null,
+            department: 'Science Communication',
+            universityId: '',
+            title: 'System Administrator (Master) 👑',
+            role: 'master',
+            registeredTrack: 'pop_science',
+            accountStatus: 'active',
+            employeeId: 'ADMIN-001',
+            completedProfile: true,
+            createdAt: new Date().toISOString()
+          });
+          scientist = await db.scientists.get(newId);
+        }
+      }
+
       if (!scientist || !scientist.completedProfile) {
         return {
           needsCompletion: true,
@@ -165,31 +244,19 @@ export const AuthProvider = ({ children }) => {
   };
 
   const completeGoogleRegistration = async (googleData, extraData) => {
-    // googleData: { email, name, avatar }
-    // extraData: { username, email (university), name, department, universityId, title, role, password }
-    const universityEmail = extraData.email.trim();
-    if (universityEmail.toLowerCase() === googleData.email.toLowerCase()) {
-      throw new Error('University email must be different from your Google account email');
-    }
+    const isMasterAdminEmail = isAdminEmail(googleData.email);
+    const universityEmail = extraData.email.trim() || googleData.email;
 
     const salt = await bcrypt.genSalt(4);
-    const hash = await bcrypt.hash(extraData.password, salt);
+    const hash = await bcrypt.hash(extraData.password || 'GoogleAuthPass123!', salt);
 
     // Check if there is an account pre-created with their Google email
     const existingEmail = await db.scientists.where('email').equals(googleData.email).first();
 
-    // Check if the chosen username is taken
+    // Check if the chosen username is taken (allow linking if admin email)
     const existingUser = await db.scientists.where('username').equals(extraData.username.trim()).first();
-    if (existingUser && (!existingEmail || existingUser.id !== existingEmail.id)) {
+    if (existingUser && !isMasterAdminEmail && (!existingEmail || existingUser.id !== existingEmail.id)) {
       throw new Error('Username is already taken');
-    }
-
-    // Check if the university email they entered is taken by someone else
-    if (universityEmail) {
-      const existingUnivEmail = await db.scientists.where('email').equals(universityEmail).first();
-      if (existingUnivEmail && (!existingEmail || existingUnivEmail.id !== existingEmail.id)) {
-        throw new Error('University email is already registered');
-      }
     }
 
     // Check if this is the first user registering on the platform
@@ -197,10 +264,10 @@ export const AuthProvider = ({ children }) => {
     const allSnap = await getDocs(collection(firestore, sciCol));
     const isFirstUser = allSnap.empty;
 
-    let role = isFirstUser ? 'master' : (extraData.role || 'competitor');
-    let accountStatus = isFirstUser ? 'active' : 'pending';
+    let role = (isMasterAdminEmail || isFirstUser) ? 'master' : (extraData.role || 'competitor');
+    let accountStatus = (isMasterAdminEmail || isFirstUser) ? 'active' : 'pending';
     if (existingEmail && existingEmail.role) {
-      role = existingEmail.role;
+      role = isMasterAdminEmail ? 'master' : existingEmail.role;
     }
 
     const isJudge = role === 'judge' || role === 'faculty';
@@ -211,20 +278,22 @@ export const AuthProvider = ({ children }) => {
     const institutionName = isAlameinStudent ? 'Alamein International University' : (extraData.institutionName ? extraData.institutionName.trim() : '');
     const competitorIdNumber = role === 'competitor' ? 'SCS-2026-' + Math.floor(100000 + Math.random() * 900000) : '';
 
+    const targetAccount = existingUser || existingEmail;
+
     let scientistId;
-    if (existingEmail) {
-      // Update pre-created account
-      await db.scientists.update(existingEmail.id, {
+    if (targetAccount) {
+      // Update/link to pre-existing or selected username account
+      await db.scientists.update(targetAccount.id, {
         username: extraData.username.trim(),
         email: universityEmail,
         googleEmail: googleData.email,
         passwordHash: hash,
         name: extraData.name.trim() || googleData.name,
-        avatar: googleData.avatar || existingEmail.avatar || null,
-        avatarUrl: googleData.avatar || existingEmail.avatar || null,
+        avatar: googleData.avatar || targetAccount.avatar || null,
+        avatarUrl: googleData.avatar || targetAccount.avatar || null,
         department: extraData.department,
         universityId: isJudge ? '' : (isAlameinStudent && extraData.universityId ? extraData.universityId.trim() : ''),
-        title: isFirstUser ? 'Master Admin' : (isJudge ? (extraData.title ? extraData.title.trim() : 'Judge') : ''),
+        title: isMasterAdminEmail ? 'System Administrator (Master) 👑' : (isJudge ? (extraData.title ? extraData.title.trim() : 'Judge') : ''),
         role: role,
         registeredTrack: isJudge ? '' : extraData.registeredTrack || 'pop_science',
         accountStatus: accountStatus,
@@ -232,10 +301,10 @@ export const AuthProvider = ({ children }) => {
         nationalId: nationalId,
         institutionName: institutionName,
         isAlameinStudent: isAlameinStudent,
-        competitorIdNumber: competitorIdNumber || existingEmail.competitorIdNumber || '',
+        competitorIdNumber: competitorIdNumber || targetAccount.competitorIdNumber || '',
         updatedAt: new Date().toISOString()
       });
-      scientistId = existingEmail.id;
+      scientistId = targetAccount.id;
     } else {
       // Create new account
       scientistId = await db.scientists.add({
@@ -248,7 +317,7 @@ export const AuthProvider = ({ children }) => {
         avatarUrl: googleData.avatar || null,
         department: extraData.department,
         universityId: isJudge ? '' : (isAlameinStudent && extraData.universityId ? extraData.universityId.trim() : ''),
-        title: isFirstUser ? 'Master Admin' : (isJudge ? (extraData.title ? extraData.title.trim() : 'Judge') : ''),
+        title: isMasterAdminEmail ? 'System Administrator (Master) 👑' : (isJudge ? (extraData.title ? extraData.title.trim() : 'Judge') : ''),
         role: role,
         registeredTrack: isJudge ? '' : extraData.registeredTrack || 'pop_science',
         accountStatus: accountStatus,
