@@ -1187,24 +1187,12 @@ export default function Landing() {
           if (!remoteData.heroBtnPrimary || remoteData.heroBtnPrimary === 'Sign Up Now') {
             remoteData.heroBtnPrimary = 'Register Now';
           }
-          let localTime = Number(contentRef.current?.updatedAt) || 0;
+          
+          // Direct real-time listener update across ALL browsers & devices globally!
+          setContent(prev => ({ ...DEFAULT_CONTENT, ...prev, ...remoteData }));
           try {
-            const cached = localStorage.getItem('scicomm_landing_content');
-            if (cached) {
-              const parsed = JSON.parse(cached);
-              localTime = Math.max(localTime, Number(parsed.updatedAt) || 0);
-            }
+            localStorage.setItem('scicomm_landing_content', JSON.stringify(remoteData));
           } catch (e) {}
-
-          const remoteTime = Number(remoteData.updatedAt) || 0;
-
-          // Update local state whenever Firestore has newer or matching content
-          if (remoteTime >= localTime || localTime === 0) {
-            setContent(prev => ({ ...prev, ...remoteData }));
-            try {
-              localStorage.setItem('scicomm_landing_content', JSON.stringify(remoteData));
-            } catch (e) {}
-          }
         } else if (contentRef.current) {
           setDoc(ref, contentRef.current).catch(err => console.warn('Background Firestore seed error:', err));
         }
@@ -1239,7 +1227,7 @@ export default function Landing() {
   // ── Content mutators ──
   const updateField = useCallback((key, value) => {
     setContent(prev => {
-      const next = { ...prev, [key]: value, updatedAt: Date.now() };
+      const next = { ...prev, [key]: value };
       try { localStorage.setItem('scicomm_landing_content', JSON.stringify(next)); } catch (e) {}
       return next;
     });
@@ -1250,7 +1238,7 @@ export default function Landing() {
       const currentList = prev[arrayKey] || DEFAULT_CONTENT[arrayKey] || [];
       const arr = [...currentList];
       arr[index] = { ...arr[index], [field]: value };
-      const next = { ...prev, [arrayKey]: arr, updatedAt: Date.now() };
+      const next = { ...prev, [arrayKey]: arr };
       try { localStorage.setItem('scicomm_landing_content', JSON.stringify(next)); } catch (e) {}
       return next;
     });
@@ -1259,7 +1247,7 @@ export default function Landing() {
   const addArrayItem = useCallback((arrayKey, newItem) => {
     setContent(prev => {
       const currentList = prev[arrayKey] || DEFAULT_CONTENT[arrayKey] || [];
-      const next = { ...prev, [arrayKey]: [...currentList, newItem], updatedAt: Date.now() };
+      const next = { ...prev, [arrayKey]: [...currentList, newItem] };
       try { localStorage.setItem('scicomm_landing_content', JSON.stringify(next)); } catch (e) {}
       return next;
     });
@@ -1269,7 +1257,7 @@ export default function Landing() {
     setContent(prev => {
       const currentList = prev[arrayKey] || DEFAULT_CONTENT[arrayKey] || [];
       const updated = currentList.filter((_, i) => i !== index);
-      const next = { ...prev, [arrayKey]: updated, updatedAt: Date.now() };
+      const next = { ...prev, [arrayKey]: updated };
       try { localStorage.setItem('scicomm_landing_content', JSON.stringify(next)); } catch (e) {}
       return next;
     });
@@ -1282,7 +1270,7 @@ export default function Landing() {
       if (targetIndex < 0 || targetIndex >= arr.length) return prev;
       const [moved] = arr.splice(index, 1);
       arr.splice(targetIndex, 0, moved);
-      const next = { ...prev, [arrayKey]: arr, updatedAt: Date.now() };
+      const next = { ...prev, [arrayKey]: arr };
       try { localStorage.setItem('scicomm_landing_content', JSON.stringify(next)); } catch (e) {}
       return next;
     });
