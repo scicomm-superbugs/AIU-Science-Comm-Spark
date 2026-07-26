@@ -3219,8 +3219,8 @@ export default function Landing() {
           {/* Continuous Infinite Marquee Reel for Trainers */}
           {(() => {
             const rawList = content.workshops || DEFAULT_CONTENT.workshops;
-            // Duplicate list when not in Edit Mode so the marquee loops 100% seamlessly without gaps
-            const displayList = E ? rawList : [...rawList, ...rawList];
+            // 4 copies ensure 100% gapless continuous marquee loop on all screen sizes (up to 4K monitors)
+            const displayList = E ? rawList : [...rawList, ...rawList, ...rawList, ...rawList];
 
             const scrollTrainers = (direction) => {
               if (trainerContainerRef.current) {

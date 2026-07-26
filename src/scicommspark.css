@@ -3576,7 +3576,7 @@
 }
 
 .trainers-smooth-marquee-track.animating {
-  animation: trainersMarqueeReel 28s linear infinite;
+  animation: trainersMarqueeReel 35s linear infinite;
 }
 
 .trainers-smooth-marquee-track.paused,
@@ -3589,6 +3589,6 @@
     transform: translateX(0);
   }
   100% {
-    transform: translateX(-50%);
+    transform: translateX(-25%);
   }
 }
