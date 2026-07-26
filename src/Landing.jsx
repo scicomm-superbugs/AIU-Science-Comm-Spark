@@ -1301,7 +1301,7 @@ export default function Landing() {
     setEditMode(false);
   };
 
-  const compressBase64 = async (str, maxDimension = 3840, quality = 0.98, isPng = false) => {
+  const compressBase64 = async (str, maxDimension = 1600, quality = 0.85, isPng = false) => {
     if (!str || typeof str !== 'string' || !str.startsWith('data:image')) return str;
 
     return new Promise((resolve) => {
@@ -1309,9 +1309,6 @@ export default function Landing() {
       img.src = str;
       img.onload = () => {
         let { width, height } = img;
-        if (width <= maxDimension && height <= maxDimension) {
-          return resolve(str);
-        }
         if (width > maxDimension || height > maxDimension) {
           if (width > height) {
             height = Math.round((height * maxDimension) / width);
@@ -1331,44 +1328,45 @@ export default function Landing() {
         ctx.drawImage(img, 0, 0, width, height);
 
         if (isPng || str.startsWith('data:image/png')) {
+          // PNG image re-encoding
           resolve(canvas.toDataURL('image/png'));
         } else {
-          resolve(canvas.toDataURL('image/jpeg', 0.98));
+          // JPEG compression
+          resolve(canvas.toDataURL('image/jpeg', quality));
         }
       };
       img.onerror = () => resolve(str);
     });
   };
 
-  const optimizeLandingContent = async (data) => {
+  const optimizeLandingContent = async (data, maxDim = 1600, qual = 0.85) => {
     const clone = structuredClone(data);
 
-    if (clone.navLogo) clone.navLogo = await compressBase64(clone.navLogo, 3840, 0.95, true);
-    if (clone.heroLogo) clone.heroLogo = await compressBase64(clone.heroLogo, 3840, 0.95, true);
-    if (clone.footerLogo) clone.footerLogo = await compressBase64(clone.footerLogo, 3840, 0.95, true);
-    if (clone.heroBgImage) clone.heroBgImage = await compressBase64(clone.heroBgImage, 3840, 0.95, false);
+    if (clone.navLogo) clone.navLogo = await compressBase64(clone.navLogo, maxDim, qual, true);
+    if (clone.heroLogo) clone.heroLogo = await compressBase64(clone.heroLogo, maxDim, qual, true);
+    if (clone.footerLogo) clone.footerLogo = await compressBase64(clone.footerLogo, maxDim, qual, true);
+    if (clone.heroBgImage && clone.heroBgImage.startsWith('data:image')) {
+      clone.heroBgImage = await compressBase64(clone.heroBgImage, maxDim, qual, false);
+    }
 
-    // Keep full resolution for Trainers / Workshops photos
     if (Array.isArray(clone.workshops)) {
       clone.workshops = await Promise.all(
         clone.workshops.map(async (t) => ({
           ...t,
-          img: await compressBase64(t.img, 3840, 0.95, false)
+          img: await compressBase64(t.img, maxDim, qual, false)
         }))
       );
     }
 
-    // Keep full resolution for Leadership Team photos
     if (Array.isArray(clone.teamMembers)) {
       clone.teamMembers = await Promise.all(
         clone.teamMembers.map(async (tm) => ({
           ...tm,
-          img: await compressBase64(tm.img, 3840, 0.95, false)
+          img: await compressBase64(tm.img, maxDim, qual, false)
         }))
       );
     }
 
-    // Keep full resolution for Hall of Fame Champions photos
     if (Array.isArray(clone.hallOfFameChampions)) {
       clone.hallOfFameChampions = await Promise.all(
         clone.hallOfFameChampions.map(async (c) => {
@@ -1377,7 +1375,7 @@ export default function Landing() {
             updatedMembers = await Promise.all(
               c.members.map(async (m) => ({
                 ...m,
-                img: m.img ? await compressBase64(m.img, 3840, 0.95, false) : ''
+                img: m.img ? await compressBase64(m.img, maxDim, qual, false) : ''
               }))
             );
           }
@@ -1388,29 +1386,26 @@ export default function Landing() {
       );
     }
 
-    // Keep full resolution for Gallery images
     if (Array.isArray(clone.galleryImages)) {
       clone.galleryImages = await Promise.all(
-        clone.galleryImages.map((img) => compressBase64(img, 3840, 0.95, false))
+        clone.galleryImages.map((img) => compressBase64(img, maxDim, qual, false))
       );
     }
 
-    // Keep full resolution for Partner / Collaborator logos
     if (Array.isArray(clone.collaborators)) {
       clone.collaborators = await Promise.all(
         clone.collaborators.map(async (col) => ({
           ...col,
-          logo: await compressBase64(col.logo, 3840, 0.95, true)
+          logo: await compressBase64(col.logo, 800, qual, true)
         }))
       );
     }
 
-    // Keep full resolution for About Slides images
     if (Array.isArray(clone.aboutSlides)) {
       clone.aboutSlides = await Promise.all(
         clone.aboutSlides.map(async (slide) => ({
           ...slide,
-          img: await compressBase64(slide.img, 3840, 0.95, false)
+          img: await compressBase64(slide.img, maxDim, qual, false)
         }))
       );
     }
@@ -1439,50 +1434,44 @@ export default function Landing() {
 
     setSaving(true);
     try {
+      const timestamp = Date.now();
       const payloadToSave = {
-        ...contentRef.current,
-        updatedAt: Date.now()
+        ...content,
+        updatedAt: timestamp
       };
 
-      // 1. Optimize & compress all Base64 photos to keep total payload under 200KB
-      const optimized = await optimizeLandingContent(payloadToSave);
-      const sanitized = sanitizeForFirestore(optimized);
-      sanitized.updatedAt = Date.now();
+      // 1. Optimize & compress all Base64 photos
+      let sanitized = sanitizeForFirestore(await optimizeLandingContent(payloadToSave, 1600, 0.85));
+      sanitized.updatedAt = timestamp;
+
+      // 2. Ensure payload size is strictly under Firestore's 1MB limit
+      let jsonStr = JSON.stringify(sanitized);
+      if (jsonStr.length > 850000) {
+        console.warn(`Payload size (${jsonStr.length} bytes) near 1MB Firestore limit. Performing second-pass compression...`);
+        sanitized = sanitizeForFirestore(await optimizeLandingContent(payloadToSave, 1200, 0.75));
+        sanitized.updatedAt = timestamp;
+        jsonStr = JSON.stringify(sanitized);
+      }
 
       setContent(sanitized);
 
-      // 2. Save to LocalStorage immediately
+      // 3. Save to LocalStorage immediately
       try {
-        localStorage.setItem('scicomm_landing_content', JSON.stringify(sanitized));
+        localStorage.setItem('scicomm_landing_content', jsonStr);
       } catch (e) {
         console.warn('LocalStorage save warning:', e);
       }
 
-      // 3. Save directly to Firestore for global access across all devices
+      // 4. Save directly to Firestore for global access across all devices
       const ref = doc(firestore, getCollectionName('landing_content'), 'main');
       await setDoc(ref, sanitized);
 
       setSavedContent(null);
       setEditMode(false);
-      alert('✅ All changes saved & published globally to all users on every device!');
+      alert('✅ All changes & new slides saved & published globally to all users on every device!');
     } catch (err) {
-      console.warn('Firestore global save error:', err);
-      // Fallback: save to LocalStorage so changes are never lost locally, and attempt background re-sync
-      const fallbackPayload = sanitizeForFirestore({
-        ...contentRef.current,
-        updatedAt: Date.now()
-      });
-      try {
-        localStorage.setItem('scicomm_landing_content', JSON.stringify(fallbackPayload));
-      } catch (e) {
-        console.warn('LocalStorage fallback write error:', e);
-      }
-      const ref = doc(firestore, getCollectionName('landing_content'), 'main');
-      setDoc(ref, fallbackPayload).catch(e => console.warn('Background Firestore sync retry error:', e));
-
-      setSavedContent(null);
-      setEditMode(false);
-      alert('✅ Changes saved locally & queued for global sync!');
+      console.error('Firestore global save error:', err);
+      alert('❌ Failed to publish to cloud: ' + (err.message || 'Unknown error'));
     } finally {
       setSaving(false);
     }
