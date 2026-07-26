@@ -1,0 +1,1195 @@
+import { useState, useEffect, useMemo } from 'react';
+import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
+import { db, firestore, getCollectionName, useLiveCollection, getFirebaseAuth } from './db';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { MapPin, BookOpen, Users, Settings, ClipboardCheck, LayoutDashboard, LogOut, Moon, Sun, Menu, X, ChevronDown, GraduationCap, Bell, AlertTriangle, Calendar, FileText, Globe } from 'lucide-react';
+import { FT_FACULTY, FT_ROLE_LABELS, FT_ROLE_COLORS, isFacultyRole, isJudgeRole, isCompetitorRole, FT_DEFAULT_REQUIRED_HOURS } from './ftConstants';
+import { getUserConflicts } from './ftConflictUtils';
+import bcrypt from 'bcryptjs';
+import './scicommspark.css';
+
+export default function FTLayout() {
+  const { user, setUser, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [dark, setDark] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [meDoc, setMeDoc] = useState(null);
+  const userRole = user?.role || 'competitor';
+
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    username: '',
+    email: '',
+    universityId: '',
+    title: '',
+    role: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [profileError, setProfileError] = useState('');
+  const [profileSuccess, setProfileSuccess] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  // Live collections
+  const registrations = useLiveCollection('ft_registrations');
+  const settings = useLiveCollection('ft_settings');
+  const places = useLiveCollection('ft_places');
+  const resetRequests = useLiveCollection('ft_reset_requests');
+  const notifications = useLiveCollection('ft_notifications');
+  const teams = useLiveCollection('ft_teams') || [];
+
+  // Determine if competitor is in a team & calculate effective code
+  const myTeam = useMemo(() => {
+    if (!user || !teams) return null;
+    return teams.find(t => t.members?.some(m => m.userId === user.id || m.username === user.username));
+  }, [teams, user]);
+
+  const effectiveCode = useMemo(() => {
+    if (myTeam?.code) return myTeam.code; // Shared Team Code if in team!
+    if (meDoc?.competitorCode) return meDoc.competitorCode;
+    if (meDoc?.competitorIdNumber) return meDoc.competitorIdNumber;
+    if (meDoc?.employeeId) return meDoc.employeeId;
+    if (meDoc?.universityId) return meDoc.universityId;
+    if (user?.id) return `SCS-2026-${user.id.substring(0, 5).toUpperCase()}`;
+    return 'SCS-2026-0001';
+  }, [myTeam, meDoc, user]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showReleaseNotesModal, setShowReleaseNotesModal] = useState(false);
+  const [releaseNotesTab, setReleaseNotesTab] = useState('competitor');
+  const [dateConflicts, setDateConflicts] = useState([]);
+  const [conflictBannerDismissed, setConflictBannerDismissed] = useState(false);
+
+  const [phoneInput, setPhoneInput] = useState('');
+  const [savingPhone, setSavingPhone] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
+  const needsPhone = meDoc && (meDoc.role === 'competitor' || meDoc.role === 'user' || !meDoc.role) && !meDoc.phone;
+
+  // Load full user doc
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      const s = await db.scientists.get(user.id);
+      if (s) setMeDoc(s);
+    })();
+  }, [user?.id]);
+
+  // Auto-link pending CSV registrations on load
+  useEffect(() => {
+    if (!user?.id || !meDoc) return;
+
+    (async () => {
+      try {
+        const isCompetitor = meDoc.role === 'competitor' || meDoc.role === 'user' || !meDoc.role;
+        if (!isCompetitor) return;
+
+        const regCol = getCollectionName('ft_registrations');
+        let linkedCount = 0;
+
+        if (meDoc.universityId) {
+          const q1 = query(
+            collection(firestore, regCol),
+            where('competitorUniversityId', '==', meDoc.universityId)
+          );
+          const snap1 = await getDocs(q1);
+
+          for (const docSnap of snap1.docs) {
+            const reg = docSnap.data();
+            if (!reg.competitorId) {
+              await db.ft_registrations.update(docSnap.id, {
+                competitorId: user.id,
+                competitorName: meDoc.name || reg.competitorName || '',
+                competitorEmail: meDoc.email || reg.competitorEmail || '',
+                competitorDepartment: meDoc.department || reg.competitorDepartment || ''
+              });
+              linkedCount++;
+            }
+          }
+        }
+
+        if (meDoc.email) {
+          const q2 = query(
+            collection(firestore, regCol),
+            where('competitorEmail', '==', meDoc.email)
+          );
+          const snap2 = await getDocs(q2);
+          for (const docSnap of snap2.docs) {
+            const reg = docSnap.data();
+            if (!reg.competitorId) {
+              await db.ft_registrations.update(docSnap.id, {
+                competitorId: user.id,
+                competitorName: meDoc.name || reg.competitorName || '',
+                competitorEmail: meDoc.email || reg.competitorEmail || '',
+                competitorDepartment: meDoc.department || reg.competitorDepartment || ''
+              });
+              linkedCount++;
+            }
+          }
+        }
+
+        if (linkedCount > 0) {
+          console.log(`Auto-linked ${linkedCount} pre-assigned registrations for competitor ${meDoc.name}`);
+        }
+      } catch (err) {
+        console.error("Failed to auto-link registrations:", err);
+      }
+    })();
+  }, [user?.id, meDoc]);
+
+  // Seed system release notes notifications once on load
+  useEffect(() => {
+    (async () => {
+      try {
+        const notifCol = getCollectionName('ft_notifications');
+        const q = query(
+          collection(firestore, notifCol),
+          where('type', '==', 'system_release_notes')
+        );
+        const snap = await getDocs(q);
+        
+        if (snap.empty) {
+          // Create competitor update notification
+          await db.ft_notifications.add({
+            title: 'System Update: Version 2.0 is Live! 🚀',
+            message: 'We have updated the portal with multiple registrations, payment receipt uploads, and real-time notifications. Click to see what is new!',
+            type: 'system_release_notes',
+            status: 'unread',
+            targetRoles: ['competitor', 'user'],
+            targetUserId: null,
+            createdAt: new Date().toISOString(),
+            link: '#open-release-notes'
+          });
+
+          // Create judge update notification
+          await db.ft_notifications.add({
+            title: 'System Update: Version 2.0 is Live! 🚀',
+            message: 'New mobile-friendly trainee cards, quick actions, and evaluation notification alerts are now live. Click to view!',
+            type: 'system_release_notes',
+            status: 'unread',
+            targetRoles: ['judge'],
+            targetUserId: null,
+            createdAt: new Date().toISOString(),
+            link: '#open-release-notes'
+          });
+
+          // Create admin update notification
+          await db.ft_notifications.add({
+            title: 'System Update: Version 2.0 is Live! 🚀',
+            message: 'Customize wave deadlines, view real-time seat capacity conflicts, and export full receipt CSVs. Click to view release notes!',
+            type: 'system_release_notes',
+            status: 'unread',
+            targetRoles: ['admin', 'master', 'faculty'],
+            targetUserId: null,
+            createdAt: new Date().toISOString(),
+            link: '#open-release-notes'
+          });
+          console.log("Seeded system release notes notifications successfully!");
+        }
+      } catch (err) {
+        console.error("Failed to seed system release notes notifications:", err);
+      }
+    })();
+  }, []);
+
+  // Auto-switch release notes tab based on role when modal opens
+  useEffect(() => {
+    if (showReleaseNotesModal) {
+      if (userRole === 'admin' || userRole === 'master' || userRole === 'faculty') {
+        setReleaseNotesTab('admin');
+      } else if (userRole === 'judge') {
+        setReleaseNotesTab('judge');
+      } else {
+        setReleaseNotesTab('competitor');
+      }
+    }
+  }, [showReleaseNotesModal, userRole]);
+
+  // Auto-approve pending registrations past their deadline
+  useEffect(() => {
+    if (places && registrations) {
+      const now = new Date();
+      places.forEach(async (place) => {
+        // Find pending registrations for this place
+        const pendingRegsForPlace = registrations.filter(r => r.placeId === place.id && r.status === 'pending');
+        for (const reg of pendingRegsForPlace) {
+          let isPassed = false;
+          if (place.registrationDeadline) {
+            const deadline = new Date(place.registrationDeadline);
+            if (deadline < now) isPassed = true;
+          }
+          if (!isPassed && reg.waveId) {
+            const matchedWave = place.hasPrograms
+              ? place.programs?.find(p => p.id === reg.programId)?.waves?.find(w => w.id === reg.waveId)
+              : place.waves?.find(w => w.id === reg.waveId);
+            if (matchedWave?.deadline) {
+              const waveDeadline = new Date(matchedWave.deadline);
+              if (waveDeadline < now) isPassed = true;
+            }
+          }
+
+          if (isPassed) {
+            try {
+              await db.ft_registrations.update(reg.id, {
+                status: 'active',
+                approvedAt: now.toISOString(),
+                autoApproved: true
+              });
+              await db.ft_notifications.add({
+                title: 'Registration Auto-Approved ⏱️',
+                message: `Your registration for ${reg.placeName} was auto-approved as the deadline has passed.`,
+                type: 'registration_approved',
+                status: 'unread',
+                targetRoles: ['competitor', 'user'],
+                targetUserId: reg.competitorId,
+                createdAt: new Date().toISOString(),
+                link: '/my-competition'
+              });
+              console.log(`Auto-approved registration ${reg.id} for competitor ${reg.competitorName} (deadline passed)`);
+            } catch (e) {
+              console.error("Failed to auto-approve registration on deadline:", e);
+            }
+          }
+        }
+      });
+    }
+  }, [places, registrations]);
+
+  // Scan for date conflicts and seed warning notifications for competitors
+  useEffect(() => {
+    if (!user?.id || !registrations || !places || !meDoc) return;
+    const isCompetitor = isCompetitorRole(meDoc.role) || meDoc.role === 'user' || !meDoc.role;
+    if (!isCompetitor) { setDateConflicts([]); return; }
+
+    const conflicts = getUserConflicts(user.id, registrations, places);
+    setDateConflicts(conflicts);
+
+    if (conflicts.length > 0) {
+      (async () => {
+        try {
+          const notifCol = getCollectionName('ft_notifications');
+          const q = query(
+            collection(firestore, notifCol),
+            where('type', '==', 'date_conflict'),
+            where('targetUserId', '==', user.id)
+          );
+          const snap = await getDocs(q);
+          if (snap.empty) {
+            await db.ft_notifications.add({
+              title: '⚠️ Schedule Conflict Detected',
+              message: `You have ${conflicts.length} overlapping wave registration(s). Please review your competition schedule to avoid time conflicts.`,
+              type: 'date_conflict',
+              status: 'unread',
+              targetRoles: ['competitor', 'user'],
+              targetUserId: user.id,
+              createdAt: new Date().toISOString(),
+              link: '/my-competition'
+            });
+          }
+        } catch (err) {
+          console.error('Failed to seed date conflict notification:', err);
+        }
+      })();
+    }
+  }, [user?.id, registrations, places, meDoc]);
+
+  // Auto-sync registration records when user profile changes
+  useEffect(() => {
+    if (!user?.id || !meDoc || !registrations) return;
+    const isCompetitor = isCompetitorRole(meDoc.role) || meDoc.role === 'user' || !meDoc.role;
+    if (!isCompetitor) return;
+
+    (async () => {
+      try {
+        const myRegs = registrations.filter(r => r.competitorId === user.id);
+        for (const reg of myRegs) {
+          const needsUpdate =
+            (meDoc.name && reg.competitorName !== meDoc.name) ||
+            (meDoc.universityId && reg.competitorUniversityId !== meDoc.universityId) ||
+            (meDoc.email && reg.competitorEmail !== meDoc.email) ||
+            (meDoc.department && reg.competitorDepartment !== meDoc.department);
+          if (needsUpdate) {
+            await db.ft_registrations.update(reg.id, {
+              competitorName: meDoc.name || reg.competitorName || '',
+              competitorUniversityId: meDoc.universityId || reg.competitorUniversityId || '',
+              competitorEmail: meDoc.email || reg.competitorEmail || '',
+              competitorDepartment: meDoc.department || reg.competitorDepartment || ''
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to sync registration records with profile:', err);
+      }
+    })();
+  }, [user?.id, meDoc?.name, meDoc?.universityId, meDoc?.email, meDoc?.department, registrations]);
+
+  useEffect(() => {
+    if (meDoc) {
+      setProfileForm({
+        name: meDoc.name || '',
+        username: meDoc.username || '',
+        email: meDoc.email || '',
+        universityId: meDoc.universityId || '',
+        title: meDoc.title || '',
+        role: meDoc.role || '',
+        password: '',
+        confirmPassword: ''
+      });
+    }
+  }, [meDoc, showProfileModal]);
+
+  const handleProfileSubmit = async (e) => {
+    e.preventDefault();
+    setProfileError('');
+    setProfileSuccess('');
+
+    if (!profileForm.email || !profileForm.email.includes('@')) {
+      setProfileError('Please enter a valid email address.');
+      return;
+    }
+
+    if (profileForm.password.trim()) {
+      if (profileForm.password !== profileForm.confirmPassword) {
+        setProfileError('Passwords do not match');
+        return;
+      }
+      if (profileForm.password.length < 6) {
+        setProfileError('Password must be at least 6 characters');
+        return;
+      }
+    }
+
+    setSavingProfile(true);
+    try {
+      const updates = {
+        name: profileForm.name.trim(),
+        username: profileForm.username.trim(),
+        email: profileForm.email.trim(),
+        universityId: isCompetitorRole(profileForm.role) ? profileForm.universityId.trim() : '',
+        title: (profileForm.role !== 'competitor' && profileForm.role !== 'user') ? profileForm.title.trim() : '',
+        role: profileForm.role,
+        updatedAt: new Date().toISOString()
+      };
+
+      if (profileForm.password.trim()) {
+        const salt = await bcrypt.genSalt(4);
+        updates.passwordHash = await bcrypt.hash(profileForm.password, salt);
+      }
+
+      await db.scientists.update(user.id, updates);
+      
+      // Update local state meDoc & auth user details
+      setMeDoc(prev => ({ ...prev, ...updates }));
+      setUser(prev => ({
+        ...prev,
+        username: updates.username,
+        name: updates.name,
+        role: updates.role
+      }));
+
+      setProfileSuccess('Profile updated successfully!');
+      setTimeout(() => {
+        setShowProfileModal(false);
+        setProfileSuccess('');
+      }, 1500);
+    } catch (err) {
+      setProfileError('Failed to update profile: ' + err.message);
+    }
+    setSavingProfile(false);
+  };
+
+  const handleLinkGoogle = async () => {
+    setProfileError('');
+    setProfileSuccess('');
+    try {
+      const auth = getFirebaseAuth();
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      
+      const result = await signInWithPopup(auth, provider);
+      const googleUser = result.user;
+      if (!googleUser || !googleUser.email) {
+        throw new Error('Could not retrieve Google account details.');
+      }
+
+      const googleEmail = googleUser.email;
+
+      const existingLink = await db.scientists.where('googleEmail').equals(googleEmail).first();
+      if (existingLink && existingLink.id !== user.id) {
+        setProfileError(`This Google account (${googleEmail}) is already linked to another user.`);
+        return;
+      }
+
+      const existingEmail = await db.scientists.where('email').equals(googleEmail).first();
+      if (existingEmail && existingEmail.id !== user.id) {
+        setProfileError(`This Google account email (${googleEmail}) is already registered as another user's primary email.`);
+        return;
+      }
+
+      await db.scientists.update(user.id, { googleEmail });
+      setMeDoc(prev => ({ ...prev, googleEmail }));
+      setProfileSuccess(`Successfully linked Google account: ${googleEmail}`);
+      setTimeout(() => {
+        setProfileSuccess('');
+      }, 3000);
+    } catch (err) {
+      setProfileError('Failed to link Google account: ' + err.message);
+    }
+  };
+
+  // Enforce Light mode only
+  useEffect(() => {
+    document.documentElement.classList.remove('ft-dark');
+    localStorage.setItem('ft-theme', 'light');
+  }, []);
+
+  // Compute credit hours for current competitor
+  const creditData = useMemo(() => {
+    if (!registrations || !user) return { registered: 0, completed: 0, required: FT_DEFAULT_REQUIRED_HOURS };
+    
+    const settingsDoc = settings?.find(s => s.id === 'global');
+    const requiredHours = settingsDoc?.requiredCreditHours || FT_DEFAULT_REQUIRED_HOURS;
+
+    const myRegs = registrations.filter(r => r.competitorId === user.id);
+    let registered = 0;
+    let completed = 0;
+
+    myRegs.forEach(reg => {
+      const place = places?.find(p => p.id === reg.placeId);
+      const hours = place?.creditHours || reg.creditHours || 0;
+      registered += hours;
+      if (reg.status === 'completed') {
+        completed += hours;
+      }
+    });
+
+    return { registered, completed, required: requiredHours };
+  }, [registrations, settings, places, user]);
+
+  const progressPct = creditData.required > 0 ? Math.min(100, Math.round((creditData.completed / creditData.required) * 100)) : 0;
+
+  const myNotifications = useMemo(() => {
+    if (!notifications || !user) return [];
+    return notifications
+      .filter(n => {
+        if (userRole === 'admin' || userRole === 'master' || userRole === 'faculty') {
+          return n.targetRoles?.includes('admin') || n.targetRoles?.includes('master') || n.targetRoles?.includes('faculty') || n.targetUserId === user.id;
+        } else {
+          return n.targetUserId === user.id;
+        }
+      })
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [notifications, user, userRole]);
+
+  const unreadCount = useMemo(() => {
+    return myNotifications.filter(n => n.status === 'unread').length;
+  }, [myNotifications]);
+
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const seconds = Math.floor((new Date() - date) / 1000);
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return date.toLocaleDateString();
+  };
+
+  const handleMarkAllRead = async () => {
+    const unreads = myNotifications.filter(n => n.status === 'unread');
+    for (const notif of unreads) {
+      try {
+        await db.ft_notifications.update(notif.id, { status: 'read' });
+      } catch (e) {
+        console.error('Failed to mark read:', e);
+      }
+    }
+  };
+
+  const handleNotificationClick = async (notif) => {
+    setShowNotifications(false);
+    try {
+      await db.ft_notifications.update(notif.id, { status: 'read' });
+    } catch (e) {
+      console.error('Failed to mark read:', e);
+    }
+    if (notif.link === '#open-release-notes') {
+      setShowReleaseNotesModal(true);
+    } else if (notif.link) {
+      navigate(notif.link);
+    }
+  };
+
+  const isActive = (path) => {
+    if (path === '/dashboard' || path === '/') {
+      return location.pathname === '/dashboard' || location.pathname === '/dashboard/';
+    }
+    return location.pathname.includes(path.replace('/dashboard/', ''));
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
+  const navItems = useMemo(() => {
+    const isCompetitor = isCompetitorRole(userRole) || userRole === 'user';
+    const isTeamCompetitor = isCompetitor && (meDoc?.participationMode !== 'individual' || Boolean(myTeam));
+    const leaderboardLabel = isTeamCompetitor ? 'Our Team & Leaderboard' : 'Leaderboard & Progress';
+
+    const items = [
+      { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Timeline & Tracks', roles: 'all' },
+      { path: '/dashboard/my-competition', icon: <BookOpen size={20} />, label: 'My Submissions', roles: ['competitor', 'user'] },
+      { path: '/dashboard/our-team', icon: <Users size={20} />, label: leaderboardLabel, roles: 'all' },
+      { path: '/dashboard/judge', icon: <ClipboardCheck size={20} />, label: 'Judge & Trainer Portal', roles: ['judge', 'trainer_judge', 'academic_judge', 'scicomm_judge'] },
+      { section: 'Management', roles: ['master', 'admin'] },
+      { path: '/dashboard/competitors', icon: <Users size={20} />, label: 'Users & Roles', roles: ['master', 'admin'] },
+      { path: '/dashboard/admin/submission-assignments', icon: <FileText size={20} />, label: 'Submission Assignments', roles: ['master', 'admin'] },
+      { path: '/dashboard/timeline-manage', icon: <Calendar size={20} />, label: 'Timeline Management', roles: ['master', 'admin'] },
+      { path: '/dashboard/settings', icon: <Settings size={20} />, label: 'Settings', roles: ['master', 'admin'] },
+      { path: '/landing', icon: <Globe size={20} />, label: 'Public Landing Page', roles: ['master', 'admin'] },
+    ];
+    return items.filter(item => {
+      if (item.roles === 'all') return true;
+      if (userRole === 'master' || userRole === 'admin') return true;
+      return item.roles?.includes(userRole);
+    });
+  }, [userRole, meDoc, myTeam]);
+
+  const isAdmin = userRole === 'master' || userRole === 'admin';
+  const isStaff = userRole === 'master' || userRole === 'admin' || userRole === 'judge' || userRole === 'faculty';
+  const competitorOverviewItems = useMemo(() => navItems.filter(item => item.path === '/dashboard' || item.path === '/dashboard/my-competition' || item.path === '/dashboard/our-team' || item.path === '/' || item.path === '/my-competition' || item.path === '/our-team'), [navItems]);
+  const judgeOverviewItems = useMemo(() => navItems.filter(item => item.path === '/dashboard/judge' || item.path === '/judge'), [navItems]);
+  const otherItems = useMemo(() => navItems.filter(item => !['/dashboard', '/dashboard/my-competition', '/dashboard/our-team', '/dashboard/judge', '/', '/my-competition', '/our-team', '/judge'].includes(item.path)), [navItems]);
+
+  const renderNavLink = (item) => {
+    if (item.section) {
+      return <div key={item.section} className="ft-sidebar-section-label">{item.section}</div>;
+    }
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        className={`ft-sidebar-link ${isActive(item.path) ? 'active' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {item.icon}
+          <span>{item.label}</span>
+        </div>
+
+      </Link>
+    );
+  };
+
+  return (
+    <div className="ft-app">
+      {/* ── Top Navbar ─────────────────────────────────────── */}
+      <nav className="ft-navbar">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button className="ft-hamburger" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
+          <Link to="/dashboard" className="ft-navbar-brand" style={{ textDecoration: 'none' }}>
+            <img src="./spark_logo.png" alt="SciComm Spark Logo" style={{ width: '50px', height: '50px', objectFit: 'contain' }} />
+            <div>
+              <div className="ft-navbar-brand-text">SciComm Spark Competition</div>
+              <div className="ft-navbar-brand-sub">{FT_FACULTY}</div>
+            </div>
+          </Link>
+        </div>
+
+
+        <div className="ft-navbar-actions">
+          {/* Notification Bell */}
+          <div style={{ position: 'relative' }}>
+            <button 
+              className="ft-theme-toggle" 
+              onClick={() => setShowNotifications(!showNotifications)} 
+              title="Notifications"
+              style={{ position: 'relative' }}
+            >
+              <Bell size={16} />
+              {unreadCount > 0 && (
+                <span className="ft-bell-badge">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+            {showNotifications && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 1050 }} onClick={() => setShowNotifications(false)} />
+                <div className="ft-notifications-dropdown">
+                  <div className="ft-notifications-header">
+                    <h3>Notifications</h3>
+                    {unreadCount > 0 && (
+                      <button 
+                        onClick={handleMarkAllRead}
+                        style={{ background: 'none', border: 'none', color: 'var(--ft-primary)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  <div className="ft-notifications-list">
+                    {myNotifications.length === 0 ? (
+                      <div className="ft-notifications-empty">No notifications yet.</div>
+                    ) : (
+                      myNotifications.map(notif => (
+                        <div 
+                          key={notif.id} 
+                          className={`ft-notifications-item ${notif.status}`}
+                          onClick={() => handleNotificationClick(notif)}
+                        >
+                          <div className="ft-notifications-item-icon">
+                            {notif.type.includes('approved') ? '🎉' : notif.type.includes('rejected') ? '❌' : '🔔'}
+                          </div>
+                          <div className="ft-notifications-item-content">
+                            <div className="ft-notifications-item-title">{notif.title}</div>
+                            <div className="ft-notifications-item-message">{notif.message}</div>
+                            <div className="ft-notifications-item-time">{formatTimeAgo(notif.createdAt)}</div>
+                          </div>
+                          {notif.status === 'unread' && <div className="ft-notifications-unread-dot" />}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+
+
+          <div className="ft-user-menu">
+            <button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'transparent', border: 'none', cursor: 'pointer', padding: '0.25rem' }}
+            >
+              {meDoc?.avatar ? (
+                <img src={meDoc.avatar} alt="" className="ft-navbar-avatar" />
+              ) : (
+                <div className="ft-navbar-avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ft-primary-bg)', color: 'var(--ft-primary)', fontWeight: 700, fontSize: '0.85rem' }}>
+                  {(meDoc?.name || user?.name || '?')[0]?.toUpperCase()}
+                </div>
+              )}
+              <ChevronDown size={14} style={{ color: 'var(--ft-text-muted)', transition: 'transform 0.2s', transform: userMenuOpen ? 'rotate(180deg)' : '' }} />
+            </button>
+
+            {userMenuOpen && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 1050 }} onClick={() => setUserMenuOpen(false)} />
+                <div className="ft-user-dropdown">
+                  <div style={{ padding: '0.75rem 0.85rem', borderBottom: '1px solid var(--ft-border-light)' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>{meDoc?.name || user?.name}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-muted)' }}>{meDoc?.email || ''}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+                      <span className="ft-badge ft-badge-role" style={{ background: `${FT_ROLE_COLORS[userRole]}15`, color: FT_ROLE_COLORS[userRole] }}>
+                        {FT_ROLE_LABELS[userRole] || userRole}
+                      </span>
+                      
+                      {/* Code Badge: Render ONLY for competitors */}
+                      {(isCompetitorRole(userRole) || userRole === 'user') && (
+                        <span style={{
+                          fontSize: '0.75rem', fontWeight: 800, padding: '0.2rem 0.55rem', borderRadius: '6px',
+                          background: myTeam ? '#fff1f2' : '#eff6ff',
+                          color: myTeam ? '#be123c' : '#2563eb',
+                          border: `1px solid ${myTeam ? '#fecdd3' : '#bfdbfe'}`,
+                          display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
+                        }}>
+                          🏷️ ID: {effectiveCode}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {meDoc?.department && (
+                    <div style={{ padding: '0.5rem 0.85rem', fontSize: '0.8rem', color: 'var(--ft-text-muted)' }}>
+                      <GraduationCap size={14} style={{ marginRight: '0.4rem', verticalAlign: 'middle' }} />
+                      {meDoc.department}
+                    </div>
+                  )}
+                  <div className="ft-user-dropdown-divider" />
+                  <button className="ft-user-dropdown-item" onClick={() => { navigate('/'); setUserMenuOpen(false); }}>
+                    🌐 Public Landing Page
+                  </button>
+                  <button className="ft-user-dropdown-item" onClick={() => { setShowProfileModal(true); setUserMenuOpen(false); }}>
+                    ⚙️ Edit Profile
+                  </button>
+                  <div className="ft-user-dropdown-divider" />
+                  <button className="ft-user-dropdown-item danger" onClick={handleLogout}>
+                    <LogOut size={16} /> Sign Out
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </nav>
+
+      {/* ── Sidebar ────────────────────────────────────────── */}
+      {sidebarOpen && <div className="ft-sidebar-overlay active" onClick={() => setSidebarOpen(false)} />}
+      <aside className={`ft-sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <nav className="ft-sidebar-nav">
+          {isAdmin ? (
+            <>
+              {/* Competitor Overview Box Wrapper */}
+              <div style={{
+                background: 'var(--ft-bg-input)',
+                border: '1.5px solid var(--ft-border)',
+                borderRadius: 'var(--ft-radius)',
+                padding: '0.4rem',
+                marginBottom: '0.75rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.2rem'
+              }}>
+                <div style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  color: 'var(--ft-primary)',
+                  padding: '0.4rem 0.5rem 0.5rem',
+                  borderBottom: '1px solid var(--ft-border-light)',
+                  marginBottom: '0.25rem',
+                  fontFamily: "'Outfit', sans-serif"
+                }}>
+                  Competitor Overview
+                </div>
+                {competitorOverviewItems.map(renderNavLink)}
+              </div>
+
+              {/* Judge Overview Box Wrapper */}
+              {judgeOverviewItems.length > 0 && (
+                <div style={{
+                  background: 'var(--ft-bg-input)',
+                  border: '1.5px solid var(--ft-border)',
+                  borderRadius: 'var(--ft-radius)',
+                  padding: '0.4rem',
+                  marginBottom: '0.75rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.2rem'
+                }}>
+                  <div style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    color: 'var(--ft-primary)',
+                    padding: '0.4rem 0.5rem 0.5rem',
+                    borderBottom: '1px solid var(--ft-border-light)',
+                    marginBottom: '0.25rem',
+                    fontFamily: "'Outfit', sans-serif"
+                  }}>
+                    Judge Overview
+                  </div>
+                  {judgeOverviewItems.map(renderNavLink)}
+                </div>
+              )}
+
+              {/* Other Items */}
+              {otherItems.map(renderNavLink)}
+            </>
+          ) : (
+            // Competitor: render normally
+            navItems.map(renderNavLink)
+          )}
+        </nav>
+      </aside>
+
+      {/* ── Main Content ───────────────────────────────────── */}
+      <main className="ft-main">
+        <div style={{ flex: 1 }}>
+           {/* Date Conflict Warning Banner */}
+           {dateConflicts.length > 0 && !conflictBannerDismissed && (isCompetitorRole(userRole) || userRole === 'user') && (
+             <div style={{
+               background: 'linear-gradient(135deg, rgba(239,68,68,0.06), rgba(251,146,60,0.06))',
+               border: '1.5px solid rgba(239,68,68,0.2)',
+               borderRadius: 'var(--ft-radius)',
+               padding: '1rem 1.25rem',
+               margin: '0 0 1.25rem',
+               display: 'flex',
+               alignItems: 'flex-start',
+               gap: '0.75rem'
+             }}>
+               <AlertTriangle size={20} style={{ color: 'var(--ft-danger)', flexShrink: 0, marginTop: '0.1rem' }} />
+               <div style={{ flex: 1 }}>
+                 <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--ft-danger)', marginBottom: '0.35rem', fontFamily: "'Outfit', sans-serif" }}>
+                   ⚠️ Schedule Conflict Detected
+                 </div>
+                 <div style={{ fontSize: '0.82rem', color: 'var(--ft-text-secondary)', lineHeight: 1.6 }}>
+                   You have <strong>{dateConflicts.length}</strong> overlapping wave registration(s):
+                   {dateConflicts.map((c, i) => (
+                     <div key={i} style={{ marginTop: '0.35rem', padding: '0.4rem 0.6rem', background: 'rgba(0,0,0,0.03)', borderRadius: '6px', fontSize: '0.78rem' }}>
+                       <strong>{c.place1?.name}</strong> ({c.wave1?.name})
+                       <span style={{ margin: '0 0.35rem', color: 'var(--ft-danger)' }}>⟷</span>
+                       <strong>{c.place2?.name}</strong> ({c.wave2?.name})
+                     </div>
+                   ))}
+                 </div>
+                 <div style={{ fontSize: '0.78rem', color: 'var(--ft-text-muted)', marginTop: '0.5rem' }}>
+                   Please visit your registrations and consider changing to a non-conflicting wave.
+                 </div>
+               </div>
+               <button
+                 onClick={() => setConflictBannerDismissed(true)}
+                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ft-text-muted)', padding: '0.25rem', flexShrink: 0 }}
+                 title="Dismiss"
+               >
+                 <X size={16} />
+               </button>
+             </div>
+           )}
+           <Outlet context={{ meDoc, creditData, userRole, places, registrations, settings, resetRequests }} />
+        </div>
+
+        {/* Footer / Downbar */}
+        <footer className="ft-footer">
+          <div className="ft-footer-content">
+            <div className="ft-footer-left" style={{ color: 'var(--ft-text-muted)', fontSize: '0.78rem' }}>
+              <span>Designed & Programmed by <strong style={{ color: 'var(--ft-text)', fontWeight: 600 }}>Abdullah Amr Maged</strong></span>
+              <span style={{ margin: '0 0.5rem', opacity: 0.4 }}>|</span>
+              <span>Teaching Assistant, , AIU</span>
+            </div>
+            <div className="ft-footer-right" style={{ color: 'var(--ft-text-muted)', fontSize: '0.78rem', fontWeight: 500 }}>
+              AIU SciComm Spark Competition System
+            </div>
+          </div>
+        </footer>
+      </main>
+
+      {/* ── Mobile Bottom Nav ──────────────────────────────── */}
+      <nav className="ft-mobile-nav">
+        {navItems
+          .filter(item => item.path)
+          .map((item) => {
+            const active = isActive(item.path);
+            const shortLabel = item.label === 'Timeline & Tracks' ? 'Timeline'
+              : item.label.includes('Leaderboard') ? 'Team'
+              : item.label === 'Judge & Trainer Portal' ? 'Judge Portal'
+              : item.label === 'Users & Roles' ? 'Users'
+              : item.label === 'Submission Assignments' ? 'Assignments'
+              : item.label === 'Timeline Management' ? 'Schedule'
+              : item.label;
+
+            return (
+              <Link 
+                key={item.path} 
+                to={item.path} 
+                className={`ft-mobile-nav-item ${active ? 'active' : ''}`}
+              >
+                {item.icon}
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {shortLabel}
+                </span>
+              </Link>
+            );
+          })}
+      </nav>
+
+      {/* Profile Edit Modal */}
+    {showProfileModal && (
+      <div className="ft-modal-overlay">
+        <div className="ft-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+          <div className="ft-modal-header">
+            <h3 className="ft-modal-title">⚙️ Edit Account Profile</h3>
+            <button className="ft-btn ft-btn-ghost ft-btn-icon" onClick={() => { setShowProfileModal(false); setProfileError(''); }}>
+              <X size={18} />
+            </button>
+          </div>
+
+          <form onSubmit={handleProfileSubmit}>
+            <div className="ft-modal-body">
+              {profileError && (
+                <div style={{ backgroundColor: 'var(--ft-danger-bg)', color: 'var(--ft-danger)', padding: '0.75rem 1rem', borderRadius: 'var(--ft-radius)', marginBottom: '1.25rem', fontSize: '0.82rem', fontWeight: 500, border: '1.5px solid rgba(239, 68, 68, 0.15)' }}>
+                  ❌ {profileError}
+                </div>
+              )}
+
+              {profileSuccess && (
+                <div style={{ backgroundColor: 'var(--ft-success-bg)', color: 'var(--ft-success)', padding: '0.75rem 1rem', borderRadius: 'var(--ft-radius)', marginBottom: '1.25rem', fontSize: '0.82rem', fontWeight: 600, border: '1.5px solid rgba(34, 197, 94, 0.15)' }}>
+                  ✅ {profileSuccess}
+                </div>
+              )}
+
+              <div className="ft-input-group">
+                <label className="ft-label">Full Name *</label>
+                <input 
+                  type="text" 
+                  className="ft-input" 
+                  required 
+                  value={profileForm.name} 
+                  onChange={e => setProfileForm({ ...profileForm, name: e.target.value })} 
+                />
+              </div>
+              <div className="ft-input-group">
+                <label className="ft-label">Username *</label>
+                <input 
+                  type="text" 
+                  className="ft-input" 
+                  required 
+                  value={profileForm.username} 
+                  onChange={e => setProfileForm({ ...profileForm, username: e.target.value })} 
+                />
+              </div>
+              <div className="ft-input-group">
+                <label className="ft-label">University Email *</label>
+                <input 
+                  type="email" 
+                  className="ft-input" 
+                  required 
+                  value={profileForm.email} 
+                  onChange={e => setProfileForm({ ...profileForm, email: e.target.value })} 
+                />
+              </div>
+
+              {isCompetitorRole(profileForm.role) ? (
+                <div className="ft-input-group">
+                  <label className="ft-label">University ID Number *</label>
+                  <input 
+                    type="text" 
+                    className="ft-input" 
+                    required 
+                    value={profileForm.universityId} 
+                    onChange={e => setProfileForm({ ...profileForm, universityId: e.target.value })} 
+                  />
+                </div>
+              ) : (
+                <div className="ft-input-group">
+                  <label className="ft-label">Judge Title *</label>
+                  <input 
+                    type="text" 
+                    className="ft-input" 
+                    required 
+                    value={profileForm.title} 
+                    onChange={e => setProfileForm({ ...profileForm, title: e.target.value })} 
+                  />
+                </div>
+              )}
+
+              <div className="ft-input-group">
+                <label className="ft-label">New Password (Leave blank to keep current)</label>
+                <input 
+                  type="password" 
+                  className="ft-input" 
+                  placeholder="Enter new password"
+                  value={profileForm.password} 
+                  onChange={e => setProfileForm({ ...profileForm, password: e.target.value })} 
+                />
+              </div>
+
+              {profileForm.password.trim() && (
+                <div className="ft-input-group" style={{ marginBottom: 0 }}>
+                  <label className="ft-label">Confirm New Password</label>
+                  <input 
+                    type="password" 
+                    className="ft-input" 
+                    placeholder="Confirm new password"
+                    value={profileForm.confirmPassword} 
+                    onChange={e => setProfileForm({ ...profileForm, confirmPassword: e.target.value })} 
+                  />
+                </div>
+              )}
+
+              {/* Google Account Connection */}
+              <div className="ft-input-group" style={{ borderTop: '1px solid var(--ft-border-light)', paddingTop: '1rem', marginTop: '1rem', marginBottom: 0 }}>
+                <label className="ft-label">Google Account Connection</label>
+                {meDoc?.googleEmail ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', color: 'var(--ft-success)', fontWeight: 600 }}>
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: 16, height: 16 }} />
+                    Linked: {meDoc.googleEmail}
+                    <span className="ft-badge ft-badge-success" style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>Active</span>
+                  </div>
+                ) : (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={handleLinkGoogle}
+                      className="ft-btn ft-btn-secondary ft-btn-sm"
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: 'auto', padding: '0.5rem 0.85rem' }}
+                    >
+                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: 16, height: 16 }} />
+                      Link Google Account
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="ft-modal-footer">
+              <button type="button" className="ft-btn ft-btn-secondary" style={{ flex: 1 }} onClick={() => { setShowProfileModal(false); setProfileError(''); }}>
+                Cancel
+              </button>
+              <button type="submit" className="ft-btn ft-btn-primary" style={{ flex: 1 }} disabled={savingProfile}>
+                {savingProfile ? 'Saving...' : 'Save Profile'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+
+    {/* Release Notes Modal */}
+    {showReleaseNotesModal && (
+      <div className="ft-modal-overlay" onClick={() => setShowReleaseNotesModal(false)}>
+        <div className="ft-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+          <div className="ft-modal-header">
+            <h3 className="ft-modal-title">✨ What's New in Version 2.0</h3>
+            <button className="ft-modal-close" onClick={() => setShowReleaseNotesModal(false)}><X size={18} /></button>
+          </div>
+          <div className="ft-modal-body" style={{ maxHeight: '70vh', overflowY: 'auto', padding: '1.25rem' }}>
+            <p style={{ fontSize: '0.88rem', color: 'var(--ft-text-secondary)', marginBottom: '1.25rem' }}>
+              Welcome to Alamein SciComm Spark Competition Version 2.0! We have rolled out exciting updates tailored to your role. Explore the tabs below to see what features are now available.
+            </p>
+            
+            {/* Tabs Inside Modal */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--ft-border-light)', paddingBottom: '0.75rem' }}>
+              {['competitor', 'judge', 'admin'].map(tabRole => (
+                <button
+                  key={tabRole}
+                  type="button"
+                  onClick={() => setReleaseNotesTab(tabRole)}
+                  style={{
+                    background: releaseNotesTab === tabRole ? 'var(--ft-primary-bg)' : 'transparent',
+                    color: releaseNotesTab === tabRole ? 'var(--ft-primary)' : 'var(--ft-text-muted)',
+                    border: 'none',
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: 'var(--ft-radius-sm)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {tabRole === 'competitor' ? '👨‍🎓 For Competitors' : tabRole === 'judge' ? '👨‍🏫 For Judges' : '🔑 For Admins'}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Content */}
+            {releaseNotesTab === 'competitor' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div className="ft-update-section">
+                  <h4>📱 Mandatory WhatsApp Contact</h4>
+                  <p>To ensure smooth communication, a one-time WhatsApp phone number entry is now required upon login.</p>
+                </div>
+                <div className="ft-update-section">
+                  <h4>💳 Visual Payment Guidance</h4>
+                  <p>When payment is required, the register button intelligently dims and guides you to the upload section with a shake animation if a receipt is missing.</p>
+                </div>
+                <div className="ft-update-section">
+                  <h4>📝 Apply to Multiple Programs</h4>
+                  <p>Competitors can now register for more than one competition program at the same place! However, to ensure fairness, you can only select exactly 1 wave per program (or 1 wave total if the place has no programs).</p>
+                </div>
+                <div className="ft-update-section">
+                  <h4>🔔 Real-Time Approval Notifications</h4>
+                  <p>A new notification bell in the top navbar alerts you immediately if your registration is approved, rejected, or auto-approved on wave deadlines.</p>
+                </div>
+              </div>
+            )}
+
+            {releaseNotesTab === 'judge' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div className="ft-update-section">
+                  <h4>📱 Stretched Trainee Cards on Mobile</h4>
+                  <p>Trainee lists now adapt to narrow viewports. Quick evaluation and removal buttons stack in a finger-friendly bottom row.</p>
+                </div>
+                <div className="ft-update-section">
+                  <h4>📋 Responsive Name Wrapping</h4>
+                  <p>Long competitor names and biotechnology titles wrap perfectly on mobile screens, avoiding squeeze overlap bugs.</p>
+                </div>
+                <div className="ft-update-section">
+                  <h4>🔔 Live Evaluation Alert Feed</h4>
+                  <p>Stay up to date with real-time notification alerts sent straight to your top-bar bell dropdown when grades are synchronized.</p>
+                </div>
+              </div>
+            )}
+
+            {releaseNotesTab === 'admin' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div className="ft-update-section">
+                  <h4>📊 Live Seat Capacity Breakdown</h4>
+                  <p>Insights now intelligently format expired waves (e.g., 'Passed +2 overloaded') and display wave dates directly underneath each wave name.</p>
+                </div>
+                <div className="ft-update-section">
+                  <h4>📥 Dynamic Profile CSV Exporter</h4>
+                  <p>CSV export sheets now fetch the absolute latest competitor profile information live, ignoring old data saved at the time of registration.</p>
+                </div>
+                <div className="ft-update-section">
+                  <h4>⏳ Customizable Wave Durations & Deadlines</h4>
+                  <p>Admins can set precise registration deadlines and durations for individual programs and waves.</p>
+                </div>
+                <div className="ft-update-section">
+                  <h4>🔔 Request Notifications Feed</h4>
+                  <p>A notifications panel alerts you instantly when competitors submit new registrations, cancellations, or password reset requests.</p>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="ft-modal-footer" style={{ borderTop: '1px solid var(--ft-border-light)', paddingTop: '0.75rem', display: 'flex', justifyContent: 'flex-end' }}>
+            <button className="ft-btn ft-btn-primary" onClick={() => setShowReleaseNotesModal(false)}>Got it, thanks!</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Mandatory Phone Modal */}
+    {needsPhone && (
+      <div className="ft-modal-overlay">
+        <div className="ft-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+          <div className="ft-modal-header">
+            <h3 className="ft-modal-title">📱 Add Your Phone Number</h3>
+          </div>
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            if (!phoneInput.trim()) {
+              setPhoneError('Please enter a valid phone number.');
+              return;
+            }
+            setSavingPhone(true);
+            setPhoneError('');
+            try {
+              await db.scientists.update(user.id, { phone: phoneInput.trim() });
+              const updated = await db.scientists.get(user.id);
+              setMeDoc(updated);
+            } catch (err) {
+              setPhoneError('Failed to save phone number: ' + err.message);
+            }
+            setSavingPhone(false);
+          }}>
+            <div className="ft-modal-body" style={{ padding: '1.25rem' }}>
+              <p style={{ fontSize: '0.88rem', color: 'var(--ft-text-secondary)', marginBottom: '1rem' }}>
+                For a successful login, please enter your WhatsApp phone number. This is required for communication regarding your SciComm Spark Competition.
+              </p>
+              {phoneError && <div className="ft-alert ft-alert-error" style={{ marginBottom: '1rem' }}>{phoneError}</div>}
+              <div className="ft-input-group" style={{ marginBottom: 0 }}>
+                <label className="ft-label">WhatsApp Phone Number *</label>
+                <input 
+                  type="tel" 
+                  className="ft-input" 
+                  value={phoneInput} 
+                  onChange={e => setPhoneInput(e.target.value)} 
+                  placeholder="e.g. 01012345678" 
+                  required 
+                />
+              </div>
+            </div>
+            <div className="ft-modal-footer">
+              <button type="submit" className="ft-btn ft-btn-primary ft-w-full" disabled={savingPhone}>
+                {savingPhone ? 'Saving...' : 'Save & Continue'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+    </div>
+  );
+}

@@ -1,0 +1,390 @@
+{
+  "scicommspark_scientists": [
+    {
+      "id": "aJnWUC2PxMyGdub6U6aq",
+      "email": "admin@aiu.edu.eg",
+      "department": "Biotechnology",
+      "createdAt": "2026-07-23T13:02:47.314Z",
+      "passwordHash": "$2b$04$ScqGTo7C1Y2aUg0xzehcSOCLhREf.dBZkXez09R97ECv4XVL06WrC",
+      "username": "admin",
+      "employeeId": "ADMIN-001",
+      "role": "admin",
+      "accountStatus": "active",
+      "name": "System Administrator"
+    },
+    {
+      "id": "flKLv4Fzty5cOZ5Hczgn",
+      "profileViews": 0,
+      "createdAt": "2026-07-23T13:04:22.977Z",
+      "nationalId": "12345678901234",
+      "employeeId": "SV-0001",
+      "username": "abdullah.amr871",
+      "role": "master",
+      "avatarUrl": "https://api.dicebear.com/7.x/avataaars/svg?seed=abdullah.amr871",
+      "accountStatus": "active",
+      "institutionName": "Alamein International University",
+      "passwordHash": "$2b$04$7i9YmDpkYfCWQNqmrdFEG.UQd5fhrFMXPgvQkqE1RY2nhos2N2Lqi",
+      "email": "abdullah.amr871@aiu.edu.eg",
+      "department": "Computer Science & AI",
+      "isAlameinStudent": true,
+      "name": "Abdullah Amr Maged",
+      "title": "Master Admin / Teaching Assistant"
+    }
+  ],
+  "scicommspark_submissions": [
+    {
+      "id": "h7iMDXAK2roCyKmCpsPt",
+      "teamName": "",
+      "articleContent": "",
+      "videoUrl": "http://localhost:5173/#/my-competition",
+      "submittedAt": "2026-07-21T10:16:48.499Z",
+      "status": "pending",
+      "competitorName": "System Administrator",
+      "competitorId": "e2Zv8vJcgC3YmBVxGbOk",
+      "title": "1212",
+      "fileUrl": "http://localhost:5173/#/my-competition",
+      "stageId": 1,
+      "track": "pop_science",
+      "competitorEmail": ""
+    },
+    {
+      "id": "ktnYWBle9Hgw1ZYixydw",
+      "competitorId": "9QLRe3pTPO93q8KbK7LY",
+      "competitorName": "Student Test 2",
+      "fileUrl": "http://localhost:5174/#/my-competition",
+      "title": "1234",
+      "articleContent": "12knklsnklsnalkgnlksanklgndslkngklsd",
+      "teamName": "",
+      "status": "pending",
+      "submittedAt": "2026-07-22T08:15:37.511Z",
+      "videoUrl": "http://localhost:5174/#/my-competition",
+      "stageId": 1,
+      "competitorEmail": "",
+      "track": "science_journalism"
+    }
+  ],
+  "scicommspark_timeline_config": [
+    {
+      "id": "jour_stage_1",
+      "acceptSubmissions": true,
+      "track": "science_journalism",
+      "status": "Active Stage",
+      "googleFormUrl": "",
+      "sub": "Topic Research & Expert Interviews Prep",
+      "assignedJudgeIds": [],
+      "title": "Stage 1: Research Field Prep",
+      "updatedAt": "2026-07-22T11:10:39.769Z",
+      "deadline": "2026-07-31",
+      "criteria": [
+        {
+          "name": "Topic Selection & Relevance",
+          "id": "crit_1784718596761",
+          "category": "scicomm",
+          "maxPoints": 15
+        },
+        {
+          "name": "Research Quality",
+          "id": "crit_1784718604843",
+          "category": "academic",
+          "maxPoints": 25
+        },
+        {
+          "id": "crit_1784718616664",
+          "name": "Credibility of Sources",
+          "maxPoints": 20,
+          "category": "academic"
+        },
+        {
+          "name": "Interview Quality (where applicable)",
+          "id": "crit_1784718622304",
+          "category": "scicomm",
+          "maxPoints": 20
+        },
+        {
+          "id": "crit_1784718631390",
+          "name": "Ethical Journalism & Proper Citation",
+          "maxPoints": 10,
+          "category": "academic"
+        },
+        {
+          "id": "crit_1784718636761",
+          "name": "Organization & Submission Quality",
+          "maxPoints": 10,
+          "category": "scicomm"
+        }
+      ],
+      "stageId": 1,
+      "details": "Select a scientific topic, gather research data, and conduct interviews with researchers & academic experts."
+    },
+    {
+      "id": "jour_stage_2",
+      "title": "Stage 2: Article Publication",
+      "updatedAt": "2026-07-22T11:11:39.957Z",
+      "status": "Upcoming Stage",
+      "googleFormUrl": "",
+      "sub": "Simplified Science Article Publication",
+      "assignedJudgeIds": [],
+      "track": "science_journalism",
+      "acceptSubmissions": true,
+      "details": "Write a simplified science news article published on the digital platform with opportunity for magazine feature.",
+      "stageId": 2,
+      "criteria": [
+        {
+          "name": "Scientific Accuracy",
+          "id": "crit_1784718655539",
+          "category": "academic",
+          "maxPoints": 25
+        },
+        {
+          "id": "crit_1784718662526",
+          "name": "Writing Quality & Readability",
+          "maxPoints": 25,
+          "category": "scicomm"
+        },
+        {
+          "name": "Storytelling & Reader Engagement",
+          "id": "crit_1784718668874",
+          "category": "scicomm",
+          "maxPoints": 20
+        },
+        {
+          "maxPoints": 15,
+          "category": "scicomm",
+          "id": "crit_1784718678963",
+          "name": "Structure & Journalistic Style"
+        },
+        {
+          "name": "Originality",
+          "id": "crit_1784718691268",
+          "category": "academic",
+          "maxPoints": 10
+        },
+        {
+          "maxPoints": 5,
+          "category": "academic",
+          "id": "crit_1784718697186",
+          "name": "Proper Referencing & Ethics"
+        }
+      ],
+      "deadline": "2026-08-20"
+    },
+    {
+      "id": "jour_stage_3",
+      "details": "Host a simulated live science talk show interview on stage in front of judges and public audience.",
+      "stageId": 3,
+      "criteria": [
+        {
+          "id": "crit_1784718725861",
+          "name": "Interview Preparation",
+          "maxPoints": 20,
+          "category": "scicomm"
+        },
+        {
+          "maxPoints": 20,
+          "category": "scicomm",
+          "id": "crit_1784718733241",
+          "name": "Question Quality"
+        },
+        {
+          "maxPoints": 20,
+          "category": "academic",
+          "id": "crit_1784718737558",
+          "name": "Scientific Understanding"
+        },
+        {
+          "maxPoints": 20,
+          "category": "scicomm",
+          "id": "crit_1784718742539",
+          "name": "Communication & Moderation Skills"
+        },
+        {
+          "maxPoints": 20,
+          "category": "academic",
+          "id": "crit_1784718764387",
+          "name": "Professionalism & Time Management"
+        }
+      ],
+      "deadline": "2026-09-10",
+      "title": "Stage 3 (Finals): Live Stage Show",
+      "updatedAt": "2026-07-22T11:13:25.452Z",
+      "googleFormUrl": "",
+      "status": "Grand Finale",
+      "sub": "Live Science Talk Show Interview on Stage",
+      "assignedJudgeIds": [],
+      "track": "science_journalism",
+      "acceptSubmissions": true
+    },
+    {
+      "id": "pop_stage_1",
+      "assignedJudgeIds": [
+        "8Wo7MjPBGdo5Cb14Z7A1",
+        "W2UkgjCbXM4pWjzasNv3",
+        "RLkNzQQ0C4xRm5gRUTcd",
+        "e2Zv8vJcgC3YmBVxGbOk"
+      ],
+      "sub": "Reels / TikTok Video (max 90 seconds)",
+      "status": "Active Stage",
+      "googleFormUrl": "",
+      "updatedAt": "2026-07-22T11:15:22.139Z",
+      "title": "Stage 1: Short Pop Video",
+      "acceptSubmissions": true,
+      "track": "pop_science",
+      "details": "Produce a punchy, highly engaging short video introducing a core scientific concept for social media.",
+      "deadline": "2026-07-31",
+      "criteria": [
+        {
+          "name": "Scientific Accuracy",
+          "id": "crit_1784718346878",
+          "category": "academic",
+          "maxPoints": 30
+        },
+        {
+          "name": "Simplicity & Clarity",
+          "id": "crit_1784718395440",
+          "category": "academic",
+          "maxPoints": 20
+        },
+        {
+          "name": "Creativity & Storytelling",
+          "id": "crit_1784718403501",
+          "category": "scicomm",
+          "maxPoints": 20
+        },
+        {
+          "category": "scicomm",
+          "maxPoints": 15,
+          "name": "Audience Engagement",
+          "id": "crit_1784718413278"
+        },
+        {
+          "name": "Video Production Quality (audio, visuals, editing)",
+          "id": "crit_1784718422902",
+          "category": "scicomm",
+          "maxPoints": 10
+        },
+        {
+          "maxPoints": 5,
+          "category": "academic",
+          "id": "crit_1784718432454",
+          "name": "Time Management & Compliance with Rules"
+        }
+      ],
+      "stageId": 1
+    },
+    {
+      "id": "pop_stage_2",
+      "acceptSubmissions": false,
+      "track": "pop_science",
+      "status": "Upcoming Stage",
+      "googleFormUrl": "",
+      "sub": "YouTube SciComm Video (up to 3 minutes)",
+      "assignedJudgeIds": [],
+      "title": "Stage 2: Long Pop Video",
+      "updatedAt": "2026-07-22T11:08:32.839Z",
+      "deadline": "2026-08-20",
+      "criteria": [
+        {
+          "name": "Scientific Accuracy & Depth",
+          "id": "crit_1784718459037",
+          "category": "academic",
+          "maxPoints": 30
+        },
+        {
+          "name": "Organization & Logical Flow",
+          "id": "crit_1784718473605",
+          "category": "academic",
+          "maxPoints": 20
+        },
+        {
+          "name": "Storytelling & Creativity",
+          "id": "crit_1784718479778",
+          "category": "scicomm",
+          "maxPoints": 20
+        },
+        {
+          "id": "crit_1784718491793",
+          "name": "Clarity for a General Audience",
+          "maxPoints": 15,
+          "category": "scicomm"
+        },
+        {
+          "maxPoints": 10,
+          "category": "scicomm",
+          "id": "crit_1784718499358",
+          "name": "Visual Design & Production Quality"
+        },
+        {
+          "name": "Time Management & Compliance",
+          "id": "crit_1784718508163",
+          "category": "academic",
+          "maxPoints": 5
+        }
+      ],
+      "stageId": 2,
+      "details": "Deep scientific storytelling featuring comprehensive explanation, visual graphics, and clear narration."
+    },
+    {
+      "id": "pop_stage_3",
+      "track": "pop_science",
+      "acceptSubmissions": false,
+      "title": "Stage 3 (Finals): Live Stage Show",
+      "updatedAt": "2026-07-22T11:09:28.744Z",
+      "googleFormUrl": "",
+      "status": "Grand Finale",
+      "sub": "Interactive Live Presentation (5 mins on stage)",
+      "assignedJudgeIds": [],
+      "criteria": [
+        {
+          "category": "academic",
+          "maxPoints": 25,
+          "name": "Scientific Accuracy",
+          "id": "crit_1784718527850"
+        },
+        {
+          "category": "scicomm",
+          "maxPoints": 25,
+          "name": "Communication & Public Speaking Skills",
+          "id": "crit_1784718533405"
+        },
+        {
+          "category": "scicomm",
+          "maxPoints": 20,
+          "name": "Audience Engagement",
+          "id": "crit_1784718541194"
+        },
+        {
+          "maxPoints": 15,
+          "category": "scicomm",
+          "id": "crit_1784718549208",
+          "name": "Creativity & Presentation Style"
+        },
+        {
+          "maxPoints": 10,
+          "category": "scicomm",
+          "id": "crit_1784718559242",
+          "name": "Stage Presence & Confidence"
+        },
+        {
+          "category": "academic",
+          "maxPoints": 5,
+          "name": "Time Management",
+          "id": "crit_1784718565399"
+        }
+      ],
+      "stageId": 3,
+      "deadline": "2026-09-10",
+      "details": "Deliver an interactive live science presentation on stage before expert judges, audience, and broadcast."
+    },
+    {
+      "id": "pop_stage_1",
+      "deadline": "2026-07-31",
+      "track": "pop_science",
+      "stageId": 1,
+      "sub": "Reels / TikTok Video (max 90 seconds)",
+      "status": "Active Stage",
+      "updatedAt": "2026-07-21T10:02:24.578Z",
+      "details": "Produce a punchy, highly engaging short video introducing a core scientific concept for social media.",
+      "title": "Stage 1: Short Pop Video"
+    }
+  ]
+}
