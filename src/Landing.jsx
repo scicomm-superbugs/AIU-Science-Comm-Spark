@@ -14,6 +14,17 @@ import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import './scicommspark.css';
 import DEFAULT_CONTENT from './defaultContent.json';
 
+/* ─────────── IMAGE PATH RESOLUTION HELPER FOR GITHUB PAGES ─────────── */
+export const resolveImageUrl = (url) => {
+  if (!url || typeof url !== 'string') return url;
+  if (url.startsWith('data:image') || url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  const cleanPath = url.replace(/^\.\//, '').replace(/^\//, '');
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  return baseUrl.endsWith('/') ? baseUrl + cleanPath : baseUrl + '/' + cleanPath;
+};
+
 
 
 /* ─────────────── EDITABLE TEXT (Rich Text & Bold Support) ─────────────── */
@@ -538,13 +549,13 @@ export function EditableImage({ src, onUpload, onRemove, editing, style = {}, al
   };
 
   if (!editing) {
-    return src ? <img src={src} alt={alt} style={style} /> : null;
+    return src ? <img src={resolveImageUrl(src)} alt={alt} style={style} /> : null;
   }
 
   return (
     <div style={{ position: 'relative', display: 'inline-block', width: style.width || '100%', height: style.height || 'auto' }}>
       {src ? (
-        <img src={src} alt={alt} style={style} />
+        <img src={resolveImageUrl(src)} alt={alt} style={style} />
       ) : (
         <div style={{
           ...style, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -855,7 +866,7 @@ export function EditableLogo({
         offsetX={offsetX}
         offsetY={offsetY}
       >
-        {src ? <img src={src} alt={alt} style={style} /> : null}
+        {src ? <img src={resolveImageUrl(src)} alt={alt} style={style} /> : null}
       </CanvaTransformBox>
     );
   }
@@ -871,7 +882,7 @@ export function EditableLogo({
     >
       <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
         {src ? (
-          <img src={src} alt={alt} style={{ ...style, maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+          <img src={resolveImageUrl(src)} alt={alt} style={{ ...style, maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
         ) : (
           <div style={{
             ...style, display: 'flex', alignItems: 'center', justifyContent: 'center',
