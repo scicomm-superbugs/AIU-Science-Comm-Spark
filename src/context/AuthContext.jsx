@@ -396,13 +396,24 @@ export const AuthProvider = ({ children }) => {
     if (isRealAdmin && viewAsMode) {
       let modeRole = realRole;
       let modeTrack = user.registeredTrack || 'pop_science';
+      let modePart = user.participationMode || 'team';
 
-      if (viewAsMode === 'student_pop') {
+      if (viewAsMode === 'student_pop_team' || viewAsMode === 'student_pop') {
         modeRole = 'competitor';
         modeTrack = 'pop_science';
-      } else if (viewAsMode === 'student_jour') {
+        modePart = 'team';
+      } else if (viewAsMode === 'student_pop_ind') {
+        modeRole = 'competitor';
+        modeTrack = 'pop_science';
+        modePart = 'individual';
+      } else if (viewAsMode === 'student_jour_team' || viewAsMode === 'student_jour') {
         modeRole = 'competitor';
         modeTrack = 'science_journalism';
+        modePart = 'team';
+      } else if (viewAsMode === 'student_jour_ind') {
+        modeRole = 'competitor';
+        modeTrack = 'science_journalism';
+        modePart = 'individual';
       } else if (viewAsMode === 'judge_scicomm') {
         modeRole = 'scicomm_judge';
         modeTrack = '';
@@ -416,6 +427,7 @@ export const AuthProvider = ({ children }) => {
         realRole,
         role: modeRole,
         registeredTrack: modeTrack,
+        participationMode: modePart,
         isImpersonating: true,
         viewAsMode
       };

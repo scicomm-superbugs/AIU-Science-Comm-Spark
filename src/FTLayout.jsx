@@ -634,10 +634,12 @@ export default function FTLayout() {
             <span style={{ fontSize: '1.1rem' }}>👁️</span>
             <span>
               Admin View Mode Active: <strong>
-                {user.viewAsMode === 'student_pop' && '🎙️ Competitor Student (Track 1: Pop Science)'}
-                {user.viewAsMode === 'student_jour' && '📰 Competitor Student (Track 2: Science Journalism)'}
-                {user.viewAsMode === 'judge_scicomm' && '🎙️ Science Communicator Judge'}
-                {user.viewAsMode === 'judge_academic' && '🎓 Academic Judge'}
+                {(user.viewAsMode === 'student_pop_team' || user.viewAsMode === 'student_pop') && '🎙️ Student (Pop Science Track) (team)'}
+                {user.viewAsMode === 'student_pop_ind' && '🎙️ Student (Pop Science Track) (individual)'}
+                {(user.viewAsMode === 'student_jour_team' || user.viewAsMode === 'student_jour') && '📰 Student (Science Journalism Track) (team)'}
+                {user.viewAsMode === 'student_jour_ind' && '📰 Student (Science Journalism Track) (individual)'}
+                {user.viewAsMode === 'judge_scicomm' && '🎙️ Judge (SciComm)'}
+                {user.viewAsMode === 'judge_academic' && '🎓 Judge (Academic)'}
               </strong>
             </span>
           </div>
@@ -659,7 +661,7 @@ export default function FTLayout() {
               boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
             }}
           >
-            👑 Exit View As & Return to Admin
+            👑 Back to Admin
           </button>
         </div>
       )}
@@ -679,10 +681,23 @@ export default function FTLayout() {
         </div>
 
 
-        <div className="ft-navbar-actions">
-          {/* Admin Quick "View As" Role Switcher */}
-          {isRealAdmin && (
-            <div style={{ position: 'relative' }}>
+        {/* Center Admin View As Role Impersonation Selector */}
+        {isRealAdmin && (
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 1rem' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.55rem',
+              background: user?.isImpersonating ? '#eef2ff' : '#f8fafc',
+              padding: '0.35rem 0.85rem',
+              borderRadius: '12px',
+              border: user?.isImpersonating ? '1.5px solid #6366f1' : '1px solid #cbd5e1',
+              boxShadow: user?.isImpersonating ? '0 2px 10px rgba(99, 102, 241, 0.18)' : '0 2px 6px rgba(0,0,0,0.02)',
+              transition: 'all 0.2s ease'
+            }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 900, color: user?.isImpersonating ? '#4338ca' : '#475569', display: 'flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap' }}>
+                👁️ View As:
+              </span>
               <select
                 value={user?.viewAsMode || 'normal'}
                 onChange={(e) => {
@@ -700,25 +715,30 @@ export default function FTLayout() {
                 }}
                 title="Admin View As Role Impersonation"
                 style={{
-                  padding: '0.4rem 0.75rem',
-                  fontSize: '0.78rem',
+                  padding: '0.25rem 0.6rem',
+                  fontSize: '0.82rem',
                   fontWeight: 800,
-                  borderRadius: '10px',
-                  border: user?.isImpersonating ? '1.5px solid #6366f1' : '1px solid #cbd5e1',
-                  background: user?.isImpersonating ? '#e0e7ff' : '#ffffff',
-                  color: user?.isImpersonating ? '#3730a3' : '#334155',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: user?.isImpersonating ? '#3730a3' : '#0f172a',
                   cursor: 'pointer',
                   outline: 'none'
                 }}
               >
-                <option value="normal">👑 View: Admin (Default)</option>
-                <option value="student_pop">🎙️ View As: Student (Pop Science)</option>
-                <option value="student_jour">📰 View As: Student (Science Journalism)</option>
-                <option value="judge_scicomm">🎙️ View As: Judge (SciComm)</option>
-                <option value="judge_academic">🎓 View As: Judge (Academic)</option>
+                <option value="normal">👑 Back to Admin</option>
+                <option value="student_pop_team">🎙️ Student (Pop Science Track) (team)</option>
+                <option value="student_pop_ind">🎙️ Student (Pop Science Track) (individual)</option>
+                <option value="student_jour_team">📰 Student (Science Journalism Track) (team)</option>
+                <option value="student_jour_ind">📰 Student (Science Journalism Track) (individual)</option>
+                <option value="judge_academic">🎓 Judge (Academic)</option>
+                <option value="judge_scicomm">🎙️ Judge (SciComm)</option>
               </select>
             </div>
-          )}
+          </div>
+        )}
+
+        <div className="ft-navbar-actions">
           {/* Notification Bell */}
           <div style={{ position: 'relative' }}>
             <button 
@@ -843,31 +863,45 @@ export default function FTLayout() {
                       </div>
                       <button
                         className="ft-user-dropdown-item"
-                        style={{ background: user?.viewAsMode === 'student_pop' ? '#f0fdf4' : 'transparent', fontWeight: user?.viewAsMode === 'student_pop' ? 800 : 600 }}
-                        onClick={() => { setViewAsMode('student_pop'); setUserMenuOpen(false); navigate('/dashboard/my-competition'); }}
+                        style={{ background: (user?.viewAsMode === 'student_pop_team' || user?.viewAsMode === 'student_pop') ? '#f0fdf4' : 'transparent', fontWeight: 700 }}
+                        onClick={() => { setViewAsMode('student_pop_team'); setUserMenuOpen(false); navigate('/dashboard/my-competition'); }}
                       >
-                        🎙️ Student (Track 1: Pop Science)
+                        🎙️ Student (Pop Science Track) (team)
                       </button>
                       <button
                         className="ft-user-dropdown-item"
-                        style={{ background: user?.viewAsMode === 'student_jour' ? '#eff6ff' : 'transparent', fontWeight: user?.viewAsMode === 'student_jour' ? 800 : 600 }}
-                        onClick={() => { setViewAsMode('student_jour'); setUserMenuOpen(false); navigate('/dashboard/my-competition'); }}
+                        style={{ background: user?.viewAsMode === 'student_pop_ind' ? '#f0fdf4' : 'transparent', fontWeight: 700 }}
+                        onClick={() => { setViewAsMode('student_pop_ind'); setUserMenuOpen(false); navigate('/dashboard/my-competition'); }}
                       >
-                        📰 Student (Track 2: Science Journalism)
+                        🎙️ Student (Pop Science Track) (individual)
                       </button>
                       <button
                         className="ft-user-dropdown-item"
-                        style={{ background: user?.viewAsMode === 'judge_scicomm' ? '#fff1f2' : 'transparent', fontWeight: user?.viewAsMode === 'judge_scicomm' ? 800 : 600 }}
-                        onClick={() => { setViewAsMode('judge_scicomm'); setUserMenuOpen(false); navigate('/dashboard/judge'); }}
+                        style={{ background: (user?.viewAsMode === 'student_jour_team' || user?.viewAsMode === 'student_jour') ? '#eff6ff' : 'transparent', fontWeight: 700 }}
+                        onClick={() => { setViewAsMode('student_jour_team'); setUserMenuOpen(false); navigate('/dashboard/my-competition'); }}
                       >
-                        🎙️ Judge (SciComm Judge)
+                        📰 Student (Science Journalism Track) (team)
                       </button>
                       <button
                         className="ft-user-dropdown-item"
-                        style={{ background: user?.viewAsMode === 'judge_academic' ? '#f0f9ff' : 'transparent', fontWeight: user?.viewAsMode === 'judge_academic' ? 800 : 600 }}
+                        style={{ background: user?.viewAsMode === 'student_jour_ind' ? '#eff6ff' : 'transparent', fontWeight: 700 }}
+                        onClick={() => { setViewAsMode('student_jour_ind'); setUserMenuOpen(false); navigate('/dashboard/my-competition'); }}
+                      >
+                        📰 Student (Science Journalism Track) (individual)
+                      </button>
+                      <button
+                        className="ft-user-dropdown-item"
+                        style={{ background: user?.viewAsMode === 'judge_academic' ? '#f0f9ff' : 'transparent', fontWeight: 700 }}
                         onClick={() => { setViewAsMode('judge_academic'); setUserMenuOpen(false); navigate('/dashboard/judge'); }}
                       >
-                        🎓 Judge (Academic Judge)
+                        🎓 Judge (Academic)
+                      </button>
+                      <button
+                        className="ft-user-dropdown-item"
+                        style={{ background: user?.viewAsMode === 'judge_scicomm' ? '#fff1f2' : 'transparent', fontWeight: 700 }}
+                        onClick={() => { setViewAsMode('judge_scicomm'); setUserMenuOpen(false); navigate('/dashboard/judge'); }}
+                      >
+                        🎙️ Judge (SciComm)
                       </button>
                       {user?.isImpersonating && (
                         <button
@@ -875,7 +909,7 @@ export default function FTLayout() {
                           style={{ color: '#047857', fontWeight: 800, background: '#ecfdf5', marginTop: '0.2rem' }}
                           onClick={() => { setViewAsMode(null); setUserMenuOpen(false); }}
                         >
-                          👑 Turn Back to Admin (Normal View)
+                          👑 Back to Admin
                         </button>
                       )}
                     </>
