@@ -172,9 +172,11 @@ export default function FTMyCompetition() {
   const [submitError, setSubmitError] = useState('');
   const [editingSubId, setEditingSubId] = useState(null);
   const [subItems, setSubItems] = useState({});
+  const [submitFieldId, setSubmitFieldId] = useState(null);
 
-  const handleOpenSubmitModal = (stage, existingSub = null) => {
+  const handleOpenSubmitModal = (stage, existingSub = null, targetFieldId = null) => {
     setSubmitStage(stage);
+    setSubmitFieldId(targetFieldId);
     setSubmitError('');
     setPolicyConsent(Boolean(existingSub));
     setSubPdfFile(null);
@@ -381,7 +383,7 @@ export default function FTMyCompetition() {
                       onClick={(e) => {
                         e.stopPropagation();
                         if (sf.isOpen === false) return;
-                        handleOpenSubmitModal(st, stageSub);
+                        handleOpenSubmitModal(st, stageSub, sf.id);
                       }}
                       className="ft-btn"
                       disabled={sf.isOpen === false}
@@ -516,7 +518,7 @@ export default function FTMyCompetition() {
                 competitorTrack === 'pop_science'
                   ? { id: 'sub_def_1', name: 'Submission 1: Short Pop Video URL', type: 'url', question: 'Paste your YouTube, TikTok, Instagram Reels, or Google Drive video URL:' }
                   : { id: 'sub_def_2', name: 'Submission 1: Science Article Document', type: 'file', question: 'Upload your formatted science article PDF document (.pdf):' }
-              ]).map((field, idx) => {
+              ]).filter(field => !submitFieldId || field.id === submitFieldId).map((field, idx) => {
                 const currentItem = subItems[field.id] || { value: '', fileUrl: '' };
 
                 return (
