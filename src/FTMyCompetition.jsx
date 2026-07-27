@@ -486,83 +486,197 @@ export default function FTMyCompetition() {
                       </span>
                     </div>
 
-                    {field.question && (
-                      <div style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>
-                        ❓ {field.question}
+                    {(field.description || field.question) && (
+                      <div style={{ fontSize: '0.83rem', color: '#334155', fontWeight: 600, background: '#f8fafc', padding: '0.65rem 0.85rem', borderRadius: '10px', border: '1.5px solid #cbd5e1', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                        📝 <strong>Description & Requirements:</strong>
+                        <div style={{ marginTop: '0.2rem', color: '#475569' }}>
+                          {field.description || field.question}
+                        </div>
                       </div>
                     )}
 
-                    {/* Field Inputs by Type */}
-                    {(field.type === 'url' || field.type === 'link_file') && (
-                      <div style={{ position: 'relative' }}>
-                        <Video size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--ft-primary)' }} />
-                        <input
-                          type="url"
-                          className="ft-input"
-                          style={{ paddingLeft: '2.4rem', fontSize: '0.88rem', fontWeight: 600 }}
-                          placeholder="https://youtube.com/watch?v=... or https://drive.google.com/..."
-                          value={currentItem.value || ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setSubItems(prev => ({
-                              ...prev,
-                              [field.id]: { ...prev[field.id], name: field.name, type: field.type, question: field.question, value: val }
-                            }));
-                            if (idx === 0) setSubVideoUrl(val);
-                          }}
-                        />
-                      </div>
-                    )}
+                    {/* RENDER MULTI-QUESTIONS IF CONFIGURED */}
+                    {field.questions && field.questions.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '0.35rem', paddingTop: '0.5rem', borderTop: '1px dashed #cbd5e1' }}>
+                        {field.questions.map((q, qIdx) => {
+                          const qKey = `${field.id}_${q.id || qIdx}`;
+                          const qVal = subItems[qKey]?.value || '';
+                          const qFileUrl = subItems[qKey]?.fileUrl || '';
 
-                    {(field.type === 'file' || field.type === 'link_file') && (
-                      <div>
-                        <input
-                          type="file"
-                          accept=".pdf,.doc,.docx,.mp4,.png,.jpg,.jpeg,application/pdf"
-                          className="ft-input"
-                          style={{ fontSize: '0.82rem', padding: '0.45rem' }}
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              setPdfUploading(true);
-                              try {
-                                const url = await uploadFile(file, `submissions/${Date.now()}_${file.name}`);
+                          return (
+                            <div key={q.id || qIdx} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                              <label className="ft-label" style={{ margin: 0, fontSize: '0.85rem', color: '#0f172a', fontWeight: 800 }}>
+                                ❓ Question {qIdx + 1}: {q.label} *
+                              </label>
+
+                              {q.type === 'short_text' && (
+                                <input
+                                  type="text"
+                                  className="ft-input"
+                                  required
+                                  style={{ fontSize: '0.85rem' }}
+                                  placeholder={`Enter ${q.label}...`}
+                                  value={qVal}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setSubItems(prev => ({
+                                      ...prev,
+                                      [qKey]: { name: q.label, type: q.type, value: val }
+                                    }));
+                                  }}
+                                />
+                              )}
+
+                              {q.type === 'textbox' && (
+                                <textarea
+                                  className="ft-textarea"
+                                  rows={3}
+                                  required
+                                  style={{ fontSize: '0.85rem' }}
+                                  placeholder={`Write your answer for ${q.label}...`}
+                                  value={qVal}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setSubItems(prev => ({
+                                      ...prev,
+                                      [qKey]: { name: q.label, type: q.type, value: val }
+                                    }));
+                                  }}
+                                />
+                              )}
+
+                              {q.type === 'url' && (
+                                <div style={{ position: 'relative' }}>
+                                  <Video size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--ft-primary)' }} />
+                                  <input
+                                    type="url"
+                                    className="ft-input"
+                                    required
+                                    style={{ paddingLeft: '2.4rem', fontSize: '0.85rem' }}
+                                    placeholder="https://..."
+                                    value={qVal}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setSubItems(prev => ({
+                                        ...prev,
+                                        [qKey]: { name: q.label, type: q.type, value: val }
+                                      }));
+                                    }}
+                                  />
+                                </div>
+                              )}
+
+                              {q.type === 'file' && (
+                                <div>
+                                  <input
+                                    type="file"
+                                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                                    className="ft-input"
+                                    style={{ fontSize: '0.82rem', padding: '0.45rem' }}
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        setPdfUploading(true);
+                                        try {
+                                          const url = await uploadFile(file, `submissions/${Date.now()}_${file.name}`);
+                                          setSubItems(prev => ({
+                                            ...prev,
+                                            [qKey]: { name: q.label, type: q.type, value: file.name, fileUrl: url }
+                                          }));
+                                        } catch (err) {
+                                          setSubmitError('Upload failed: ' + err.message);
+                                        } finally {
+                                          setPdfUploading(false);
+                                        }
+                                      }
+                                    }}
+                                  />
+                                  {qFileUrl && (
+                                    <div style={{ marginTop: '0.3rem', fontSize: '0.78rem', color: '#047857', fontWeight: 700 }}>
+                                      📄 File uploaded successfully!
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      /* SINGLE QUESTION / SINGLE INPUT FALLBACK */
+                      <>
+                        {(field.type === 'url' || field.type === 'link_file') && (
+                          <div style={{ position: 'relative' }}>
+                            <Video size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--ft-primary)' }} />
+                            <input
+                              type="url"
+                              className="ft-input"
+                              style={{ paddingLeft: '2.4rem', fontSize: '0.88rem', fontWeight: 600 }}
+                              placeholder="https://youtube.com/watch?v=... or https://drive.google.com/..."
+                              value={currentItem.value || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
                                 setSubItems(prev => ({
                                   ...prev,
-                                  [field.id]: { ...prev[field.id], name: field.name, type: field.type, question: field.question, fileUrl: url }
+                                  [field.id]: { ...prev[field.id], name: field.name, type: field.type, question: field.question, value: val }
                                 }));
-                                if (idx === 0) setSubFileUrl(url);
-                              } catch (err) {
-                                setSubmitError('Upload failed: ' + err.message);
-                              } finally {
-                                setPdfUploading(false);
-                              }
-                            }
-                          }}
-                        />
-                        {currentItem.fileUrl && (
-                          <div style={{ marginTop: '0.35rem', fontSize: '0.8rem', color: '#047857', background: '#ecfdf5', padding: '0.35rem 0.65rem', borderRadius: '6px', border: '1px solid #a7f3d0' }}>
-                            📄 File Uploaded: <a href={currentItem.fileUrl} target="_blank" rel="noreferrer" style={{ color: '#047857', fontWeight: 800, textDecoration: 'underline' }}>View File ↗</a>
+                                if (idx === 0) setSubVideoUrl(val);
+                              }}
+                            />
                           </div>
                         )}
-                      </div>
-                    )}
 
-                    {field.type === 'textbox' && (
-                      <textarea
-                        className="ft-textarea"
-                        rows={3}
-                        placeholder="Type your response / answer / notes here..."
-                        value={currentItem.value || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setSubItems(prev => ({
-                            ...prev,
-                            [field.id]: { ...prev[field.id], name: field.name, type: field.type, question: field.question, value: val }
-                          }));
-                          if (idx === 0) setSubArticleContent(val);
-                        }}
-                      />
+                        {(field.type === 'file' || field.type === 'link_file') && (
+                          <div>
+                            <input
+                              type="file"
+                              accept=".pdf,.doc,.docx,.mp4,.png,.jpg,.jpeg,application/pdf"
+                              className="ft-input"
+                              style={{ fontSize: '0.82rem', padding: '0.45rem' }}
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  setPdfUploading(true);
+                                  try {
+                                    const url = await uploadFile(file, `submissions/${Date.now()}_${file.name}`);
+                                    setSubItems(prev => ({
+                                      ...prev,
+                                      [field.id]: { ...prev[field.id], name: field.name, type: field.type, question: field.question, fileUrl: url }
+                                    }));
+                                    if (idx === 0) setSubFileUrl(url);
+                                  } catch (err) {
+                                    setSubmitError('Upload failed: ' + err.message);
+                                  } finally {
+                                    setPdfUploading(false);
+                                  }
+                                }
+                              }}
+                            />
+                            {currentItem.fileUrl && (
+                              <div style={{ marginTop: '0.35rem', fontSize: '0.8rem', color: '#047857', background: '#ecfdf5', padding: '0.35rem 0.65rem', borderRadius: '6px', border: '1px solid #a7f3d0' }}>
+                                📄 File Uploaded: <a href={currentItem.fileUrl} target="_blank" rel="noreferrer" style={{ color: '#047857', fontWeight: 800, textDecoration: 'underline' }}>View File ↗</a>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {field.type === 'textbox' && (
+                          <textarea
+                            className="ft-textarea"
+                            rows={3}
+                            placeholder="Type your response / answer / notes here..."
+                            value={currentItem.value || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setSubItems(prev => ({
+                                ...prev,
+                                [field.id]: { ...prev[field.id], name: field.name, type: field.type, question: field.question, value: val }
+                              }));
+                              if (idx === 0) setSubArticleContent(val);
+                            }}
+                          />
+                        )}
+                      </>
                     )}
                   </div>
                 );

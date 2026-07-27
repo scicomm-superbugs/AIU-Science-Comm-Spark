@@ -31,6 +31,33 @@ export default function FTTimelineManagement() {
   const [newSubType, setNewSubType] = useState('url');
   const [newSubDeadline, setNewSubDeadline] = useState('');
   const [newSubQuestion, setNewSubQuestion] = useState('');
+  const [subQuestionsList, setSubQuestionsList] = useState([]);
+  const [newQLabel, setNewQLabel] = useState('');
+  const [newQType, setNewQType] = useState('short_text');
+
+  const handleAddSubmissionFieldToStage = () => {
+    if (!newSubName.trim() || !editingStage) return;
+    const newField = {
+      id: 'sub_field_' + Date.now(),
+      name: newSubName.trim(),
+      type: subQuestionsList.length > 0 ? 'mixed' : newSubType,
+      deadline: newSubDeadline || editingStage.deadline || '2026-09-01',
+      description: newSubQuestion.trim() || `Please submit required items for ${newSubName.trim()}`,
+      question: newSubQuestion.trim() || `Please submit required items for ${newSubName.trim()}`,
+      questions: subQuestionsList.length > 0 ? [...subQuestionsList] : []
+    };
+    const currentList = editingStage.submissions || [];
+    setEditingStage({
+      ...editingStage,
+      submissions: [...currentList, newField]
+    });
+    setNewSubName('');
+    setNewSubQuestion('');
+    setNewSubDeadline('');
+    setNewSubType('url');
+    setSubQuestionsList([]);
+    setNewQLabel('');
+  };
 
   // Default Stage Configurations with custom stage criteria
   const defaultStages = {
@@ -139,26 +166,6 @@ export default function FTTimelineManagement() {
       ...editingStage,
       criteria: currentList.filter(c => c.id !== critId)
     });
-  };
-
-  const handleAddSubmissionFieldToStage = () => {
-    if (!newSubName.trim() || !editingStage) return;
-    const newField = {
-      id: 'sub_field_' + Date.now(),
-      name: newSubName.trim(),
-      type: newSubType,
-      deadline: newSubDeadline || editingStage.deadline || '2026-09-01',
-      question: newSubQuestion.trim() || `Please submit item for ${newSubName.trim()}`
-    };
-    const currentList = editingStage.submissions || [];
-    setEditingStage({
-      ...editingStage,
-      submissions: [...currentList, newField]
-    });
-    setNewSubName('');
-    setNewSubQuestion('');
-    setNewSubDeadline('');
-    setNewSubType('url');
   };
 
   const handleDeleteSubmissionFieldFromStage = (fieldId) => {
@@ -520,12 +527,15 @@ export default function FTTimelineManagement() {
                 <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '1rem' }}>
                   Configure 1, 2, or more separate submissions in this stage (e.g. Submission 1: Short Video Link, Submission 2: Script PDF, Submission 3: Q&A Text Box).
                 </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '1rem', background: '#ffffff', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '1.25rem', background: '#ffffff', padding: '1.25rem', borderRadius: '16px', border: '1.5px solid #cbd5e1', boxShadow: '0 4px 14px rgba(0,0,0,0.03)' }}>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span>➕</span> Add New Deliverable / Submission Option
+                  </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1.3fr auto', gap: '0.6rem' }}>
                     <input
                       type="text"
                       className="ft-input"
-                      placeholder="Submission Name (e.g. Submission 2: Script PDF)"
+                      placeholder="Submission Option Title (e.g. Pre-Interview Preparation)"
                       value={newSubName}
                       onChange={e => setNewSubName(e.target.value)}
                     />
@@ -536,7 +546,7 @@ export default function FTTimelineManagement() {
                     >
                       <option value="url">URL / Link 🔗</option>
                       <option value="file">File Upload 📄</option>
-                      <option value="textbox">Text Box 📝</option>
+                      <option value="textbox">Paragraph Text Box 📝</option>
                       <option value="link_file">URL or File 📁</option>
                     </select>
                     <input
@@ -546,18 +556,84 @@ export default function FTTimelineManagement() {
                       value={newSubDeadline}
                       onChange={e => setNewSubDeadline(e.target.value)}
                     />
-                    <button className="ft-btn ft-btn-outline" onClick={handleAddSubmissionFieldToStage} type="button">
-                      <Plus size={16} /> Add Field
+                    <button className="ft-btn ft-btn-primary" onClick={handleAddSubmissionFieldToStage} type="button" style={{ fontWeight: 800 }}>
+                      <Plus size={16} /> Add Submission Option
                     </button>
                   </div>
 
-                  <input
-                    type="text"
-                    className="ft-input"
-                    placeholder="Question Prompt / Instructions for competitor (e.g. Upload your script document in PDF format)"
-                    value={newSubQuestion}
-                    onChange={e => setNewSubQuestion(e.target.value)}
-                  />
+                  {/* Multi-Line Description & Requirements Box */}
+                  <div>
+                    <label className="ft-label" style={{ fontSize: '0.82rem', color: '#334155', fontWeight: 800, margin: '0 0 0.3rem 0' }}>
+                      📝 Detailed Description & Requirements Box (Write what exactly is needed):
+                    </label>
+                    <textarea
+                      className="ft-textarea"
+                      rows={2}
+                      placeholder="e.g. Submit a brief preparation document (maximum 1 page) that includes: Interviewee Profile Name, Target Audience, and Core Topics."
+                      value={newSubQuestion}
+                      onChange={e => setNewSubQuestion(e.target.value)}
+                      style={{ fontSize: '0.85rem' }}
+                    />
+                  </div>
+
+                  {/* Multi-Question / Requirements Builder */}
+                  <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span>❓</span> Add Sub-Questions / Specific Fields (Optional Multiple Questions):
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr auto', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <input
+                        type="text"
+                        className="ft-input"
+                        style={{ fontSize: '0.82rem', padding: '0.4rem 0.6rem' }}
+                        placeholder="Question Prompt / Field Label (e.g. Interviewee Full Name & Title)"
+                        value={newQLabel}
+                        onChange={e => setNewQLabel(e.target.value)}
+                      />
+                      <select
+                        className="ft-select"
+                        style={{ fontSize: '0.82rem', padding: '0.4rem 0.6rem' }}
+                        value={newQType}
+                        onChange={e => setNewQType(e.target.value)}
+                      >
+                        <option value="short_text">Short Text ✏️</option>
+                        <option value="textbox">Paragraph Text Box 📝</option>
+                        <option value="file">File Upload 📄</option>
+                        <option value="url">URL Link 🔗</option>
+                      </select>
+                      <button
+                        type="button"
+                        className="ft-btn ft-btn-outline"
+                        style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', background: '#ffffff' }}
+                        onClick={() => {
+                          if (!newQLabel.trim()) return;
+                          setSubQuestionsList(prev => [...prev, { id: 'q_' + Date.now(), label: newQLabel.trim(), type: newQType }]);
+                          setNewQLabel('');
+                        }}
+                      >
+                        <Plus size={14} /> Add Sub-Question
+                      </button>
+                    </div>
+
+                    {subQuestionsList.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        {subQuestionsList.map((q, qIdx) => (
+                          <div key={q.id || qIdx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', padding: '0.35rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.78rem' }}>
+                            <span style={{ fontWeight: 700, color: '#0f172a' }}>
+                              <strong>Question {qIdx + 1}:</strong> {q.label} <em style={{ color: '#0284c7', fontWeight: 600 }}>({q.type === 'short_text' ? 'Short Text' : q.type === 'textbox' ? 'Paragraph' : q.type === 'file' ? 'File Upload' : 'URL Link'})</em>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setSubQuestionsList(prev => prev.filter(item => item.id !== q.id))}
+                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.1rem' }}
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Configured Submission Requirements List */}
@@ -569,25 +645,38 @@ export default function FTTimelineManagement() {
                   )}
                   {(editingStage.submissions || []).map((subField, idx) => {
                     const effectiveDeadline = subField.deadline || editingStage.deadline || '2026-09-01';
+                    const hasSubQuestions = subField.questions && subField.questions.length > 0;
+
                     return (
                       <div key={subField.id || idx} style={{
-                        padding: '0.75rem 1rem', borderRadius: '10px', background: '#ffffff',
-                        border: '1.5px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap'
+                        padding: '0.85rem 1.1rem', borderRadius: '12px', background: '#ffffff',
+                        border: '1.5px solid #cbd5e1', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap'
                       }}>
                         <div style={{ flex: 1, minWidth: '240px' }}>
-                          <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                             <span>{subField.type === 'url' ? '🔗' : subField.type === 'file' ? '📄' : subField.type === 'textbox' ? '📝' : '📁'}</span>
                             <span>{subField.name}</span>
                             <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: '#f0f9ff', color: '#0284c7', fontWeight: 800, border: '1px solid #bae6fd' }}>
-                              {subField.type === 'url' ? 'URL Link' : subField.type === 'file' ? 'File Upload' : subField.type === 'textbox' ? 'Text Box' : 'Link or File'}
+                              {hasSubQuestions ? `${subField.questions.length} Multi-Questions` : subField.type === 'url' ? 'URL Link' : subField.type === 'file' ? 'File Upload' : subField.type === 'textbox' ? 'Text Box' : 'Link or File'}
                             </span>
                             <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: '#fff1f2', color: '#be123c', fontWeight: 800, border: '1px solid #fecdd3' }}>
                               📅 Deadline: {formatUnifiedDate(effectiveDeadline)}
                             </span>
                           </div>
-                          {subField.question && (
-                            <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '0.25rem', fontWeight: 600 }}>
-                              ❓ {subField.question}
+
+                          {(subField.description || subField.question) && (
+                            <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '0.35rem', fontWeight: 600, background: '#f8fafc', padding: '0.45rem 0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                              📝 <strong>Description:</strong> {subField.description || subField.question}
+                            </div>
+                          )}
+
+                          {hasSubQuestions && (
+                            <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                              {subField.questions.map((q, qIdx) => (
+                                <div key={q.id || qIdx} style={{ fontSize: '0.78rem', color: '#334155', fontWeight: 700 }}>
+                                  ❓ <strong>Question {qIdx + 1}:</strong> {q.label} <span style={{ color: '#0284c7', fontSize: '0.72rem' }}>({q.type})</span>
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>
