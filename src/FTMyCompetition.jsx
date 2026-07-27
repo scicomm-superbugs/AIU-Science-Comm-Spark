@@ -377,44 +377,66 @@ export default function FTMyCompetition() {
                     Boolean(stageSub.fileUrl)
                   );
 
+                  // Submission window check
+                  const now = new Date();
+                  const todayStr = now.toISOString().slice(0, 10);
+                  const hasOpenDate = Boolean(sf.openDate);
+                  const hasCloseDate = Boolean(effDeadline);
+                  const isBeforeOpen = hasOpenDate && todayStr < sf.openDate;
+                  const isAfterClose = hasCloseDate && todayStr > effDeadline;
+                  const isWindowBlocked = (isBeforeOpen || isAfterClose) && !isAdminOrStaff;
+                  const isManuallyClosed = sf.isOpen === false;
+                  const isDisabled = isManuallyClosed || isWindowBlocked;
+
+                  // Days until open
+                  const daysUntilOpen = isBeforeOpen ? Math.ceil((new Date(sf.openDate) - now) / 86400000) : 0;
+
                   return (
                     <button
                       key={sf.id || idx}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (sf.isOpen === false) return;
+                        if (isDisabled) return;
                         handleOpenSubmitModal(st, stageSub, sf.id);
                       }}
                       className="ft-btn"
-                      disabled={sf.isOpen === false}
+                      disabled={isDisabled}
                       style={{
-                        background: sf.isOpen === false
-                          ? '#fff1f2'
+                        background: isDisabled
+                          ? isBeforeOpen ? '#fffbeb' : '#fff1f2'
                           : isFieldSubmitted
                             ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
                             : '#f1f5f9',
-                        color: sf.isOpen === false
-                          ? '#be123c'
+                        color: isDisabled
+                          ? isBeforeOpen ? '#92400e' : '#be123c'
                           : isFieldSubmitted ? '#ffffff' : '#334155',
                         fontWeight: 800,
                         padding: '0.55rem 1.15rem',
                         borderRadius: '12px',
                         fontSize: '0.85rem',
-                        border: sf.isOpen === false
-                          ? '1.5px solid #fecdd3'
+                        border: isDisabled
+                          ? isBeforeOpen ? '1.5px solid #fde68a' : '1.5px solid #fecdd3'
                           : isFieldSubmitted ? 'none' : '1.5px solid #cbd5e1',
-                        boxShadow: isFieldSubmitted && sf.isOpen !== false ? '0 4px 14px rgba(5, 150, 105, 0.3)' : 'none',
-                        cursor: sf.isOpen === false ? 'not-allowed' : 'pointer',
-                        opacity: sf.isOpen === false ? 0.85 : 1,
+                        boxShadow: isFieldSubmitted && !isDisabled ? '0 4px 14px rgba(5, 150, 105, 0.3)' : 'none',
+                        cursor: isDisabled ? 'not-allowed' : 'pointer',
+                        opacity: isDisabled ? 0.85 : 1,
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '0.45rem',
                         transition: 'all 0.2s ease'
                       }}
                     >
-                      {sf.isOpen === false ? (
+                      {isManuallyClosed ? (
                         <>
                           <span>🛑 Closed:</span> {sf.name || `Stage ${st.stageId}`}
+                        </>
+                      ) : isBeforeOpen && !isAdminOrStaff ? (
+                        <>
+                          <span>⏳ Opens in {daysUntilOpen}d:</span> {sf.name || `Stage ${st.stageId}`}
+                        </>
+                      ) : isAfterClose && !isAdminOrStaff ? (
+                        <>
+                          <span>🛑 Window Closed:</span> {sf.name || `Stage ${st.stageId}`}
                         </>
                       ) : isFieldSubmitted ? (
                         <>
@@ -427,8 +449,8 @@ export default function FTMyCompetition() {
                       )}
                       <span style={{
                         fontSize: '0.72rem',
-                        background: sf.isOpen === false ? 'rgba(190,18,60,0.1)' : isFieldSubmitted ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
-                        color: sf.isOpen === false ? '#be123c' : isFieldSubmitted ? '#ffffff' : '#475569',
+                        background: isDisabled ? (isBeforeOpen ? 'rgba(146,64,14,0.1)' : 'rgba(190,18,60,0.1)') : isFieldSubmitted ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+                        color: isDisabled ? (isBeforeOpen ? '#92400e' : '#be123c') : isFieldSubmitted ? '#ffffff' : '#475569',
                         padding: '0.15rem 0.5rem',
                         borderRadius: '6px',
                         marginLeft: '0.2rem',
@@ -521,11 +543,33 @@ export default function FTMyCompetition() {
               ]).filter(field => !submitFieldId || field.id === submitFieldId).map((field, idx) => {
                 const currentItem = subItems[field.id] || { value: '', fileUrl: '' };
 
+                // Window status check for this field in modal
+                const nowModal = new Date();
+                const todayModal = nowModal.toISOString().slice(0, 10);
+                const fieldOpenDate = field.openDate;
+                const fieldCloseDate = field.deadline || submitStage.deadline;
+                const fieldBeforeOpen = Boolean(fieldOpenDate) && todayModal < fieldOpenDate;
+                const fieldAfterClose = Boolean(fieldCloseDate) && todayModal > fieldCloseDate;
+                const fieldWindowBlocked = (fieldBeforeOpen || fieldAfterClose) && !isAdminOrStaff;
+                const fieldManuallyClosed = field.isOpen === false;
+                const fieldIsLocked = fieldManuallyClosed || fieldWindowBlocked;
+                const daysUntilFieldOpen = fieldBeforeOpen ? Math.ceil((new Date(fieldOpenDate) - nowModal) / 86400000) : 0;
+
                 return (
-                  <div key={field.id} style={{ background: field.isOpen === false ? '#fef2f2' : '#ffffff', padding: '1.1rem 1.25rem', borderRadius: '16px', border: field.isOpen === false ? '1.5px solid #fecdd3' : '1.5px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.65rem', opacity: field.isOpen === false ? 0.7 : 1 }}>
-                    {field.isOpen === false && (
+                  <div key={field.id} style={{ background: fieldIsLocked ? (fieldBeforeOpen ? '#fffbeb' : '#fef2f2') : '#ffffff', padding: '1.1rem 1.25rem', borderRadius: '16px', border: fieldIsLocked ? (fieldBeforeOpen ? '1.5px solid #fde68a' : '1.5px solid #fecdd3') : '1.5px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.65rem', opacity: fieldIsLocked ? 0.75 : 1 }}>
+                    {fieldManuallyClosed && (
                       <div style={{ padding: '0.65rem 1rem', borderRadius: '10px', background: '#fff1f2', color: '#be123c', fontSize: '0.85rem', fontWeight: 800, border: '1.5px solid #fecdd3', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         🛑 Submissions for this deliverable are currently <strong>closed</strong> by the competition administrators.
+                      </div>
+                    )}
+                    {!fieldManuallyClosed && fieldBeforeOpen && !isAdminOrStaff && (
+                      <div style={{ padding: '0.65rem 1rem', borderRadius: '10px', background: '#fffbeb', color: '#92400e', fontSize: '0.85rem', fontWeight: 800, border: '1.5px solid #fde68a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        ⏳ Submission window has not opened yet. Opens on <strong>{formatUnifiedDate(fieldOpenDate)}</strong> ({daysUntilFieldOpen} day{daysUntilFieldOpen !== 1 ? 's' : ''} remaining).
+                      </div>
+                    )}
+                    {!fieldManuallyClosed && fieldAfterClose && !isAdminOrStaff && (
+                      <div style={{ padding: '0.65rem 1rem', borderRadius: '10px', background: '#fff1f2', color: '#be123c', fontSize: '0.85rem', fontWeight: 800, border: '1.5px solid #fecdd3', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        🛑 Submission window has ended. The deadline was <strong>{formatUnifiedDate(fieldCloseDate)}</strong>. No new submissions are accepted.
                       </div>
                     )}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -772,7 +816,11 @@ export default function FTMyCompetition() {
                 <button 
                   type="submit" 
                   className="ft-btn ft-btn-primary"
-                  disabled={isSubmitting || !policyConsent}
+                  disabled={isSubmitting || !policyConsent || (() => {
+                    const allFields = ((submitStage.submissions && submitStage.submissions.length > 0) ? submitStage.submissions : []).filter(f => !submitFieldId || f.id === submitFieldId);
+                    const nowCheck = new Date().toISOString().slice(0, 10);
+                    return !isAdminOrStaff && allFields.some(f => f.isOpen === false || (f.openDate && nowCheck < f.openDate) || ((f.deadline || submitStage.deadline) && nowCheck > (f.deadline || submitStage.deadline)));
+                  })()}
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', opacity: policyConsent ? 1 : 0.6 }}
                 >
                   <Send size={16} />
