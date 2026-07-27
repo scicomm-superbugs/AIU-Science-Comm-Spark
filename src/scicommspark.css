@@ -3493,9 +3493,7 @@
    ══════════════════════════════════════════════════════════════════════ */
 html, body, #root {
   min-width: 1200px !important;
-  width: 1200px !important;
-  margin: 0 auto !important;
-  overflow-x: hidden !important;
+  overflow-x: auto !important;
 }
 
 .landing-nav-center {
