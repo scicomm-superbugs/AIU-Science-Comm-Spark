@@ -350,7 +350,7 @@ export default function FTOurTeam() {
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.6rem', fontFamily: "'Outfit', sans-serif" }}>
           <Trophy size={32} style={{ color: '#be123c' }} />
-          {!isCompetitorUser ? 'Master Competition Leaderboard' : isIndividualMode ? 'Leaderboard & Progress' : 'Our Team & Leaderboard'}
+          {!isCompetitorUser ? 'Competition Leaderboard' : isIndividualMode ? 'Leaderboard & Progress' : 'Our Team & Leaderboard'}
         </h1>
         <p style={{ color: '#64748b', fontSize: '0.95rem', margin: '0.3rem 0 0 0' }}>
           {!isCompetitorUser
@@ -705,7 +705,7 @@ export default function FTOurTeam() {
       {/* MASTER UNIFIED LEADERBOARD (TEAMS + INDIVIDUAL COMPETITORS TOGETHER!) */}
       <div className="ft-card" style={{ padding: '2rem', background: '#ffffff', borderRadius: '24px', border: '1.5px solid #e2e8f0' }}>
         <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Trophy size={22} style={{ color: '#f59e0b' }} /> Master Competition Rankings & Leaderboard
+          <Trophy size={22} style={{ color: '#f59e0b' }} /> Competition Rankings & Leaderboard
         </h3>
         <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 1.25rem 0' }}>
           Combined rankings of all registered Teams and Solo Competitors scored by judges across competition stages.
