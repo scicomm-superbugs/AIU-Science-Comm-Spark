@@ -1237,6 +1237,24 @@ function EditableTextObject({ value, onChange, editing, isMobile, scale = 1, rot
     </CanvaTransformBox>
   );
 }
+/* ─────────── INDEXEDDB PERSISTENCE HELPER (NO 5MB QUOTA LIMIT) ─────────── */
+const IDB_KEY = 'scicomm_landing_content_idb';
+const saveToIDB = (data) => {
+  try {
+    const request = indexedDB.open('SciCommLandingDB', 1);
+    request.onupgradeneeded = (e) => {
+      e.target.result.createObjectStore('store');
+    };
+    request.onsuccess = (e) => {
+      const db = e.target.result;
+      const tx = db.transaction('store', 'readwrite');
+      tx.objectStore('store').put(data, IDB_KEY);
+    };
+  } catch (e) {
+    console.warn('IDB save warning:', e);
+  }
+};
+
 /* ═══════════════════════════ LANDING COMPONENT ═══════════════════════════ */
 export default function Landing() {
   const navigate = useNavigate();
@@ -1265,6 +1283,31 @@ export default function Landing() {
   useEffect(() => {
     contentRef.current = content;
   }, [content]);
+
+  // Load from IndexedDB on mount if available & newer
+  useEffect(() => {
+    try {
+      const request = indexedDB.open('SciCommLandingDB', 1);
+      request.onupgradeneeded = (e) => { e.target.result.createObjectStore('store'); };
+      request.onsuccess = (e) => {
+        const db = e.target.result;
+        const tx = db.transaction('store', 'readonly');
+        const req = tx.objectStore('store').get(IDB_KEY);
+        req.onsuccess = () => {
+          if (req.result) {
+            setContent(prev => {
+              const localTime = prev?.updatedAt || 0;
+              const idbTime = req.result?.updatedAt || 0;
+              if (idbTime >= localTime) {
+                return { ...DEFAULT_CONTENT, ...prev, ...req.result };
+              }
+              return prev;
+            });
+          }
+        };
+      };
+    } catch (e) {}
+  }, []);
 
   // Keep editModeRef in sync so onSnapshot closure always reads the latest value
   useEffect(() => {
@@ -1330,6 +1373,15 @@ export default function Landing() {
 
         if (snap.exists()) {
           const remoteData = snap.data();
+
+          // CRITICAL TIMESTAMP CHECK: If local content is newer than remote data, keep local!
+          const localUpdatedAt = contentRef.current?.updatedAt || 0;
+          const remoteUpdatedAt = remoteData.updatedAt || 0;
+          if (localUpdatedAt > remoteUpdatedAt) {
+            console.log('Local content is newer than Firestore remote data. Retaining local edits.');
+            return;
+          }
+
           if (!remoteData.heroBtnPrimary || remoteData.heroBtnPrimary === 'Sign Up Now') {
             remoteData.heroBtnPrimary = 'Register Now';
           }
@@ -1341,6 +1393,7 @@ export default function Landing() {
           setContent(prev => ({ ...DEFAULT_CONTENT, ...prev, ...remoteData }));
           try {
             localStorage.setItem('scicomm_landing_content', JSON.stringify(remoteData));
+            saveToIDB(remoteData);
           } catch (e) {}
         } else if (contentRef.current) {
           setDoc(ref, contentRef.current).catch(err => console.warn('Background Firestore seed error:', err));
@@ -1559,11 +1612,12 @@ export default function Landing() {
     sanitized.updatedAt = timestamp;
     const jsonStr = JSON.stringify(sanitized);
 
-    // 1. Save to LocalStorage IMMEDIATELY (1ms)
+    // 1. Save to IndexedDB (unlimited size quota) + LocalStorage IMMEDIATELY
+    saveToIDB(sanitized);
     try {
       localStorage.setItem('scicomm_landing_content', jsonStr);
     } catch (e) {
-      console.warn('LocalStorage save warning:', e);
+      console.warn('LocalStorage quota exceeded, saved safely to IndexedDB:', e);
     }
 
     // 2. Exit Edit Mode INSTANTLY (0.01 seconds!) — zero wait time for the user!
@@ -1582,10 +1636,28 @@ export default function Landing() {
     optimizeLandingContent(payloadToSave).then(cloudPayload => {
       cloudPayload.updatedAt = Date.now();
       const cloudJson = JSON.stringify(cloudPayload);
+      saveToIDB(cloudPayload);
       try { localStorage.setItem('scicomm_landing_content', cloudJson); } catch (e) {}
       setContent(cloudPayload);
       setDoc(ref, cloudPayload).catch(err => console.warn('Background cloud payload sync:', err));
     }).catch(err => console.warn('Background optimize error:', err));
+  };
+
+  const exportEditsJSON = () => {
+    const jsonStr = JSON.stringify(content, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `scicomm_edits.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    try {
+      navigator.clipboard.writeText(jsonStr);
+      alert('📦 Edits downloaded & copied to clipboard!\n\nYou can share this JSON or ask the AI assistant to merge your photos directly into the repository!');
+    } catch {
+      alert('📦 Edits downloaded to scicomm_edits.json!');
+    }
   };
 
   // shorthand
@@ -1602,6 +1674,18 @@ export default function Landing() {
         }}>
           {E ? (
             <>
+              <button
+                onClick={exportEditsJSON}
+                style={{
+                  background: '#38bdf8', color: '#0f172a', border: 'none',
+                  padding: '0.6rem 1rem', borderRadius: '14px', fontWeight: 800, fontSize: '0.82rem',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
+                  boxShadow: '0 4px 14px rgba(56,189,248,0.35)'
+                }}
+                title="Export current edits as JSON file"
+              >
+                📥 Export Edits
+              </button>
               <button
                 onClick={cancelEditMode}
                 style={{
