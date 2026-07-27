@@ -1369,72 +1369,61 @@ export default function Landing() {
   const optimizeLandingContent = async (data, maxDim = 800, qual = 0.65) => {
     const clone = structuredClone(data);
 
-    if (clone.navLogo) clone.navLogo = await compressAndUpload(clone.navLogo, maxDim, qual, true);
-    if (clone.heroLogo) clone.heroLogo = await compressAndUpload(clone.heroLogo, maxDim, qual, true);
-    if (clone.footerLogo) clone.footerLogo = await compressAndUpload(clone.footerLogo, maxDim, qual, true);
-    if (clone.heroBgImage && clone.heroBgImage.startsWith('data:image')) {
-      clone.heroBgImage = await compressAndUpload(clone.heroBgImage, maxDim, qual, false);
-    }
+    // Collect ALL upload tasks and run them in ONE parallel batch
+    const tasks = []; // Array of { set: () => assign result, promise }
 
+    const enqueue = (getter, setter, dim, q, png) => {
+      const val = getter();
+      if (!val || typeof val !== 'string' || !val.startsWith('data:image')) return;
+      tasks.push(compressAndUpload(val, dim, q, png).then(url => setter(url)));
+    };
+
+    // Top-level fields
+    enqueue(() => clone.navLogo,    (u) => { clone.navLogo = u; },    maxDim, qual, true);
+    enqueue(() => clone.heroLogo,   (u) => { clone.heroLogo = u; },   maxDim, qual, true);
+    enqueue(() => clone.footerLogo, (u) => { clone.footerLogo = u; }, maxDim, qual, true);
+    enqueue(() => clone.heroBgImage,(u) => { clone.heroBgImage = u; },maxDim, qual, false);
+
+    // Array fields
     if (Array.isArray(clone.workshops)) {
-      clone.workshops = await Promise.all(
-        clone.workshops.map(async (t) => ({
-          ...t,
-          img: await compressAndUpload(t.img, maxDim, qual, false)
-        }))
-      );
+      clone.workshops.forEach((t, i) => {
+        enqueue(() => t.img, (u) => { clone.workshops[i].img = u; }, maxDim, qual, false);
+      });
     }
-
     if (Array.isArray(clone.teamMembers)) {
-      clone.teamMembers = await Promise.all(
-        clone.teamMembers.map(async (tm) => ({
-          ...tm,
-          img: await compressAndUpload(tm.img, maxDim, qual, false)
-        }))
-      );
+      clone.teamMembers.forEach((tm, i) => {
+        enqueue(() => tm.img, (u) => { clone.teamMembers[i].img = u; }, maxDim, qual, false);
+      });
     }
-
     if (Array.isArray(clone.hallOfFameChampions)) {
-      clone.hallOfFameChampions = await Promise.all(
-        clone.hallOfFameChampions.map(async (c) => {
-          let updatedMembers = [];
-          if (Array.isArray(c.members)) {
-            updatedMembers = await Promise.all(
-              c.members.map(async (m) => ({
-                ...m,
-                img: m.img ? await compressAndUpload(m.img, maxDim, qual, false) : ''
-              }))
-            );
-          }
-          const cleaned = { ...c, members: updatedMembers };
-          delete cleaned.img;
-          return cleaned;
-        })
-      );
+      clone.hallOfFameChampions.forEach((c, ci) => {
+        if (Array.isArray(c.members)) {
+          c.members.forEach((m, mi) => {
+            enqueue(() => m.img, (u) => { clone.hallOfFameChampions[ci].members[mi].img = u; }, maxDim, qual, false);
+          });
+        }
+        delete clone.hallOfFameChampions[ci].img; // clean legacy field
+      });
     }
-
     if (Array.isArray(clone.galleryImages)) {
-      clone.galleryImages = await Promise.all(
-        clone.galleryImages.map((img) => compressAndUpload(img, maxDim, qual, false))
-      );
+      clone.galleryImages.forEach((img, i) => {
+        enqueue(() => img, (u) => { clone.galleryImages[i] = u; }, maxDim, qual, false);
+      });
     }
-
     if (Array.isArray(clone.collaborators)) {
-      clone.collaborators = await Promise.all(
-        clone.collaborators.map(async (col) => ({
-          ...col,
-          logo: await compressAndUpload(col.logo, 500, qual, true)
-        }))
-      );
+      clone.collaborators.forEach((col, i) => {
+        enqueue(() => col.logo, (u) => { clone.collaborators[i].logo = u; }, 500, qual, true);
+      });
+    }
+    if (Array.isArray(clone.aboutSlides)) {
+      clone.aboutSlides.forEach((slide, i) => {
+        enqueue(() => slide.img, (u) => { clone.aboutSlides[i].img = u; }, maxDim, qual, false);
+      });
     }
 
-    if (Array.isArray(clone.aboutSlides)) {
-      clone.aboutSlides = await Promise.all(
-        clone.aboutSlides.map(async (slide) => ({
-          ...slide,
-          img: await compressAndUpload(slide.img, maxDim, qual, false)
-        }))
-      );
+    // Fire ALL uploads simultaneously — only base64 images hit the network
+    if (tasks.length > 0) {
+      await Promise.all(tasks);
     }
 
     return clone;
