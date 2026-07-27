@@ -98,14 +98,29 @@ export default function FTTimelineManagement() {
     ],
     science_journalism: [
       {
-        id: 'jour_stage_1', stageId: 1, title: 'Stage 1: Research Field Prep', sub: 'Topic Research & Expert Interviews Prep', deadline: '2026-09-01', status: 'Active Stage',
-        details: 'Select a scientific topic, gather research data, and conduct interviews with researchers & academic experts.',
+        id: 'jour_stage_1', stageId: 1, title: 'Stage 1: Pre-Interview Preparation', sub: 'Topic Research, Profile & Interview Prep', deadline: '2026-09-01', status: 'Active Stage',
+        details: 'Before the interview, each participant is required to submit a Pre-Interview Preparation document demonstrating their research, planning, and understanding of the interview topic.',
         criteria: [
           { id: 'c7', name: 'Literature Review & Citation', category: 'academic', maxPoints: 25 },
           { id: 'c8', name: 'Journalistic Angle', category: 'scicomm', maxPoints: 25 }
         ],
         submissions: [
-          { id: 'sub_def_4', name: 'Submission 1: Research & Interview Notes', type: 'textbox', question: 'Summarize your research sources, academic literature citations, and interview transcripts:' }
+          {
+            id: 'sub_jour_1',
+            name: 'Pre-Interview Preparation',
+            type: 'mixed',
+            deadline: '2026-09-01',
+            description: 'Before the interview, each participant is required to submit a Pre-Interview Preparation document demonstrating their research, planning, and understanding of the interview topic.\n\nThe document must include:\n1. Interviewee Profile (Full name, position, affiliation, expertise, bio)\n2. Research Abstract (150-250 words)\n3. Interview Objective (Main purpose & story message)\n4. Interview Questions (8-10 open-ended questions)\n5. Audience Impact (Public relevance & expected takeaway)',
+            question: 'Complete all 5 required pre-interview preparation sections below:',
+            questions: [
+              { id: 'q_profile', label: '1. Interviewee Profile (Full Name, Position/Affiliation, Expertise & Bio)', type: 'textbox' },
+              { id: 'q_abstract', label: '2. Research Abstract (150–250 words summarizing interviewee research)', type: 'textbox' },
+              { id: 'q_objective', label: '3. Interview Objective (Main purpose & story message)', type: 'textbox' },
+              { id: 'q_questions', label: '4. Interview Questions (8–10 open-ended questions in logical sequence)', type: 'textbox' },
+              { id: 'q_impact', label: '5. Audience Impact (Public relevance & expected takeaway)', type: 'textbox' },
+              { id: 'q_pdf_doc', label: 'Upload Complete Preparation Document PDF (Optional / Attachment)', type: 'file' }
+            ]
+          }
         ]
       },
       {
