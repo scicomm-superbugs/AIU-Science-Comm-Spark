@@ -74,7 +74,21 @@ export default function FTMyCompetition() {
   const meDoc = scientists.find(s => s.id === user?.id || s.email === user?.email || s.username === user?.username) || user;
   const myTeam = teams.find(t => (t.members || []).some(m => m.userId === user?.id || m.userId === meDoc?.id));
 
-  const competitorTrack = normalizeTrackKey(meDoc?.registeredTrack || user?.registeredTrack || myTeam?.track || user?.track);
+  const isAdminOrStaff = Boolean(
+    user?.role === 'admin' ||
+    user?.role === 'system_administrator' ||
+    user?.isMasterAdmin ||
+    user?.role === 'trainer' ||
+    user?.role === 'academic_judge' ||
+    user?.role === 'scicomm_judge' ||
+    !user?.registeredTrack
+  );
+
+  const [adminSelectedTrack, setAdminSelectedTrack] = useState('pop_science');
+
+  const actualCompetitorTrack = normalizeTrackKey(meDoc?.registeredTrack || user?.registeredTrack || myTeam?.track || user?.track) || 'pop_science';
+  const competitorTrack = isAdminOrStaff ? adminSelectedTrack : actualCompetitorTrack;
+
   const rawStages = DEFAULT_STAGES[competitorTrack] || DEFAULT_STAGES.pop_science;
 
   const getStageData = (trackId, stageObj) => {
@@ -215,12 +229,50 @@ export default function FTMyCompetition() {
 
   return (
     <div className="ft-animate-in">
-      <div className="ft-page-header">
-        <h1 className="ft-page-title">My Competition Workspace</h1>
-        <p className="ft-page-subtitle">Track your submission status, assigned judges, dynamic criteria, and scores stage-by-stage.</p>
-        {user?.competitorIdNumber && (
-          <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--ft-primary)', marginTop: '0.4rem', background: 'rgba(225, 29, 72, 0.05)', border: '1px solid rgba(225, 29, 72, 0.15)', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem', borderRadius: '8px' }}>
-            🎫 Competitor ID: {user.competitorIdNumber}
+      <div className="ft-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.25rem', marginBottom: '2rem' }}>
+        <div>
+          <h1 className="ft-page-title">My Competition Workspace</h1>
+          <p className="ft-page-subtitle">Track your submission status, assigned judges, dynamic criteria, and scores stage-by-stage.</p>
+          {user?.competitorIdNumber && (
+            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--ft-primary)', marginTop: '0.4rem', background: 'rgba(225, 29, 72, 0.05)', border: '1px solid rgba(225, 29, 72, 0.15)', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem', borderRadius: '8px' }}>
+              🎫 Competitor ID: {user.competitorIdNumber}
+            </div>
+          )}
+        </div>
+
+        {isAdminOrStaff && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '0.5rem',
+            background: '#ffffff', padding: '0.45rem 0.75rem', borderRadius: '14px',
+            border: '1.5px solid #cbd5e1', boxShadow: '0 4px 14px rgba(0,0,0,0.04)'
+          }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#334155', padding: '0 0.3rem' }}>
+              👀 Admin Track Preview:
+            </span>
+            <button
+              type="button"
+              onClick={() => setAdminSelectedTrack('pop_science')}
+              style={{
+                padding: '0.45rem 0.9rem', fontSize: '0.82rem', fontWeight: 800, borderRadius: '10px', border: 'none',
+                background: competitorTrack === 'pop_science' ? '#be123c' : '#f1f5f9',
+                color: competitorTrack === 'pop_science' ? '#ffffff' : '#64748b',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', transition: 'all 0.2s ease'
+              }}
+            >
+              🎙️ Pop Science Videos
+            </button>
+            <button
+              type="button"
+              onClick={() => setAdminSelectedTrack('science_journalism')}
+              style={{
+                padding: '0.45rem 0.9rem', fontSize: '0.82rem', fontWeight: 800, borderRadius: '10px', border: 'none',
+                background: competitorTrack === 'science_journalism' ? '#2563eb' : '#f1f5f9',
+                color: competitorTrack === 'science_journalism' ? '#ffffff' : '#64748b',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', transition: 'all 0.2s ease'
+              }}
+            >
+              📰 Science Journalism
+            </button>
           </div>
         )}
       </div>
