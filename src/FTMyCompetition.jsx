@@ -265,6 +265,13 @@ export default function FTMyCompetition() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
                 {isStageActive && subFields.map((sf, idx) => {
                   const effDeadline = sf.deadline || st.deadline;
+                  const isFieldSubmitted = Boolean(stageSub) && (
+                    Boolean(stageSub.submittedItems?.[sf.id]?.value) ||
+                    Boolean(stageSub.submittedItems?.[sf.id]?.fileUrl) ||
+                    Boolean(stageSub.videoUrl) ||
+                    Boolean(stageSub.fileUrl)
+                  );
+
                   return (
                     <button
                       key={sf.id || idx}
@@ -274,14 +281,41 @@ export default function FTMyCompetition() {
                       }}
                       className="ft-btn"
                       style={{
-                        background: `linear-gradient(135deg, ${trackThemeColor} 0%, #be123c 100%)`,
-                        color: '#ffffff', fontWeight: 800, padding: '0.55rem 1.15rem', borderRadius: '12px',
-                        fontSize: '0.85rem', border: 'none', boxShadow: `0 4px 14px ${trackThemeColor}40`,
-                        cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem'
+                        background: isFieldSubmitted
+                          ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                          : '#f1f5f9',
+                        color: isFieldSubmitted ? '#ffffff' : '#334155',
+                        fontWeight: 800,
+                        padding: '0.55rem 1.15rem',
+                        borderRadius: '12px',
+                        fontSize: '0.85rem',
+                        border: isFieldSubmitted ? 'none' : '1.5px solid #cbd5e1',
+                        boxShadow: isFieldSubmitted ? '0 4px 14px rgba(5, 150, 105, 0.3)' : 'none',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.45rem',
+                        transition: 'all 0.2s ease'
                       }}
                     >
-                      <Send size={15} /> Submit {sf.name || `Stage ${st.stageId}`}
-                      <span style={{ fontSize: '0.72rem', background: 'rgba(255,255,255,0.22)', padding: '0.15rem 0.5rem', borderRadius: '6px', marginLeft: '0.2rem', fontWeight: 800 }}>
+                      {isFieldSubmitted ? (
+                        <>
+                          <span>✅ Submitted:</span> {sf.name || `Stage ${st.stageId}`}
+                        </>
+                      ) : (
+                        <>
+                          <Send size={15} style={{ color: 'var(--ft-primary)' }} /> Submit {sf.name || `Stage ${st.stageId}`}
+                        </>
+                      )}
+                      <span style={{
+                        fontSize: '0.72rem',
+                        background: isFieldSubmitted ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+                        color: isFieldSubmitted ? '#ffffff' : '#475569',
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: '6px',
+                        marginLeft: '0.2rem',
+                        fontWeight: 800
+                      }}>
                         ⏰ {formatUnifiedDate(effDeadline)}
                       </span>
                     </button>
