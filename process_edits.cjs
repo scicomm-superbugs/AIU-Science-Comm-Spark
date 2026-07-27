@@ -1,10 +1,49 @@
 const fs = require('fs');
 const path = require('path');
 
-const jsonPath = 'C:/Users/amage/Downloads/scicomm_edits.json';
+const jsonPath = fs.existsSync('C:/Users/amage/Downloads/scicomm_edits (1).json')
+  ? 'C:/Users/amage/Downloads/scicomm_edits (1).json'
+  : 'C:/Users/amage/Downloads/scicomm_edits.json';
+
 console.log('Reading JSON from:', jsonPath);
 
-const edits = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+const rawEdits = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+
+function stripBadTags(str) {
+  if (typeof str !== 'string') return str;
+  let cleaned = str.replace(/<span\b[^>]*>(.*?)<\/span>/gi, '$1');
+  cleaned = cleaned.replace(/<font\b[^>]*>(.*?)<\/font>/gi, '$1');
+  cleaned = cleaned.replace(/\s*style="[^"]*"/gi, '');
+  cleaned = cleaned.replace(/\s*class="[^"]*"/gi, '');
+  cleaned = cleaned.trim();
+  return cleaned;
+}
+
+function decodeEntities(str) {
+  if (typeof str !== 'string') return str;
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function cleanObject(obj) {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(cleanObject);
+  const res = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (typeof v === 'string') {
+      res[k] = decodeEntities(stripBadTags(v));
+    } else {
+      res[k] = cleanObject(v);
+    }
+  }
+  return res;
+}
+
+const edits = cleanObject(rawEdits);
 
 const publicUploads = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(publicUploads)) {

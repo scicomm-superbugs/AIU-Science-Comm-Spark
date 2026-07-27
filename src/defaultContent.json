@@ -66,7 +66,7 @@
     {
       "bg": "#fef3c7",
       "color": "#d97706",
-      "text": "Historic Venue &amp; Partnership: Jointly hosted at the Bibliotheca Alexandrina alongside AIU leadership",
+      "text": "Historic Venue & Partnership: Jointly hosted at the Bibliotheca Alexandrina alongside AIU leadership",
       "icon": "🏛️"
     },
     {
@@ -308,7 +308,7 @@
       "img": "./uploads/workshop_0_1785140502263_12.jpg",
       "day": "10",
       "speaker": "Abdullah Amr Maged",
-      "role": "Teaching Assistant &amp; General Coordinator for Science Communication"
+      "role": "Teaching Assistant & General Coordinator for Science Communication"
     },
     {
       "day": "00",
@@ -324,7 +324,7 @@
       "day": "00",
       "title": "",
       "speaker": "Dr. Andrew Samir",
-      "role": "Pharmacist &amp; Viral Science Content Creator with over 4 million followers",
+      "role": "Pharmacist & Viral Science Content Creator with over 4 million followers",
       "type": "Online",
       "img": "./uploads/workshop_2_1785140502267_14.png"
     },
@@ -342,7 +342,7 @@
       "day": "00",
       "title": "",
       "speaker": "Eng. Metwally Hamza",
-      "role": "Geologist &amp; Science Journalist",
+      "role": "Geologist & Science Journalist",
       "type": "Online",
       "img": "./uploads/workshop_4_1785140502271_16.png"
     },
@@ -351,7 +351,7 @@
       "day": "00",
       "title": "",
       "speaker": "Dr. Samaa Ibrahim",
-      "role": "Content Strategist &amp; Children's Science Communicator",
+      "role": "Content Strategist & Children's Science Communicator",
       "type": "Online",
       "img": "./uploads/workshop_5_1785140502273_17.png"
     },
@@ -360,7 +360,7 @@
       "day": "00",
       "title": "",
       "speaker": "Mr. Anthony Ragaey",
-      "role": "STEM Instructor &amp; Science Communicator at NuttyScientist EG",
+      "role": "STEM Instructor & Science Communicator at NuttyScientist EG",
       "type": "Online",
       "img": "./uploads/workshop_6_1785140502275_18.jpg"
     },
@@ -369,7 +369,7 @@
       "day": "00",
       "title": "",
       "speaker": "Mr. Omar Fawzy",
-      "role": "Founder of \"Sciphilia\" &amp; Science Storyteller on YouTube with 20M Views",
+      "role": "Founder of \"Sciphilia\" & Science Storyteller on YouTube with 20M Views",
       "type": "Online",
       "img": "./uploads/workshop_7_1785140502276_19.png"
     },
@@ -378,7 +378,7 @@
       "day": "00",
       "title": "",
       "speaker": "Mr. Yossef El-Said",
-      "role": "Science Communication Specialist &amp; STEM Edutainment Expert",
+      "role": "Science Communication Specialist & STEM Edutainment Expert",
       "type": "Online",
       "img": "./uploads/workshop_8_1785140502277_20.jpg"
     }
@@ -387,12 +387,12 @@
   "collaboratorsHeadline": "Working Together to Fuel Science Communication in Egypt",
   "collaborators": [
     {
-      "name": "New Partner Organization",
+      "name": "<br>",
       "offsetY": 0,
       "logo": "./uploads/collab_0_1785140502278_21.png",
       "offsetX": 0,
       "scale": 1,
-      "role": "Partner Category",
+      "role": "Strategic Partner&nbsp;",
       "rotate": 0
     }
   ],
@@ -443,7 +443,7 @@
   "footerBtn": "Sign Up Now 🚀",
   "galleryImages": [],
   "sparkWordMobileScale": 1.1743169263452558,
-  "updatedAt": 1785140738637,
+  "updatedAt": 1785140876820,
   "sparkWordMobileOffsetY": -89,
   "tagline2MobileOffsetX": 0,
   "heroLogoMobileOffsetX": 234,
