@@ -1045,46 +1045,6 @@ export default function Landing() {
 
   const isMobile = false; // Forced Desktop layout on all devices
   const [savedContent, setSavedContent] = useState(null); // snapshot before editing
-
-  // ── Automatic Fullscreen & Landscape Mode Request for Mobile ──
-  const [showLandscapePrompt, setShowLandscapePrompt] = useState(false);
-
-  useEffect(() => {
-    const checkOrientation = () => {
-      const portrait = typeof window !== 'undefined' && window.innerHeight > window.innerWidth && window.innerWidth <= 900;
-      setShowLandscapePrompt(portrait);
-    };
-
-    checkOrientation();
-    window.addEventListener('resize', checkOrientation);
-    window.addEventListener('orientationchange', checkOrientation);
-
-    // Try locking orientation to landscape
-    if (window.screen?.orientation?.lock) {
-      window.screen.orientation.lock('landscape').catch(() => {});
-    }
-
-    return () => {
-      window.removeEventListener('resize', checkOrientation);
-      window.removeEventListener('orientationchange', checkOrientation);
-    };
-  }, []);
-
-  const requestFullscreenLandscape = async () => {
-    try {
-      if (document.documentElement.requestFullscreen) {
-        await document.documentElement.requestFullscreen();
-      } else if (document.documentElement.webkitRequestFullscreen) {
-        await document.documentElement.webkitRequestFullscreen();
-      }
-    } catch (e) {}
-    try {
-      if (window.screen?.orientation?.lock) {
-        await window.screen.orientation.lock('landscape');
-      }
-    } catch (e) {}
-    setShowLandscapePrompt(false);
-  };
   const [saving, setSaving] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
@@ -3843,36 +3803,6 @@ export default function Landing() {
           </span>
         </div>
       </footer>
-
-      {/* ═══════ FULLSCREEN LANDSCAPE APP PROMPT FOR MOBILE ═══════ */}
-      {showLandscapePrompt && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999999,
-          background: 'rgba(15, 23, 42, 0.96)', backdropFilter: 'blur(12px)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          color: '#ffffff', textAlign: 'center', padding: '2rem'
-        }}>
-          <div style={{ fontSize: '3.8rem', marginBottom: '1rem' }}>📱 🔄</div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.5rem', color: '#f43f5e', fontFamily: "'Outfit', sans-serif" }}>
-            Please Rotate Your Device to Landscape
-          </h2>
-          <p style={{ fontSize: '0.95rem', color: '#cbd5e1', maxWidth: '440px', marginBottom: '1.75rem', lineHeight: 1.5 }}>
-            SciComm Spark runs in full Desktop App mode. Rotate your device horizontally or tap below for full screen.
-          </p>
-          <button
-            type="button"
-            onClick={requestFullscreenLandscape}
-            style={{
-              background: 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
-              color: '#ffffff', border: 'none', padding: '0.9rem 2.2rem',
-              borderRadius: '30px', fontWeight: 900, fontSize: '1.05rem',
-              cursor: 'pointer', boxShadow: '0 8px 25px rgba(190, 18, 60, 0.45)'
-            }}
-          >
-            🖥️ Open Desktop App Mode
-          </button>
-        </div>
-      )}
 
     </div>
   );
