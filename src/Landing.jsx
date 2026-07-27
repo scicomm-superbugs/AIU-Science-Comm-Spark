@@ -883,6 +883,9 @@ export function CanvaTransformBox({
   onTransformChange,
   style = {}
 }) {
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0, initX: 0, initY: 0 });
+  const [isHovered, setIsHovered] = useState(false);
   const leaveTimerRef = useRef(null);
 
   const handleMouseEnter = () => {
