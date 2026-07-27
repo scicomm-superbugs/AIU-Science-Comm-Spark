@@ -155,6 +155,7 @@ export default function FTDashboard() {
       const merged = getMergedStage(st, selectedTrack);
       return {
         ...merged,
+        deadline: formatUnifiedDate(merged.deadline),
         _rawDate: getRawDate(merged.deadline, idx)
       };
     });
@@ -171,7 +172,7 @@ export default function FTDashboard() {
         sub: ws.trainerName ? `Trainer: ${ws.trainerName}` : 'Training Session',
         trainerName: ws.trainerName || '',
         trainerId: ws.trainerId || '',
-        deadline: ws.startDate ? (isNaN(new Date(ws.startDate).getTime()) ? ws.startDate : new Date(ws.startDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })) : 'TBD',
+        deadline: formatUnifiedDate(ws.startDate),
         startDate: ws.startDate,
         _rawDate: getRawDate(ws.startDate, 100 + idx),
         icon: ws.type === 'Orientation' ? <Zap size={20} />
@@ -230,10 +231,20 @@ export default function FTDashboard() {
     }
     const cleanName = (step.trainerName || step.sub || '').replace(/^Trainer:\s*/i, '').trim();
     if (!cleanName) return null;
-    return scientists.find(a => 
-      (a.name && a.name.toLowerCase() === cleanName.toLowerCase()) ||
+    const match = scientists.find(a => 
+      (a.name && a.name.toLowerCase().includes(cleanName.toLowerCase())) ||
+      (cleanName.toLowerCase().includes(a.name?.toLowerCase())) ||
       (a.username && a.username.toLowerCase() === cleanName.toLowerCase())
-    ) || null;
+    );
+    if (match) return match;
+    return {
+      name: cleanName,
+      username: cleanName.toLowerCase().replace(/\s+/g, '_'),
+      role: 'trainer',
+      title: 'Workshop Trainer & Speaker',
+      institutionName: 'AIU SciComm Spark',
+      department: 'Science Communication'
+    };
   };
 
   // Find index of currently selected/targeted step node
@@ -1011,19 +1022,28 @@ export default function FTDashboard() {
 
                         return (
                           <div key={judgeId} style={{
-                            display: 'flex', alignItems: 'center', gap: '0.85rem',
-                            background: '#161f30', padding: '0.75rem 1.1rem', borderRadius: '14px',
+                            display: 'flex', alignItems: 'center', gap: '0.95rem',
+                            background: '#161f30', padding: '0.85rem 1.15rem', borderRadius: '16px',
                             border: `1.5px solid ${roleColor}80`,
-                            boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.2)', flexWrap: 'wrap'
                           }}>
                             <img
                               src={avatarUrl}
                               alt={judge.name}
-                              style={{ width: '40px', height: '40px', borderRadius: '50%', border: `2px solid ${roleColor}`, objectFit: 'cover' }}
+                              style={{ width: '46px', height: '46px', borderRadius: '50%', border: `2.5px solid ${roleColor}`, objectFit: 'cover', flexShrink: 0, boxShadow: `0 0 10px ${roleColor}40` }}
                             />
-                            <div>
-                              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#ffffff' }}>{judge.name}</div>
-                              <div style={{ fontSize: '0.78rem', fontWeight: 900, color: roleColor }}>{roleLabel}</div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap' }}>
+                                <div style={{ fontSize: '0.98rem', fontWeight: 900, color: '#ffffff' }}>{judge.name}</div>
+                                <span style={{ fontSize: '0.7rem', fontWeight: 900, background: `${roleColor}25`, color: roleColor, padding: '0.15rem 0.5rem', borderRadius: '6px', border: `1px solid ${roleColor}60` }}>
+                                  {roleLabel}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '0.8rem', color: '#cbd5e1', marginTop: '0.2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                {judge.title && <span>{judge.title}</span>}
+                                {judge.institutionName && <span style={{ color: '#38bdf8' }}>· 🏫 {judge.institutionName}</span>}
+                                {!judge.institutionName && judge.department && <span style={{ color: '#94a3b8' }}>· 🎓 {judge.department}</span>}
+                              </div>
                             </div>
                           </div>
                         );

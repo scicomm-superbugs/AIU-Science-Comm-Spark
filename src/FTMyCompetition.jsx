@@ -652,14 +652,35 @@ export default function FTMyCompetition() {
                               <span style={{ fontSize: '0.75rem', fontWeight: 900, background: judgeRoleColor, color: '#ffffff', padding: '0.25rem 0.65rem', borderRadius: '8px' }}>
                                 {judgeRoleLabel}
                               </span>
-                              <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', background: '#fef3c7', padding: '0.2rem 0.65rem', borderRadius: '8px', border: '1px solid #f59e0b' }}>
+                               <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', background: '#fef3c7', padding: '0.2rem 0.65rem', borderRadius: '8px', border: '1px solid #f59e0b' }}>
                                 {evalDoc.totalScore} / {displayMaxScore} pts
                               </span>
                             </div>
 
-                            <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700, marginBottom: '0.4rem' }}>
-                              Evaluated by <strong>{evalDoc.judgeName}</strong> on {dateFormatted}
-                            </div>
+                             {(() => {
+                               const judgeAcc = scientists.find(s => s.name === evalDoc.judgeName || s.username === evalDoc.judgeName || s.id === evalDoc.judgeId);
+                               return (
+                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', margin: '0.4rem 0' }}>
+                                   <img
+                                     src={judgeAcc?.avatarUrl || judgeAcc?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${evalDoc.judgeName}`}
+                                     alt=""
+                                     style={{ width: 34, height: 34, borderRadius: '50%', border: `2px solid ${judgeRoleColor}`, objectFit: 'cover', flexShrink: 0 }}
+                                   />
+                                   <div>
+                                     <div style={{ fontSize: '0.84rem', color: '#0f172a', fontWeight: 800 }}>
+                                       Evaluated by <strong>{evalDoc.judgeName}</strong> on {dateFormatted}
+                                     </div>
+                                     {judgeAcc && (judgeAcc.title || judgeAcc.institutionName || judgeAcc.department) && (
+                                       <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>
+                                         {judgeAcc.title && <span>{judgeAcc.title}</span>}
+                                         {judgeAcc.institutionName && <span>{judgeAcc.title ? ' · ' : ''}🏫 {judgeAcc.institutionName}</span>}
+                                         {!judgeAcc.institutionName && judgeAcc.department && <span>{judgeAcc.title ? ' · ' : ''}🎓 {judgeAcc.department}</span>}
+                                       </div>
+                                     )}
+                                   </div>
+                                 </div>
+                               );
+                             })()}
                             
                             {/* Judge Feedback Comments */}
                             {evalDoc.comments && (

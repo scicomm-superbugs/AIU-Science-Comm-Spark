@@ -1,6 +1,13 @@
 export const FT_UNIVERSITY = 'SciComm Spark Egypt';
 export const FT_FACULTY = '';
 
+export const formatUnifiedDate = (dateStr) => {
+  if (!dateStr || dateStr === 'TBD') return 'TBD';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
 export const FT_DEPARTMENTS = [
   'Biotechnology & Life Sciences',
   'Physics & Chemistry',
