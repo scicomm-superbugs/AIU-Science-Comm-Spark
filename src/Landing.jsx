@@ -1192,6 +1192,9 @@ export default function Landing() {
 
     const unsubscribe = onSnapshot(ref, (snap) => {
       try {
+        // CRITICAL: Do NOT overwrite admin's active local draft edits while in Edit Mode!
+        if (editMode) return;
+
         if (snap.exists()) {
           const remoteData = snap.data();
           if (!remoteData.heroBtnPrimary || remoteData.heroBtnPrimary === 'Sign Up Now') {
@@ -1217,7 +1220,7 @@ export default function Landing() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [editMode]);
 
   // ── Auto slide timer for About Gallery ──
   useEffect(() => {
@@ -2346,18 +2349,18 @@ export default function Landing() {
                             <EditableImage
                               src={m.img || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=800&q=80'}
                               onUpload={(base64) => {
-                                const copy = [...(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions)];
-                                const memCopy = [...(copy[currentChampIndex].members || [])];
-                                memCopy[mIdx] = { ...memCopy[mIdx], img: base64 };
-                                copy[currentChampIndex] = { ...copy[currentChampIndex], members: memCopy };
-                                updateField('hallOfFameChampions', copy);
+                                const copy = structuredClone(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions);
+                                if (copy[currentChampIndex] && copy[currentChampIndex].members && copy[currentChampIndex].members[mIdx]) {
+                                  copy[currentChampIndex].members[mIdx].img = base64;
+                                  updateField('hallOfFameChampions', copy);
+                                }
                               }}
                               onRemove={() => {
-                                const copy = [...(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions)];
-                                const memCopy = [...(copy[currentChampIndex].members || [])];
-                                memCopy[mIdx] = { ...memCopy[mIdx], img: '' };
-                                copy[currentChampIndex] = { ...copy[currentChampIndex], members: memCopy };
-                                updateField('hallOfFameChampions', copy);
+                                const copy = structuredClone(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions);
+                                if (copy[currentChampIndex] && copy[currentChampIndex].members && copy[currentChampIndex].members[mIdx]) {
+                                  copy[currentChampIndex].members[mIdx].img = '';
+                                  updateField('hallOfFameChampions', copy);
+                                }
                               }}
                               editing={E}
                               alt={m.name}
