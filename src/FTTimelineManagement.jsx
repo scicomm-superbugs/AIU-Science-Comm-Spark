@@ -36,6 +36,13 @@ export default function FTTimelineManagement() {
   const [newQType, setNewQType] = useState('short_text');
   const [newQDescription, setNewQDescription] = useState('');
 
+  // Inline Editing for existing submissions
+  const [editingSubFieldId, setEditingSubFieldId] = useState(null);
+  const [editSubData, setEditSubData] = useState(null);
+  const [editSubQLabel, setEditSubQLabel] = useState('');
+  const [editSubQType, setEditSubQType] = useState('short_text');
+  const [editSubQDesc, setEditSubQDesc] = useState('');
+
   const handleAddSubmissionFieldToStage = () => {
     if (!newSubName.trim() || !editingStage) return;
 
@@ -687,6 +694,195 @@ export default function FTTimelineManagement() {
                   {(editingStage.submissions || []).map((subField, idx) => {
                     const effectiveDeadline = subField.deadline || editingStage.deadline || '2026-09-01';
                     const hasSubQuestions = subField.questions && subField.questions.length > 0;
+                    const isEditingThisSub = editingSubFieldId === subField.id;
+
+                    if (isEditingThisSub && editSubData) {
+                      return (
+                        <div key={subField.id || idx} style={{
+                          padding: '1.2rem 1.25rem', borderRadius: '16px', background: '#f8fafc',
+                          border: '2px solid #0284c7', display: 'flex', flexDirection: 'column', gap: '0.85rem', width: '100%',
+                          boxShadow: '0 4px 16px rgba(2, 132, 199, 0.12)'
+                        }}>
+                          <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              ✏️ Editing Submission Deliverable: <strong style={{ color: '#0284c7' }}>{subField.name}</strong>
+                            </span>
+                            <button
+                              type="button"
+                              className="ft-btn ft-btn-outline"
+                              style={{ padding: '0.2rem 0.6rem', fontSize: '0.78rem' }}
+                              onClick={() => {
+                                setEditingSubFieldId(null);
+                                setEditSubData(null);
+                              }}
+                            >
+                              ✕ Cancel
+                            </button>
+                          </div>
+
+                          {/* Title & Custom Deadline */}
+                          <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1.5fr', gap: '0.6rem' }}>
+                            <div>
+                              <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem' }}>Deliverable Title *</label>
+                              <input
+                                type="text"
+                                className="ft-input"
+                                style={{ fontSize: '0.85rem' }}
+                                value={editSubData.name || ''}
+                                onChange={e => setEditSubData({ ...editSubData, name: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem' }}>Custom Deadline</label>
+                              <input
+                                type="date"
+                                className="ft-input"
+                                style={{ fontSize: '0.85rem' }}
+                                value={editSubData.deadline || ''}
+                                onChange={e => setEditSubData({ ...editSubData, deadline: e.target.value })}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Description & Requirements Box */}
+                          <div>
+                            <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem' }}>
+                              📝 Detailed Description & Requirements Box (Supports Markdown):
+                            </label>
+                            <textarea
+                              className="ft-textarea"
+                              rows={3}
+                              style={{ fontSize: '0.85rem' }}
+                              value={editSubData.description || editSubData.question || ''}
+                              onChange={e => setEditSubData({ ...editSubData, description: e.target.value, question: e.target.value })}
+                            />
+                          </div>
+
+                          {/* Questions / Requirement Fields Manager */}
+                          <div style={{ background: '#ffffff', padding: '0.85rem 1rem', borderRadius: '12px', border: '1.5px solid #cbd5e1' }}>
+                            <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#0f172a', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <span>❓</span> Sub-Questions & Requirement Fields ({editSubData.questions?.length || 0}):
+                            </div>
+
+                            {/* Question List */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginBottom: '0.75rem' }}>
+                              {(editSubData.questions || []).map((q, qIdx) => (
+                                <div key={q.id || qIdx} style={{ background: '#f8fafc', padding: '0.55rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span style={{ fontWeight: 800, color: '#0f172a' }}>
+                                      <strong>Question {qIdx + 1}:</strong> {q.label} <em style={{ color: '#0284c7', fontWeight: 600 }}>({q.type})</em>
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const updatedQuestions = (editSubData.questions || []).filter((_, idx) => idx !== qIdx);
+                                        setEditSubData({ ...editSubData, questions: updatedQuestions });
+                                      }}
+                                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.1rem' }}
+                                      title="Remove question"
+                                    >
+                                      <X size={14} />
+                                    </button>
+                                  </div>
+                                  {q.description && (
+                                    <div style={{ color: '#475569', fontSize: '0.74rem', background: '#ffffff', padding: '0.3rem 0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                      📝 {q.description}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Add Question to Existing Deliverable Form */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', background: '#f1f5f9', padding: '0.65rem 0.75rem', borderRadius: '10px' }}>
+                              <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#334155' }}>
+                                ➕ Add New Sub-Question to this deliverable:
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr auto', gap: '0.4rem' }}>
+                                <input
+                                  type="text"
+                                  className="ft-input"
+                                  style={{ fontSize: '0.78rem', padding: '0.35rem 0.55rem' }}
+                                  placeholder="Question Label (e.g. 1. Interviewee Profile)"
+                                  value={editSubQLabel}
+                                  onChange={e => setEditSubQLabel(e.target.value)}
+                                />
+                                <select
+                                  className="ft-select"
+                                  style={{ fontSize: '0.78rem', padding: '0.35rem 0.55rem' }}
+                                  value={editSubQType}
+                                  onChange={e => setEditSubQType(e.target.value)}
+                                >
+                                  <option value="short_text">Short Text ✏️</option>
+                                  <option value="textbox">Paragraph Text Box 📝</option>
+                                  <option value="file">File Upload 📄</option>
+                                  <option value="url">URL Link 🔗</option>
+                                </select>
+                                <button
+                                  type="button"
+                                  className="ft-btn ft-btn-outline"
+                                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', background: '#ffffff' }}
+                                  onClick={() => {
+                                    if (!editSubQLabel.trim()) return;
+                                    const newQ = {
+                                      id: 'q_' + Date.now(),
+                                      label: editSubQLabel.trim(),
+                                      type: editSubQType,
+                                      description: editSubQDesc.trim()
+                                    };
+                                    setEditSubData({
+                                      ...editSubData,
+                                      questions: [...(editSubData.questions || []), newQ]
+                                    });
+                                    setEditSubQLabel('');
+                                    setEditSubQDesc('');
+                                  }}
+                                >
+                                  <Plus size={14} /> Add Q
+                                </button>
+                              </div>
+                              <textarea
+                                className="ft-textarea"
+                                rows={2}
+                                style={{ fontSize: '0.78rem', padding: '0.35rem 0.55rem' }}
+                                placeholder="Sub-Question Description & Guidelines (Optional - Supports Markdown)..."
+                                value={editSubQDesc}
+                                onChange={e => setEditSubQDesc(e.target.value)}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Save / Cancel buttons */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.2rem' }}>
+                            <button
+                              type="button"
+                              className="ft-btn ft-btn-outline"
+                              onClick={() => {
+                                setEditingSubFieldId(null);
+                                setEditSubData(null);
+                              }}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              className="ft-btn ft-btn-primary"
+                              style={{ fontWeight: 800 }}
+                              onClick={() => {
+                                const updatedSubmissions = (editingStage.submissions || []).map(f =>
+                                  f.id === subField.id ? { ...editSubData } : f
+                                );
+                                setEditingStage({ ...editingStage, submissions: updatedSubmissions });
+                                setEditingSubFieldId(null);
+                                setEditSubData(null);
+                              }}
+                            >
+                              <Save size={16} /> Save Deliverable Changes
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
 
                     return (
                       <div key={subField.id || idx} style={{
@@ -726,6 +922,20 @@ export default function FTTimelineManagement() {
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <button
+                            type="button"
+                            className="ft-btn ft-btn-outline"
+                            style={{ padding: '0.25rem 0.65rem', fontSize: '0.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.3rem', background: '#f8fafc' }}
+                            onClick={() => {
+                              setEditingSubFieldId(subField.id);
+                              setEditSubData({
+                                ...subField,
+                                questions: subField.questions ? [...subField.questions] : []
+                              });
+                            }}
+                          >
+                            <Edit3 size={14} /> Edit
+                          </button>
                           <input
                             type="date"
                             className="ft-input"
@@ -743,6 +953,7 @@ export default function FTTimelineManagement() {
                             type="button"
                             onClick={() => handleDeleteSubmissionFieldFromStage(subField.id)}
                             style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.3rem' }}
+                            title="Delete Deliverable"
                           >
                             <Trash2 size={16} />
                           </button>
