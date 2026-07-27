@@ -721,12 +721,36 @@ export function ImageCropModal({ isOpen, imageSrc, onClose, onSave }) {
   );
 }
 
+/* ─────────── INSTANT STORAGE UPLOAD HELPER ─────────── */
+// Compress via canvas + upload to Firebase Storage immediately → returns download URL
+const quickUpload = async (base64Str, maxDim = 800, quality = 0.65) => {
+  if (!base64Str || typeof base64Str !== 'string' || !base64Str.startsWith('data:image')) return base64Str;
+  // Compress on canvas first
+  const compressed = await new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        if (width > height) { height = Math.round((height * maxDim) / width); width = maxDim; }
+        else { width = Math.round((width * maxDim) / height); height = maxDim; }
+      }
+      const c = document.createElement('canvas'); c.width = width; c.height = height;
+      const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
+      resolve(base64Str.startsWith('data:image/png') ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(base64Str);
+  });
+  return await uploadBase64ToStorage(compressed, 'landing');
+};
+
 /* ─────────────────────────── CLEAN MEDIA FRAME SYSTEM ─────────────────────────── */
 
 export function EditableImage({ src, onUpload, onRemove, editing, style = {}, alt = '' }) {
   const fileRef = useRef(null);
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [pendingImage, setPendingImage] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   const handleFile = (e) => {
     const file = e.target.files?.[0];
@@ -734,11 +758,21 @@ export function EditableImage({ src, onUpload, onRemove, editing, style = {}, al
     e.target.value = '';
 
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       const base64 = ev.target?.result;
       if (base64) {
-        if (onUpload) onUpload(base64);
+        // Show preview immediately
         setPendingImage(base64);
+        // Upload to Firebase Storage in background → pass URL (not base64) to parent
+        setUploading(true);
+        try {
+          const url = await quickUpload(base64, 800, 0.65);
+          if (onUpload) onUpload(url);
+        } catch {
+          if (onUpload) onUpload(base64); // fallback
+        } finally {
+          setUploading(false);
+        }
       }
     };
     reader.readAsDataURL(file);
@@ -823,8 +857,13 @@ export function EditableImage({ src, onUpload, onRemove, editing, style = {}, al
         isOpen={cropModalOpen}
         imageSrc={pendingImage}
         onClose={() => setCropModalOpen(false)}
-        onSave={(croppedBase64) => {
-          if (onUpload) onUpload(croppedBase64);
+        onSave={async (croppedBase64) => {
+          try {
+            const url = await quickUpload(croppedBase64, 800, 0.65);
+            if (onUpload) onUpload(url);
+          } catch {
+            if (onUpload) onUpload(croppedBase64);
+          }
         }}
       />
     </div>
@@ -1095,8 +1134,14 @@ export function EditableLogo({
           isOpen={cropModalOpen}
           imageSrc={pendingImage}
           onClose={() => setCropModalOpen(false)}
-          onSave={(croppedBase64) => {
-            if (onUpload) onUpload(croppedBase64);
+          onSave={async (croppedBase64) => {
+            // Upload cropped image to Storage immediately
+            try {
+              const url = await quickUpload(croppedBase64, 800, 0.65);
+              if (onUpload) onUpload(url);
+            } catch {
+              if (onUpload) onUpload(croppedBase64);
+            }
           }}
         />
       </div>
@@ -1355,75 +1400,46 @@ export default function Landing() {
     });
   };
 
-  // Compress a base64 image, then upload to Firebase Storage → returns a short download URL
-  const compressAndUpload = async (str, maxDimension = 800, quality = 0.65, isPng = false) => {
-    if (!str || typeof str !== 'string') return str;
-    // Already a URL (https:// or ./ relative path) — no processing needed
-    if (!str.startsWith('data:image')) return str;
-    const compressed = await compressBase64(str, maxDimension, quality, isPng);
-    // Upload to Firebase Storage and get a short download URL (~200 bytes vs ~100KB+ base64)
-    const url = await uploadBase64ToStorage(compressed, 'landing');
-    return url;
+  // Strip any remaining base64 strings from the content (safety net).
+  // All images should already be URLs from instant upload on selection.
+  const stripRemainingBase64 = (val) => {
+    if (!val || typeof val !== 'string') return val;
+    if (val.startsWith('data:image')) return ''; // should never happen — images upload on selection
+    return val;
   };
 
-  const optimizeLandingContent = async (data, maxDim = 800, qual = 0.65) => {
+  const optimizeLandingContent = (data) => {
     const clone = structuredClone(data);
 
-    // Collect ALL upload tasks and run them in ONE parallel batch
-    const tasks = []; // Array of { set: () => assign result, promise }
-
-    const enqueue = (getter, setter, dim, q, png) => {
-      const val = getter();
-      if (!val || typeof val !== 'string' || !val.startsWith('data:image')) return;
-      tasks.push(compressAndUpload(val, dim, q, png).then(url => setter(url)));
-    };
-
-    // Top-level fields
-    enqueue(() => clone.navLogo,    (u) => { clone.navLogo = u; },    maxDim, qual, true);
-    enqueue(() => clone.heroLogo,   (u) => { clone.heroLogo = u; },   maxDim, qual, true);
-    enqueue(() => clone.footerLogo, (u) => { clone.footerLogo = u; }, maxDim, qual, true);
-    enqueue(() => clone.heroBgImage,(u) => { clone.heroBgImage = u; },maxDim, qual, false);
+    // Top-level image fields — should already be URLs
+    if (clone.navLogo) clone.navLogo = stripRemainingBase64(clone.navLogo);
+    if (clone.heroLogo) clone.heroLogo = stripRemainingBase64(clone.heroLogo);
+    if (clone.footerLogo) clone.footerLogo = stripRemainingBase64(clone.footerLogo);
+    if (clone.heroBgImage) clone.heroBgImage = stripRemainingBase64(clone.heroBgImage);
 
     // Array fields
     if (Array.isArray(clone.workshops)) {
-      clone.workshops.forEach((t, i) => {
-        enqueue(() => t.img, (u) => { clone.workshops[i].img = u; }, maxDim, qual, false);
-      });
+      clone.workshops.forEach((t, i) => { clone.workshops[i].img = stripRemainingBase64(t.img); });
     }
     if (Array.isArray(clone.teamMembers)) {
-      clone.teamMembers.forEach((tm, i) => {
-        enqueue(() => tm.img, (u) => { clone.teamMembers[i].img = u; }, maxDim, qual, false);
-      });
+      clone.teamMembers.forEach((tm, i) => { clone.teamMembers[i].img = stripRemainingBase64(tm.img); });
     }
     if (Array.isArray(clone.hallOfFameChampions)) {
       clone.hallOfFameChampions.forEach((c, ci) => {
         if (Array.isArray(c.members)) {
-          c.members.forEach((m, mi) => {
-            enqueue(() => m.img, (u) => { clone.hallOfFameChampions[ci].members[mi].img = u; }, maxDim, qual, false);
-          });
+          c.members.forEach((m, mi) => { clone.hallOfFameChampions[ci].members[mi].img = stripRemainingBase64(m.img); });
         }
-        delete clone.hallOfFameChampions[ci].img; // clean legacy field
+        delete clone.hallOfFameChampions[ci].img;
       });
     }
     if (Array.isArray(clone.galleryImages)) {
-      clone.galleryImages.forEach((img, i) => {
-        enqueue(() => img, (u) => { clone.galleryImages[i] = u; }, maxDim, qual, false);
-      });
+      clone.galleryImages = clone.galleryImages.map(img => stripRemainingBase64(img));
     }
     if (Array.isArray(clone.collaborators)) {
-      clone.collaborators.forEach((col, i) => {
-        enqueue(() => col.logo, (u) => { clone.collaborators[i].logo = u; }, 500, qual, true);
-      });
+      clone.collaborators.forEach((col, i) => { clone.collaborators[i].logo = stripRemainingBase64(col.logo); });
     }
     if (Array.isArray(clone.aboutSlides)) {
-      clone.aboutSlides.forEach((slide, i) => {
-        enqueue(() => slide.img, (u) => { clone.aboutSlides[i].img = u; }, maxDim, qual, false);
-      });
-    }
-
-    // Fire ALL uploads simultaneously — only base64 images hit the network
-    if (tasks.length > 0) {
-      await Promise.all(tasks);
+      clone.aboutSlides.forEach((slide, i) => { clone.aboutSlides[i].img = stripRemainingBase64(slide.img); });
     }
 
     return clone;
@@ -1457,8 +1473,8 @@ export default function Landing() {
         updatedAt: timestamp
       };
 
-      // 1. Compress all base64 images and upload to Firebase Storage → short URLs stored in Firestore
-      let sanitized = sanitizeForFirestore(await optimizeLandingContent(payloadToSave, 800, 0.65));
+      // 1. Strip any leftover base64 (images already uploaded to Storage on selection)
+      let sanitized = sanitizeForFirestore(optimizeLandingContent(payloadToSave));
       sanitized.updatedAt = timestamp;
       const jsonStr = JSON.stringify(sanitized);
 
