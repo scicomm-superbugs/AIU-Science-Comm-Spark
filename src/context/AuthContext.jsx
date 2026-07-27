@@ -48,6 +48,18 @@ const purgeObsoleteUsers = async () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [viewAsMode, setViewAsModeState] = useState(() => {
+    return sessionStorage.getItem('ft_viewAsMode') || null;
+  });
+
+  const setViewAsMode = (mode) => {
+    setViewAsModeState(mode);
+    if (mode) {
+      sessionStorage.setItem('ft_viewAsMode', mode);
+    } else {
+      sessionStorage.removeItem('ft_viewAsMode');
+    }
+  };
 
   // Initialize auth
   useEffect(() => {
@@ -65,6 +77,10 @@ export const AuthProvider = ({ children }) => {
               username: scientist.username,
               name: scientist.name,
               role: scientist.role || 'competitor',
+              realRole: scientist.role || 'competitor',
+              registeredTrack: scientist.registeredTrack || 'pop_science',
+              email: scientist.email,
+              googleEmail: scientist.googleEmail,
               avatar: scientist.avatar
             });
             
@@ -117,9 +133,12 @@ export const AuthProvider = ({ children }) => {
       username: scientist.username,
       name: scientist.name,
       role: scientist.role || 'competitor',
+      realRole: scientist.role || 'competitor',
       avatar: scientist.avatar,
       registeredTrack: scientist.registeredTrack || 'pop_science',
-      teamName: scientist.teamName || ''
+      teamName: scientist.teamName || '',
+      email: scientist.email,
+      googleEmail: scientist.googleEmail
     };
 
     setUser(userData);
@@ -221,6 +240,10 @@ export const AuthProvider = ({ children }) => {
         username: scientist.username,
         name: scientist.name,
         role: scientist.role || 'competitor',
+        realRole: scientist.role || 'competitor',
+        registeredTrack: scientist.registeredTrack || 'pop_science',
+        email: scientist.email,
+        googleEmail: scientist.googleEmail,
         avatar: scientist.avatar
       };
 
@@ -359,12 +382,57 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     setUser(null);
+    setViewAsMode(null);
     localStorage.removeItem('ft_userId');
     sessionStorage.removeItem('ft_userId');
+    sessionStorage.removeItem('ft_viewAsMode');
   };
 
+  const effectiveUser = (function() {
+    if (!user) return null;
+    const realRole = user.realRole || user.role || 'competitor';
+    const isRealAdmin = realRole === 'master' || realRole === 'admin' || Boolean(user.isMasterAdmin) || isAdminEmail(user.email) || isAdminEmail(user.googleEmail);
+
+    if (isRealAdmin && viewAsMode) {
+      let modeRole = realRole;
+      let modeTrack = user.registeredTrack || 'pop_science';
+
+      if (viewAsMode === 'student_pop') {
+        modeRole = 'competitor';
+        modeTrack = 'pop_science';
+      } else if (viewAsMode === 'student_jour') {
+        modeRole = 'competitor';
+        modeTrack = 'science_journalism';
+      } else if (viewAsMode === 'judge_scicomm') {
+        modeRole = 'scicomm_judge';
+        modeTrack = '';
+      } else if (viewAsMode === 'judge_academic') {
+        modeRole = 'academic_judge';
+        modeTrack = '';
+      }
+
+      return {
+        ...user,
+        realRole,
+        role: modeRole,
+        registeredTrack: modeTrack,
+        isImpersonating: true,
+        viewAsMode
+      };
+    }
+
+    return {
+      ...user,
+      realRole,
+      isImpersonating: false,
+      viewAsMode: null
+    };
+  })();
+
+  const isRealAdmin = Boolean(effectiveUser && (effectiveUser.realRole === 'master' || effectiveUser.realRole === 'admin' || Boolean(effectiveUser.isMasterAdmin) || isAdminEmail(effectiveUser.email) || isAdminEmail(effectiveUser.googleEmail)));
+
   return (
-    <AuthContext.Provider value={{ user, setUser, login, loginWithGoogle, completeGoogleRegistration, logout, loading }}>
+    <AuthContext.Provider value={{ user: effectiveUser, setUser, login, loginWithGoogle, completeGoogleRegistration, logout, loading, viewAsMode, setViewAsMode, isRealAdmin }}>
       {children}
     </AuthContext.Provider>
   );

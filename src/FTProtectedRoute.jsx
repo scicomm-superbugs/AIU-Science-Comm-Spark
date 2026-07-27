@@ -22,7 +22,9 @@ export default function FTProtectedRoute({ requireRole = [] }) {
 
   if (requireRole.length > 0) {
     const userRole = user.role || 'competitor';
-    if (userRole !== 'master' && userRole !== 'admin' && !requireRole.includes(userRole)) {
+    const realRole = user.realRole || userRole;
+    const isRealAdmin = realRole === 'master' || realRole === 'admin' || Boolean(user.isMasterAdmin);
+    if (!isRealAdmin && userRole !== 'master' && userRole !== 'admin' && !requireRole.includes(userRole)) {
       return <Navigate to="/dashboard" replace />;
     }
   }
