@@ -4,7 +4,7 @@ import { useAuth } from './context/AuthContext';
 import { useLiveCollection, db, getCollectionName, firestore, uploadFile } from './db';
 import { collection, getDocs } from 'firebase/firestore';
 import { Award, Star, MessageSquare, CheckCircle, Clock, X, Send, Video, FileText, ExternalLink } from 'lucide-react';
-import { DEFAULT_JUDGING_CRITERIA, calculateAveragedPoints, normalizeTrackKey, formatUnifiedDate } from './ftConstants';
+import { DEFAULT_JUDGING_CRITERIA, calculateAveragedPoints, normalizeTrackKey, formatUnifiedDate, renderFormattedDescription } from './ftConstants';
 import './scicommspark.css';
 
 export const DEFAULT_STAGES = {
@@ -489,10 +489,12 @@ export default function FTMyCompetition() {
                     </div>
 
                     {(field.description || field.question) && (
-                      <div style={{ fontSize: '0.83rem', color: '#334155', fontWeight: 600, background: '#f8fafc', padding: '0.65rem 0.85rem', borderRadius: '10px', border: '1.5px solid #cbd5e1', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-                        📝 <strong>Description & Requirements:</strong>
-                        <div style={{ marginTop: '0.2rem', color: '#475569' }}>
-                          {field.description || field.question}
+                      <div style={{ fontSize: '0.83rem', color: '#334155', fontWeight: 600, background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '12px', border: '1.5px solid #cbd5e1', lineHeight: 1.5 }}>
+                        <div style={{ fontWeight: 900, color: '#0f172a', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          📋 <strong>Description & Requirements:</strong>
+                        </div>
+                        <div style={{ color: '#475569' }}>
+                          {renderFormattedDescription(field.description || field.question)}
                         </div>
                       </div>
                     )}

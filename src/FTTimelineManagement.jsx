@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLiveCollection, db } from './db';
 import { Calendar, Clock, Edit3, Save, CheckCircle2, Video, Newspaper, Layers, AlertCircle, Plus, Trash2, Award, UserCheck, X } from 'lucide-react';
-import { formatUnifiedDate } from './ftConstants';
+import { formatUnifiedDate, renderFormattedDescription } from './ftConstants';
 import WorkshopManager from './WorkshopManager';
 import './scicommspark.css';
 
@@ -680,8 +680,11 @@ export default function FTTimelineManagement() {
                           </div>
 
                           {(subField.description || subField.question) && (
-                            <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '0.35rem', fontWeight: 600, background: '#f8fafc', padding: '0.45rem 0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                              📝 <strong>Description:</strong> {subField.description || subField.question}
+                            <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '0.4rem', fontWeight: 600, background: '#f8fafc', padding: '0.6rem 0.85rem', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                              📝 <strong>Description & Requirements:</strong>
+                              <div style={{ marginTop: '0.25rem', color: '#334155' }}>
+                                {renderFormattedDescription(subField.description || subField.question)}
+                              </div>
                             </div>
                           )}
 
