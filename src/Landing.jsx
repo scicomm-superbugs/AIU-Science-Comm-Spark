@@ -1043,14 +1043,8 @@ export default function Landing() {
     editModeRef.current = editMode;
   }, [editMode]);
 
-  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
+  const isMobile = false; // Forced Desktop layout on all devices
   const [savedContent, setSavedContent] = useState(null); // snapshot before editing
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
   const [saving, setSaving] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
