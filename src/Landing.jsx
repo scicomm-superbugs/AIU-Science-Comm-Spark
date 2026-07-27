@@ -2250,180 +2250,201 @@ export default function Landing() {
             />
           </div>
 
-          {/* Static Champions Grid (Displaying All Places at Once Without Carousel Animation) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2.25rem', width: '100%', maxWidth: '880px', margin: '0 auto' }}>
-            {(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions).map((champ, champIdx) => (
-              <div
-                key={champIdx}
-                style={{
-                  background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
-                  borderRadius: '24px', border: `2px solid ${champ?.borderColor || '#e2e8f0'}`,
-                  padding: '2.25rem 1.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  textAlign: 'center', position: 'relative', overflow: 'hidden',
-                  boxShadow: '0 12px 30px rgba(0,0,0,0.04)'
-                }}
-              >
-                {/* Floating Graphic Accents */}
-                <span className="fame-graphic-sparkle-1" style={{ position: 'absolute', top: '20px', left: '25px', fontSize: '1.4rem', pointerEvents: 'none', userSelect: 'none' }}>✨</span>
-                <span className="fame-graphic-sparkle-2" style={{ position: 'absolute', top: '25px', right: '35px', fontSize: '1.3rem', pointerEvents: 'none', userSelect: 'none' }}>🌟</span>
+          {/* Static Champions Podium Layout (Line 1: 1st Place Full Width | Line 2: 2nd & 3rd Places Side-by-Side Horizontally) */}
+          <div style={{ width: '100%', maxWidth: '960px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            {(() => {
+              const champions = content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions;
+              const firstPlace = champions[0];
+              const restPlaces = champions.slice(1);
 
-                {/* Delete Place Button in Edit Mode */}
-                {E && (content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions).length > 1 && (
-                  <button
-                    onClick={() => removeArrayItem('hallOfFameChampions', champIdx)}
-                    style={{ position: 'absolute', top: '14px', right: '14px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 30, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}
-                    title="Delete Champion Place"
-                  >
-                    <X size={15} />
-                  </button>
-                )}
+              const renderChampCard = (champ, champIdx) => (
+                <div
+                  key={champIdx}
+                  style={{
+                    background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+                    borderRadius: '24px', border: `2px solid ${champ?.borderColor || '#e2e8f0'}`,
+                    padding: champIdx === 0 ? '2.5rem 2rem' : '2rem 1.25rem',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    textAlign: 'center', position: 'relative', overflow: 'hidden',
+                    boxShadow: '0 12px 30px rgba(0,0,0,0.04)', height: '100%', boxSizing: 'border-box'
+                  }}
+                >
+                  {/* Floating Graphic Accents */}
+                  <span className="fame-graphic-sparkle-1" style={{ position: 'absolute', top: '20px', left: '25px', fontSize: '1.4rem', pointerEvents: 'none', userSelect: 'none' }}>✨</span>
+                  <span className="fame-graphic-sparkle-2" style={{ position: 'absolute', top: '25px', right: '35px', fontSize: '1.3rem', pointerEvents: 'none', userSelect: 'none' }}>🌟</span>
 
-                {/* Place Badge */}
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.75rem', zIndex: 5 }}>
-                  <span style={{ fontSize: '2rem' }}>
-                    {E ? (
-                      <EditableText
-                        value={champ?.icon || '🏆'}
-                        onChange={(v) => updateNestedArray('hallOfFameChampions', champIdx, 'icon', v)}
-                        editing={true}
-                        style={{ fontSize: '2rem' }}
-                      />
-                    ) : (champ?.icon || '🏆')}
-                  </span>
-                  <EditableText
-                    value={champ?.place || ''}
-                    onChange={(v) => updateNestedArray('hallOfFameChampions', champIdx, 'place', v)}
-                    editing={E}
-                    tag="span"
-                    style={{
-                      fontWeight: 900, fontSize: '1.15rem', color: champ?.badgeColor || '#be123c',
-                      background: champ?.badgeBg || '#ffe4e6', padding: '0.4rem 1.1rem', borderRadius: '20px',
-                      letterSpacing: '0.02em', boxShadow: '0 4px 12px rgba(0,0,0,0.04)'
-                    }}
-                  />
-                </div>
-
-                {/* Circular Photos & Winner Info Grid */}
-                <div style={{
-                  display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start',
-                  gap: '2.25rem', width: '100%', zIndex: 5
-                }}>
-                  {(champ?.members || []).map((m, mIdx) => (
-                    <div
-                      key={mIdx}
-                      style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center',
-                        gap: '0.85rem', maxWidth: '240px', position: 'relative'
-                      }}
+                  {/* Delete Place Button in Edit Mode */}
+                  {E && champions.length > 1 && (
+                    <button
+                      onClick={() => removeArrayItem('hallOfFameChampions', champIdx)}
+                      style={{ position: 'absolute', top: '14px', right: '14px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 30, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}
+                      title="Delete Champion Place"
                     >
-                      {/* Circular Photo with Graphic Spinning Ring */}
-                      <div style={{ position: 'relative', display: 'inline-block' }}>
-                        <div
-                          className="fame-graphic-spin-ring"
-                          style={{
-                            position: 'absolute', inset: '-6px', borderRadius: '50%',
-                            background: `conic-gradient(from 0deg, ${champ?.badgeColor || '#be123c'}, #f59e0b, #3b82f6, #10b981, ${champ?.badgeColor || '#be123c'})`,
-                            opacity: 0.85, filter: 'blur(3px)', zIndex: 1
-                          }}
-                        />
+                      <X size={15} />
+                    </button>
+                  )}
 
-                        <div style={{
-                          position: 'relative', zIndex: 2,
-                          width: (champ?.members || []).length > 1 ? '135px' : '165px',
-                          height: (champ?.members || []).length > 1 ? '135px' : '165px',
-                          borderRadius: '50%', overflow: 'hidden',
-                          border: '4px solid #ffffff',
-                          boxShadow: `0 10px 30px ${(champ?.badgeColor || '#be123c')}35`,
-                          background: '#e2e8f0'
-                        }}>
-                          <EditableImage
-                            src={m.img || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=800&q=80'}
-                            onUpload={(base64) => {
-                              const copy = structuredClone(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions);
-                              if (copy[champIdx] && copy[champIdx].members && copy[champIdx].members[mIdx]) {
-                                copy[champIdx].members[mIdx].img = base64;
-                                updateField('hallOfFameChampions', copy);
-                              }
+                  {/* Place Badge */}
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.5rem', zIndex: 5 }}>
+                    <span style={{ fontSize: '2rem' }}>
+                      {E ? (
+                        <EditableText
+                          value={champ?.icon || '🏆'}
+                          onChange={(v) => updateNestedArray('hallOfFameChampions', champIdx, 'icon', v)}
+                          editing={true}
+                          style={{ fontSize: '2rem' }}
+                        />
+                      ) : (champ?.icon || '🏆')}
+                    </span>
+                    <EditableText
+                      value={champ?.place || ''}
+                      onChange={(v) => updateNestedArray('hallOfFameChampions', champIdx, 'place', v)}
+                      editing={E}
+                      tag="span"
+                      style={{
+                        fontWeight: 900, fontSize: '1.15rem', color: champ?.badgeColor || '#be123c',
+                        background: champ?.badgeBg || '#ffe4e6', padding: '0.4rem 1.1rem', borderRadius: '20px',
+                        letterSpacing: '0.02em', boxShadow: '0 4px 12px rgba(0,0,0,0.04)'
+                      }}
+                    />
+                  </div>
+
+                  {/* Circular Photos & Winner Info Grid */}
+                  <div style={{
+                    display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start',
+                    gap: champIdx === 0 ? '2.5rem' : '1.5rem', width: '100%', zIndex: 5
+                  }}>
+                    {(champ?.members || []).map((m, mIdx) => (
+                      <div
+                        key={mIdx}
+                        style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center',
+                          gap: '0.85rem', maxWidth: '240px', position: 'relative'
+                        }}
+                      >
+                        {/* Circular Photo with Graphic Spinning Ring */}
+                        <div style={{ position: 'relative', display: 'inline-block' }}>
+                          <div
+                            className="fame-graphic-spin-ring"
+                            style={{
+                              position: 'absolute', inset: '-6px', borderRadius: '50%',
+                              background: `conic-gradient(from 0deg, ${champ?.badgeColor || '#be123c'}, #f59e0b, #3b82f6, #10b981, ${champ?.badgeColor || '#be123c'})`,
+                              opacity: 0.85, filter: 'blur(3px)', zIndex: 1
                             }}
-                            onRemove={() => {
+                          />
+
+                          <div style={{
+                            position: 'relative', zIndex: 2,
+                            width: champIdx === 0 ? ((champ?.members || []).length > 1 ? '140px' : '175px') : ((champ?.members || []).length > 1 ? '110px' : '140px'),
+                            height: champIdx === 0 ? ((champ?.members || []).length > 1 ? '140px' : '175px') : ((champ?.members || []).length > 1 ? '110px' : '140px'),
+                            borderRadius: '50%', overflow: 'hidden',
+                            border: '4px solid #ffffff',
+                            boxShadow: `0 10px 30px ${(champ?.badgeColor || '#be123c')}35`,
+                            background: '#e2e8f0'
+                          }}>
+                            <EditableImage
+                              src={m.img || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=800&q=80'}
+                              onUpload={(base64) => {
+                                const copy = structuredClone(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions);
+                                if (copy[champIdx] && copy[champIdx].members && copy[champIdx].members[mIdx]) {
+                                  copy[champIdx].members[mIdx].img = base64;
+                                  updateField('hallOfFameChampions', copy);
+                                }
+                              }}
+                              onRemove={() => {
+                                const copy = structuredClone(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions);
+                                if (copy[champIdx] && copy[champIdx].members && copy[champIdx].members[mIdx]) {
+                                  copy[champIdx].members[mIdx].img = '';
+                                  updateField('hallOfFameChampions', copy);
+                                }
+                              }}
+                              editing={E}
+                              alt={m.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Winner Name & Faculty */}
+                        <div style={{ textAlign: 'center' }}>
+                          <EditableText
+                            value={m.name}
+                            onChange={(v) => {
                               const copy = structuredClone(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions);
                               if (copy[champIdx] && copy[champIdx].members && copy[champIdx].members[mIdx]) {
-                                copy[champIdx].members[mIdx].img = '';
+                                copy[champIdx].members[mIdx].name = v;
                                 updateField('hallOfFameChampions', copy);
                               }
                             }}
                             editing={E}
-                            alt={m.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                            tag="h3"
+                            style={{ fontWeight: 900, fontSize: champIdx === 0 ? '1.15rem' : '1rem', color: '#0f172a', margin: 0, lineHeight: 1.3 }}
+                          />
+                          <EditableText
+                            value={m.faculty}
+                            onChange={(v) => {
+                              const copy = structuredClone(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions);
+                              if (copy[champIdx] && copy[champIdx].members && copy[champIdx].members[mIdx]) {
+                                copy[champIdx].members[mIdx].faculty = v;
+                                updateField('hallOfFameChampions', copy);
+                              }
+                            }}
+                            editing={E}
+                            tag="p"
+                            style={{ fontSize: '0.82rem', color: '#64748b', fontStyle: 'italic', fontWeight: 600, margin: 0, marginTop: '0.3rem' }}
                           />
                         </div>
-                      </div>
 
-                      {/* Winner Name & Faculty */}
-                      <div style={{ textAlign: 'center' }}>
-                        <EditableText
-                          value={m.name}
-                          onChange={(v) => {
-                            const copy = structuredClone(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions);
-                            if (copy[champIdx] && copy[champIdx].members && copy[champIdx].members[mIdx]) {
-                              copy[champIdx].members[mIdx].name = v;
-                              updateField('hallOfFameChampions', copy);
-                            }
-                          }}
-                          editing={E}
-                          tag="h3"
-                          style={{ fontWeight: 900, fontSize: '1.1rem', color: '#0f172a', margin: 0, lineHeight: 1.3 }}
-                        />
-                        <EditableText
-                          value={m.faculty}
-                          onChange={(v) => {
-                            const copy = structuredClone(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions);
-                            if (copy[champIdx] && copy[champIdx].members && copy[champIdx].members[mIdx]) {
-                              copy[champIdx].members[mIdx].faculty = v;
-                              updateField('hallOfFameChampions', copy);
-                            }
-                          }}
-                          editing={E}
-                          tag="p"
-                          style={{ fontSize: '0.85rem', color: '#64748b', fontStyle: 'italic', fontWeight: 600, margin: 0, marginTop: '0.3rem' }}
-                        />
+                        {E && ((champ?.members || []).length > 1) && (
+                          <button
+                            onClick={() => {
+                              const copy = structuredClone(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions);
+                              if (copy[champIdx] && copy[champIdx].members) {
+                                copy[champIdx].members = copy[champIdx].members.filter((_, i) => i !== mIdx);
+                                updateField('hallOfFameChampions', copy);
+                              }
+                            }}
+                            style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '0.2rem' }}
+                            title="Remove member"
+                          >
+                            <X size={13} />
+                          </button>
+                        )}
                       </div>
+                    ))}
+                  </div>
 
-                      {E && ((champ?.members || []).length > 1) && (
-                        <button
-                          onClick={() => {
-                            const copy = structuredClone(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions);
-                            if (copy[champIdx] && copy[champIdx].members) {
-                              copy[champIdx].members = copy[champIdx].members.filter((_, i) => i !== mIdx);
-                              updateField('hallOfFameChampions', copy);
-                            }
-                          }}
-                          style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '0.2rem' }}
-                          title="Remove member"
-                        >
-                          <X size={13} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                  {E && (
+                    <button
+                      onClick={() => {
+                        const copy = structuredClone(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions);
+                        if (copy[champIdx]) {
+                          copy[champIdx].members = [...(copy[champIdx].members || []), { name: 'Winner Name', faculty: 'Faculty of ...', img: '' }];
+                          updateField('hallOfFameChampions', copy);
+                        }
+                      }}
+                      style={{ background: '#ffffff', color: '#2563eb', border: '1px dashed #bfdbfe', padding: '0.45rem 1rem', borderRadius: '10px', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', marginTop: '1.5rem' }}
+                    >
+                      + Add Joint Member Photo
+                    </button>
+                  )}
                 </div>
+              );
 
-                {E && (
-                  <button
-                    onClick={() => {
-                      const copy = structuredClone(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions);
-                      if (copy[champIdx]) {
-                        copy[champIdx].members = [...(copy[champIdx].members || []), { name: 'Winner Name', faculty: 'Faculty of ...', img: '' }];
-                        updateField('hallOfFameChampions', copy);
-                      }
-                    }}
-                    style={{ background: '#ffffff', color: '#2563eb', border: '1px dashed #bfdbfe', padding: '0.45rem 1rem', borderRadius: '10px', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', marginTop: '1.5rem' }}
-                  >
-                    + Add Joint Member Photo
-                  </button>
-                )}
-              </div>
-            ))}
+              return (
+                <>
+                  {/* Line 1: 1st Place Featured Full Width */}
+                  {firstPlace && renderChampCard(firstPlace, 0)}
+
+                  {/* Line 2: 2nd and 3rd Places Side-by-Side Horizontally */}
+                  {restPlaces.length > 0 && (
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', alignItems: 'stretch' }}>
+                      {restPlaces.map((champ, rIdx) => renderChampCard(champ, rIdx + 1))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             {/* Add New Champion Place Button in Edit Mode */}
             {E && (
