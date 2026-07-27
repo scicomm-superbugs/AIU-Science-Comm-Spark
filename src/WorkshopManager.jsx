@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { useLiveCollection, db } from './db';
-import { Calendar, Clock, Plus, Trash2, Edit3, AlertCircle, CheckCircle2, User, MapPin, Link2, ExternalLink, Video, BookOpen, Layers, Search, Award, Send, Check } from 'lucide-react';
+import { Calendar, Clock, Plus, Trash2, Edit3, AlertCircle, CheckCircle2, User, MapPin, Link2, ExternalLink, Video, BookOpen, Layers, Search, Award, Send, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import './scicommspark.css';
 
 export default function WorkshopManager({ isAdmin = true, isTrainer = true, currentTrack = 'all' }) {
@@ -116,6 +116,116 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
     const combined = [...filteredWs, ...filteredStages];
     return combined.sort((a, b) => new Date(a.startDate || '2099-01-01') - new Date(b.startDate || '2099-01-01'));
   }, [workshops, defaultStageMilestones, trackFilter]);
+
+  // Calendar View Mode & Selected Date State
+  const [viewMode, setViewMode] = useState('calendar'); // 'calendar' (default) or 'list'
+
+  const getFormattedDateString = (d) => {
+    if (!d) return '';
+    const dateObj = new Date(d);
+    if (isNaN(dateObj.getTime())) return '';
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayStr = useMemo(() => getFormattedDateString(new Date()), []);
+  const [selectedDateStr, setSelectedDateStr] = useState(todayStr);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+
+  // Dictionary of events keyed by YYYY-MM-DD
+  const eventsByDate = useMemo(() => {
+    const map = {};
+    allMasterEvents.forEach(evt => {
+      const dateKey = getFormattedDateString(evt.startDate || evt.endDate);
+      if (dateKey) {
+        if (!map[dateKey]) map[dateKey] = [];
+        map[dateKey].push(evt);
+      }
+    });
+    return map;
+  }, [allMasterEvents]);
+
+  // Events on currently selected date
+  const selectedDayEvents = useMemo(() => {
+    return eventsByDate[selectedDateStr] || [];
+  }, [eventsByDate, selectedDateStr]);
+
+  // Upcoming events within next 7 days
+  const upcomingThisWeekEvents = useMemo(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const next7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    next7Days.setHours(23, 59, 59, 999);
+
+    return allMasterEvents.filter(evt => {
+      const evtDate = evt.startDate || evt.endDate;
+      if (!evtDate) return false;
+      const d = new Date(evtDate);
+      return !isNaN(d.getTime()) && d >= now && d <= next7Days;
+    }).sort((a, b) => new Date(a.startDate || a.endDate) - new Date(b.startDate || b.endDate));
+  }, [allMasterEvents]);
+
+  // Google Calendar Grid Math for Month View
+  const calendarDays = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const days = [];
+
+    // Prev month padding
+    const prevMonthDays = new Date(year, month, 0).getDate();
+    for (let i = firstDay - 1; i >= 0; i--) {
+      const d = new Date(year, month - 1, prevMonthDays - i);
+      days.push({
+        dateObj: d,
+        dateStr: getFormattedDateString(d),
+        dayNum: prevMonthDays - i,
+        isCurrentMonth: false
+      });
+    }
+
+    // Current month days
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateObj = new Date(year, month, d);
+      days.push({
+        dateObj,
+        dateStr: getFormattedDateString(dateObj),
+        dayNum: d,
+        isCurrentMonth: true
+      });
+    }
+
+    // Next month padding
+    const totalCells = days.length > 35 ? 42 : 35;
+    const remaining = totalCells - days.length;
+    for (let d = 1; d <= remaining; d++) {
+      const dateObj = new Date(year, month + 1, d);
+      days.push({
+        dateObj,
+        dateStr: getFormattedDateString(dateObj),
+        dayNum: d,
+        isCurrentMonth: false
+      });
+    }
+
+    return days;
+  }, [calendarMonth]);
+
+  const handlePrevMonth = () => {
+    setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+  const handleNextMonth = () => {
+    setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+  const handleTodayClick = () => {
+    const today = new Date();
+    setCalendarMonth(today);
+    setSelectedDateStr(getFormattedDateString(today));
+  };
 
   const [form, setForm] = useState({
     title: '',
@@ -365,133 +475,347 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
         )}
       </div>
 
-      {/* Track Filter Tabs (Or Single Track Badge for Competitor) */}
-      {isCompetitorUser ? (
-        <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <div style={{
-            padding: '0.6rem 1.25rem', borderRadius: '12px', border: '1.5px solid',
-            borderColor: competitorTrack === 'pop_science' ? '#fecdd3' : '#bfdbfe',
-            background: competitorTrack === 'pop_science' ? '#fff1f2' : '#eff6ff',
-            color: competitorTrack === 'pop_science' ? '#be123c' : '#2563eb',
-            fontWeight: 800, fontSize: '0.88rem', display: 'inline-flex', alignItems: 'center', gap: '0.45rem'
-          }}>
-            {competitorTrack === 'pop_science' ? <Video size={16} /> : <BookOpen size={16} />}
-            Showing Schedule for: {competitorTrack === 'pop_science' ? 'Track 1: Pop Science Videos' : 'Track 2: Science Journalism'}
+      {/* View Switcher Bar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.4rem', background: '#e2e8f0', padding: '0.25rem', borderRadius: '10px' }}>
+          <button
+            type="button"
+            onClick={() => setViewMode('calendar')}
+            style={{
+              padding: '0.45rem 0.9rem', fontSize: '0.82rem', fontWeight: 800, borderRadius: '8px', border: 'none',
+              background: viewMode === 'calendar' ? 'var(--ft-primary)' : 'transparent',
+              color: viewMode === 'calendar' ? '#ffffff' : '#475569',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', transition: 'all 0.2s ease'
+            }}
+          >
+            <Calendar size={15} /> Google Calendar View
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            style={{
+              padding: '0.45rem 0.9rem', fontSize: '0.82rem', fontWeight: 800, borderRadius: '8px', border: 'none',
+              background: viewMode === 'list' ? 'var(--ft-primary)' : 'transparent',
+              color: viewMode === 'list' ? '#ffffff' : '#475569',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', transition: 'all 0.2s ease'
+            }}
+          >
+            <Layers size={15} /> List View
+          </button>
+        </div>
+
+        {viewMode === 'calendar' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={handleTodayClick}
+              style={{
+                padding: '0.4rem 0.85rem', fontSize: '0.8rem', fontWeight: 800, borderRadius: '8px',
+                background: '#ffffff', color: 'var(--ft-primary)', border: '1.5px solid var(--ft-primary)',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem'
+              }}
+            >
+              📅 Today
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: '8px' }}>
+              <button
+                type="button"
+                onClick={handlePrevMonth}
+                style={{ padding: '0.4rem 0.6rem', border: 'none', background: 'none', cursor: 'pointer', color: '#334155' }}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a', padding: '0 0.5rem', minWidth: '130px', textAlign: 'center' }}>
+                {calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </span>
+              <button
+                type="button"
+                onClick={handleNextMonth}
+                style={{ padding: '0.4rem 0.6rem', border: 'none', background: 'none', cursor: 'pointer', color: '#334155' }}
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {viewMode === 'calendar' ? (
+        <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
+          {/* Calendar Grid Box */}
+          <div style={{ background: '#ffffff', borderRadius: '16px', border: '1.5px solid #e2e8f0', padding: '1rem', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
+            {/* Day Header Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.3rem', marginBottom: '0.5rem', textAlign: 'center' }}>
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                <div key={d} style={{ fontSize: '0.78rem', fontWeight: 900, color: '#64748b', padding: '0.3rem 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Grid of Days */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.35rem' }}>
+              {calendarDays.map((day, idx) => {
+                const dayEvents = eventsByDate[day.dateStr] || [];
+                const isSelected = day.dateStr === selectedDateStr;
+                const isToday = day.dateStr === todayStr;
+
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => setSelectedDateStr(day.dateStr)}
+                    style={{
+                      minHeight: '78px',
+                      padding: '0.35rem',
+                      borderRadius: '10px',
+                      background: isSelected ? 'rgba(30, 41, 59, 0.06)' : day.isCurrentMonth ? '#f8fafc' : '#f1f5f9',
+                      border: `2px solid ${isSelected ? 'var(--ft-primary)' : isToday ? '#be123c' : '#e2e8f0'}`,
+                      opacity: day.isCurrentMonth ? 1 : 0.45,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      transition: 'all 0.15s ease',
+                      boxShadow: isSelected ? '0 4px 12px rgba(0,0,0,0.12)' : 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{
+                        fontSize: '0.82rem',
+                        fontWeight: isToday || isSelected ? 900 : 700,
+                        color: isToday ? '#ffffff' : day.isCurrentMonth ? '#0f172a' : '#94a3b8',
+                        background: isToday ? '#be123c' : 'transparent',
+                        padding: isToday ? '0.1rem 0.4rem' : '0',
+                        borderRadius: '6px'
+                      }}>
+                        {day.dayNum}
+                      </span>
+                      {dayEvents.length > 0 && (
+                        <span style={{ fontSize: '0.68rem', fontWeight: 900, background: 'var(--ft-primary)', color: '#ffffff', padding: '0.05rem 0.35rem', borderRadius: '10px' }}>
+                          {dayEvents.length}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Mini event tags */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: '0.25rem', overflow: 'hidden' }}>
+                      {dayEvents.slice(0, 2).map((evt, eIdx) => {
+                        const isStage = !!evt.isStage;
+                        const badgeColor = isStage ? '#be123c' : evt.type === 'Orientation' ? '#0d9488' : '#2563eb';
+                        return (
+                          <div
+                            key={eIdx}
+                            style={{
+                              fontSize: '0.65rem',
+                              fontWeight: 800,
+                              background: `${badgeColor}15`,
+                              color: badgeColor,
+                              borderLeft: `3px solid ${badgeColor}`,
+                              padding: '0.1rem 0.3rem',
+                              borderRadius: '3px',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                          >
+                            {isStage ? `🏆 S${evt.stageId}` : evt.title}
+                          </div>
+                        );
+                      })}
+                      {dayEvents.length > 2 && (
+                        <div style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 700, paddingLeft: '0.2rem' }}>
+                          +{dayEvents.length - 2} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Right Column: Selected Day Summary & Upcoming Events This Week */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {/* Selected Day Summary Box */}
+            <div style={{ background: '#f8fafc', borderRadius: '16px', border: '1.5px solid #e2e8f0', padding: '1.25rem', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+                <h3 style={{ fontSize: '0.98rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  📅 Events on {selectedDateStr ? new Date(selectedDateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Selected Day'}
+                </h3>
+                {selectedDateStr === todayStr && (
+                  <span style={{ fontSize: '0.7rem', fontWeight: 900, background: '#be123c', color: '#ffffff', padding: '0.15rem 0.5rem', borderRadius: '6px' }}>
+                    TODAY
+                  </span>
+                )}
+              </div>
+
+              {selectedDayEvents.length === 0 ? (
+                <div style={{ padding: '1.5rem 1rem', textAlign: 'center', background: '#ffffff', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                  <div style={{ fontSize: '1.5rem', marginBottom: '0.3rem' }}>💤</div>
+                  <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#475569' }}>No Scheduled Events</div>
+                  <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.2rem' }}>There are no deadlines or sessions on this date.</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {selectedDayEvents.map((evt, idx) => {
+                    const isStage = !!evt.isStage;
+                    const badgeColor = isStage ? '#be123c' : evt.type === 'Orientation' ? '#0d9488' : '#2563eb';
+
+                    return (
+                      <div key={idx} style={{ background: '#ffffff', borderRadius: '12px', padding: '0.95rem', border: `1.5px solid ${badgeColor}40`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 900, background: `${badgeColor}15`, color: badgeColor, padding: '0.15rem 0.55rem', borderRadius: '6px', border: `1px solid ${badgeColor}30` }}>
+                            {isStage ? `🏆 STAGE ${evt.stageId} MILESTONE` : (evt.type || 'WORKSHOP').toUpperCase()}
+                          </span>
+                          {evt.targetTrack && evt.targetTrack !== 'both' && (
+                            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748b' }}>
+                              · {evt.targetTrack === 'pop_science' ? 'Pop Videos' : 'Journalism'}
+                            </span>
+                          )}
+                        </div>
+
+                        <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.3rem' }}>
+                          {evt.title}
+                        </div>
+
+                        {evt.description && (
+                          <div style={{ fontSize: '0.8rem', color: '#475569', marginBottom: '0.6rem' }}>
+                            {evt.description}
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9', flexWrap: 'wrap' }}>
+                          <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <Clock size={13} />
+                            {evt.startDate ? new Date(evt.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '11:59 PM'}
+                          </div>
+
+                          {isStage ? (
+                            <button
+                              onClick={() => navigate('/dashboard/my-competition')}
+                              style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 800, borderRadius: '8px', background: '#be123c', color: '#ffffff', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                            >
+                              <Send size={12} /> Submit Stage Work
+                            </button>
+                          ) : evt.meetingLink ? (
+                            <a
+                              href={evt.meetingLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 800, borderRadius: '8px', background: '#0d9488', color: '#ffffff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                            >
+                              <ExternalLink size={12} /> Join Session
+                            </a>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Upcoming Events This Week Section */}
+            <div style={{ background: '#f8fafc', borderRadius: '16px', border: '1.5px solid #e2e8f0', padding: '1.25rem', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.85rem 0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                ⚡ Upcoming Events This Week
+              </h3>
+
+              {upcomingThisWeekEvents.length === 0 ? (
+                <div style={{ fontSize: '0.82rem', color: '#94a3b8', fontStyle: 'italic', padding: '0.5rem' }}>
+                  No upcoming deadlines or sessions scheduled for the next 7 days.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  {upcomingThisWeekEvents.map((evt, idx) => {
+                    const isStage = !!evt.isStage;
+                    const badgeColor = isStage ? '#be123c' : '#2563eb';
+                    const dateStr = evt.startDate || evt.endDate;
+
+                    return (
+                      <div key={idx} style={{ background: '#ffffff', padding: '0.75rem 0.9rem', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
+                        <div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0f172a' }}>
+                            {evt.title}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <Calendar size={12} />
+                            {dateStr ? new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD'}
+                          </div>
+                        </div>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 900, background: `${badgeColor}15`, color: badgeColor, padding: '0.2rem 0.5rem', borderRadius: '6px' }}>
+                          {isStage ? 'Deadline' : 'Session'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', background: '#f1f5f9', padding: '0.35rem', borderRadius: '14px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => setTrackFilter('pop_science')}
-            style={{
-              padding: '0.55rem 1.1rem', fontSize: '0.85rem', fontWeight: 800, borderRadius: '10px', border: 'none',
-              background: trackFilter === 'pop_science' ? '#ffffff' : 'transparent',
-              color: trackFilter === 'pop_science' ? '#be123c' : '#64748b',
-              boxShadow: trackFilter === 'pop_science' ? '0 2px 10px rgba(0,0,0,0.08)' : 'none',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem'
-            }}
-          >
-            🎥 Track 1: Pop Science Videos
-          </button>
+        /* Unified Master List of Events & Stage Milestones */
+        allMasterEvents.length === 0 ? (
+          <div className="ft-empty" style={{ padding: '2rem' }}>
+            <div className="ft-empty-icon">📆</div>
+            <div className="ft-empty-title">No Events Scheduled</div>
+            <div className="ft-empty-text">No workshops, lectures, or stage deadlines have been scheduled yet.</div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {allMasterEvents.map((ws) => {
+              const trainerAcc = getTrainerAccount(ws);
+              const isStage = !!ws.isStage;
+              const typeLower = (ws.type || 'workshop').toLowerCase();
+              
+              // Check if date has passed
+              const dateToCheck = ws.startDate || ws.endDate;
+              const isPassed = dateToCheck ? new Date(dateToCheck).getTime() < Date.now() : false;
 
-          <button
-            type="button"
-            onClick={() => setTrackFilter('science_journalism')}
-            style={{
-              padding: '0.55rem 1.1rem', fontSize: '0.85rem', fontWeight: 800, borderRadius: '10px', border: 'none',
-              background: trackFilter === 'science_journalism' ? '#ffffff' : 'transparent',
-              color: trackFilter === 'science_journalism' ? '#2563eb' : '#64748b',
-              boxShadow: trackFilter === 'science_journalism' ? '0 2px 10px rgba(0,0,0,0.08)' : 'none',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem'
-            }}
-          >
-            📰 Track 2: Science Journalism
-          </button>
+              // Accent colors by type
+              const accentColor = isPassed ? '#94a3b8'
+                : isStage ? '#be123c'
+                : typeLower === 'orientation' ? '#0d9488'
+                : typeLower === 'lecture' ? '#7c3aed'
+                : typeLower === 'office hours' ? '#d97706'
+                : '#059669';
 
-          <button
-            type="button"
-            onClick={() => setTrackFilter('all')}
-            style={{
-              padding: '0.55rem 1.1rem', fontSize: '0.85rem', fontWeight: 800, borderRadius: '10px', border: 'none',
-              background: trackFilter === 'all' ? '#ffffff' : 'transparent',
-              color: trackFilter === 'all' ? '#0f172a' : '#64748b',
-              boxShadow: trackFilter === 'all' ? '0 2px 10px rgba(0,0,0,0.08)' : 'none',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem'
-            }}
-          >
-            🌐 All Tracks & Events
-          </button>
-        </div>
-      )}
+              const badgeBg = isPassed ? '#f1f5f9'
+                : isStage ? '#fff1f2'
+                : typeLower === 'orientation' ? '#ccfbf1'
+                : typeLower === 'lecture' ? '#f3e8ff'
+                : typeLower === 'office hours' ? '#fef3c7'
+                : '#ecfdf5';
 
-      {success && (
-        <div style={{ padding: '0.8rem', borderRadius: '8px', background: 'var(--ft-success-bg)', color: 'var(--ft-success)', marginBottom: '1rem', fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <CheckCircle2 size={18} /> {success}
-        </div>
-      )}
+              const badgeTextColor = isPassed ? '#64748b'
+                : isStage ? '#be123c'
+                : typeLower === 'orientation' ? '#0f766e'
+                : typeLower === 'lecture' ? '#6d28d9'
+                : typeLower === 'office hours' ? '#b45309'
+                : '#047857';
 
-      {/* Unified Master List of Events & Stage Milestones */}
-      {allMasterEvents.length === 0 ? (
-        <div className="ft-empty" style={{ padding: '2rem' }}>
-          <div className="ft-empty-icon">📆</div>
-          <div className="ft-empty-title">No Events Scheduled</div>
-          <div className="ft-empty-text">No workshops, lectures, or stage deadlines have been scheduled yet.</div>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {allMasterEvents.map((ws) => {
-            const trainerAcc = getTrainerAccount(ws);
-            const isStage = !!ws.isStage;
-            const typeLower = (ws.type || 'workshop').toLowerCase();
-            
-            // Check if date has passed
-            const dateToCheck = ws.startDate || ws.endDate;
-            const isPassed = dateToCheck ? new Date(dateToCheck).getTime() < Date.now() : false;
-
-            // Accent colors by type
-            const accentColor = isPassed ? '#94a3b8'
-              : isStage ? '#be123c'
-              : typeLower === 'orientation' ? '#0d9488'
-              : typeLower === 'lecture' ? '#7c3aed'
-              : typeLower === 'office hours' ? '#d97706'
-              : '#059669';
-
-            const badgeBg = isPassed ? '#f1f5f9'
-              : isStage ? '#fff1f2'
-              : typeLower === 'orientation' ? '#ccfbf1'
-              : typeLower === 'lecture' ? '#f3e8ff'
-              : typeLower === 'office hours' ? '#fef3c7'
-              : '#ecfdf5';
-
-            const badgeTextColor = isPassed ? '#64748b'
-              : isStage ? '#be123c'
-              : typeLower === 'orientation' ? '#0f766e'
-              : typeLower === 'lecture' ? '#6d28d9'
-              : typeLower === 'office hours' ? '#b45309'
-              : '#047857';
-
-            return (
-              <div key={ws.id} style={{
-                padding: '1.4rem 1.6rem', borderRadius: '18px',
-                background: isPassed ? '#f8fafc' : '#ffffff',
-                border: isPassed ? '1.5px solid #cbd5e1' : '1.5px solid #e2e8f0',
-                borderLeft: `6px solid ${accentColor}`,
-                opacity: isPassed ? 0.68 : 1,
-                filter: isPassed ? 'grayscale(20%)' : 'none',
-                boxShadow: isPassed ? 'none' : '0 4px 20px rgba(0,0,0,0.04)',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem',
-                position: 'relative', overflow: 'hidden', transition: 'all 0.3s ease'
-              }}>
-                <div style={{ flex: 1, minWidth: '280px' }}>
-                  {/* Header Row: Type Badge + Track Tag + Event Title */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem', flexWrap: 'wrap' }}>
-                    <span style={{
-                      fontSize: '0.78rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em',
-                      padding: '0.25rem 0.75rem', borderRadius: '8px', background: badgeBg, color: badgeTextColor,
-                      border: `1px solid ${accentColor}40`
-                    }}>
-                      {isPassed ? '✔️ DONE / PASSED'
+              return (
+                <div key={ws.id} style={{
+                  padding: '1.4rem 1.6rem', borderRadius: '18px',
+                  background: isPassed ? '#f8fafc' : '#ffffff',
+                  border: isPassed ? '1.5px solid #cbd5e1' : '1.5px solid #e2e8f0',
+                  borderLeft: `6px solid ${accentColor}`,
+                  opacity: isPassed ? 0.68 : 1,
+                  filter: isPassed ? 'grayscale(20%)' : 'none',
+                  boxShadow: isPassed ? 'none' : '0 4px 20px rgba(0,0,0,0.04)',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem',
+                  position: 'relative', overflow: 'hidden', transition: 'all 0.3s ease'
+                }}>
+                  <div style={{ flex: 1, minWidth: '280px' }}>
+                    {/* Header Row: Type Badge + Track Tag + Event Title */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem', flexWrap: 'wrap' }}>
+                      <span style={{
+                        fontSize: '0.78rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em',
+                        background: badgeBg, color: badgeTextColor, padding: '0.2rem 0.65rem', borderRadius: '8px'
+                      }}>
+                        {isPassed ? '✔️ DONE / PASSED'
                         : isStage ? `🏆 STAGE ${ws.stageId} MILESTONE`
                         : ws.type === 'Orientation' ? '🚀 Orientation'
                         : ws.type === 'Lecture' ? '🎙️ Lecture'
@@ -649,7 +973,8 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
             );
           })}
         </div>
-      )}
+      )
+    )}
 
       {/* Modal for adding/editing workshop/lecture */}
       {showModal && (
