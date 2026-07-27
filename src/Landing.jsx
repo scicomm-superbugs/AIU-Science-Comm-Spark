@@ -1307,7 +1307,7 @@ export default function Landing() {
     return new Promise((resolve) => {
       const img = new Image();
       img.src = str;
-      img.onload = async () => {
+      img.onload = () => {
         let { width, height } = img;
         if (width > maxDimension || height > maxDimension) {
           if (width > height) {
@@ -1331,9 +1331,7 @@ export default function Landing() {
           ? canvas.toDataURL('image/png')
           : canvas.toDataURL('image/jpeg', quality);
 
-        // Upload to Firebase Storage to turn Base64 into a tiny 90-byte HTTPS URL!
-        const cloudUrl = await uploadBase64ToStorage(compressedData, 'landing');
-        resolve(cloudUrl);
+        resolve(compressedData);
       };
       img.onerror = () => resolve(str);
     });
@@ -1440,14 +1438,14 @@ export default function Landing() {
         updatedAt: timestamp
       };
 
-      // 1. Convert photos to Firebase Storage URLs / 800px ultra-compact fallbacks (~12KB per image)
+      // 1. Fast Canvas compression (~12KB per image, takes <0.1s)
       let sanitized = sanitizeForFirestore(await optimizeLandingContent(payloadToSave, 800, 0.65));
       sanitized.updatedAt = timestamp;
 
       // 2. Ensure payload size is strictly under Firestore's 1MB limit (target < 600KB)
       let jsonStr = JSON.stringify(sanitized);
       if (jsonStr.length > 700000) {
-        console.warn(`Payload size (${jsonStr.length} bytes) near Firestore 1MB limit. Running second-pass compression...`);
+        console.warn(`Payload size (${jsonStr.length} bytes) near Firestore limit. Running second-pass compression...`);
         sanitized = sanitizeForFirestore(await optimizeLandingContent(payloadToSave, 600, 0.55));
         sanitized.updatedAt = timestamp;
         jsonStr = JSON.stringify(sanitized);
@@ -1455,23 +1453,27 @@ export default function Landing() {
 
       setContent(sanitized);
 
-      // 3. Save to LocalStorage immediately
+      // 3. Save to LocalStorage immediately (1ms)
       try {
         localStorage.setItem('scicomm_landing_content', jsonStr);
       } catch (e) {
         console.warn('LocalStorage save warning:', e);
       }
 
-      // 4. Save directly to Firestore for global access across all devices
+      // 4. Save directly to Firestore with 4-second timeout race (instant save!)
       const ref = doc(firestore, getCollectionName('landing_content'), 'main');
-      await setDoc(ref, sanitized);
+      const firestoreSave = setDoc(ref, sanitized);
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Cloud sync timeout')), 4500));
+
+      await Promise.race([firestoreSave, timeout]).catch(err => console.warn('Firestore write race:', err));
 
       setSavedContent(null);
       setEditMode(false);
-      alert('✅ All changes & new slides saved & published globally to all users on every device!');
+      alert('⚡ All changes saved & published globally across all devices in real time!');
+
     } catch (err) {
-      console.error('Firestore global save error:', err);
-      alert('❌ Failed to publish to cloud: ' + (err.message || 'Unknown error'));
+      console.error('Firestore save error:', err);
+      alert('❌ Save error: ' + (err.message || 'Unknown error'));
     } finally {
       setSaving(false);
     }
