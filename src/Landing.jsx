@@ -985,7 +985,11 @@ export default function Landing() {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed.heroBtnPrimary === 'Sign Up Now') parsed.heroBtnPrimary = 'Register Now';
-        return { ...structuredClone(DEFAULT_CONTENT), ...parsed };
+        const cachedTime = parsed.updatedAt || 0;
+        const defaultTime = DEFAULT_CONTENT.updatedAt || 0;
+        if (cachedTime > defaultTime) {
+          return { ...structuredClone(DEFAULT_CONTENT), ...parsed };
+        }
       }
     } catch (e) {
       console.warn('Initial localStorage read warning:', e);
@@ -998,7 +1002,7 @@ export default function Landing() {
     contentRef.current = content;
   }, [content]);
 
-  // Load from IndexedDB on mount if available & newer
+  // Load from IndexedDB on mount if available & newer than default
   useEffect(() => {
     try {
       const request = indexedDB.open('SciCommLandingDB', 1);
@@ -1010,9 +1014,9 @@ export default function Landing() {
         req.onsuccess = () => {
           if (req.result) {
             setContent(prev => {
-              const localTime = prev?.updatedAt || 0;
+              const defaultTime = DEFAULT_CONTENT.updatedAt || 0;
               const idbTime = req.result?.updatedAt || 0;
-              if (idbTime >= localTime) {
+              if (idbTime > defaultTime) {
                 return { ...DEFAULT_CONTENT, ...prev, ...req.result };
               }
               return prev;
@@ -1088,11 +1092,12 @@ export default function Landing() {
         if (snap.exists()) {
           const remoteData = snap.data();
 
-          // CRITICAL TIMESTAMP CHECK: If local content is newer than remote data, keep local!
-          const localUpdatedAt = contentRef.current?.updatedAt || 0;
+          // CRITICAL TIMESTAMP CHECK: If local/default content is newer than remote data, keep local!
+          const defaultUpdatedAt = DEFAULT_CONTENT.updatedAt || 0;
+          const localUpdatedAt = Math.max(contentRef.current?.updatedAt || 0, defaultUpdatedAt);
           const remoteUpdatedAt = remoteData.updatedAt || 0;
           if (localUpdatedAt > remoteUpdatedAt) {
-            console.log('Local content is newer than Firestore remote data. Retaining local edits.');
+            console.log('Local/Default content is newer than Firestore remote data. Retaining local content.');
             return;
           }
 

@@ -66,12 +66,12 @@
     {
       "bg": "#fef3c7",
       "color": "#d97706",
-      "text": "Historic Venue &amp; Partnership: <span style=\"font-weight: normal;\">Jointly hosted at the Bibliotheca Alexandrina alongside AIU leadership</span>",
+      "text": "Historic Venue &amp; Partnership: Jointly hosted at the Bibliotheca Alexandrina alongside AIU leadership",
       "icon": "🏛️"
     },
     {
       "icon": "📺",
-      "text": "Nationwide Media Spotlight:<span style=\"font-weight: normal;\"> Broadcasted and covered extensively by 15+ television channels and leading regional newspapers.</span>",
+      "text": "Nationwide Media Spotlight: Broadcasted and covered extensively by 15+ television channels and leading regional newspapers.",
       "color": "#d97706",
       "bg": "#fef3c7"
     },
@@ -79,7 +79,7 @@
       "bg": "#fef3c7",
       "color": "#d97706",
       "icon": "🏆",
-      "text": "The Live Final Stage: <span style=\"font-weight: normal;\">Out of 94 original student competitors across AIU faculties, 13 elite teams (26 student advocates) earned their place to present live on stage during the SciComm Spark finale.</span>"
+      "text": "The Live Final Stage: Out of 94 original student competitors across AIU faculties, 13 elite teams (26 student advocates) earned their place to present live on stage during the SciComm Spark finale."
     }
   ],
   "hallOfFameTitle": "SciComm Spark Hall of Fame (2026 Champions)",
@@ -312,19 +312,19 @@
     },
     {
       "day": "00",
-      "speaker": "<span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none\" style=\"color: rgba(193,11,11,var(--O42jJQ,1)); caret-color: rgb(193, 11, 11); --Ys-XuQ: none; font-kerning: none;\">Dr. Ibrahim Farouq</span>",
+      "speaker": "Dr. Ibrahim Farouq",
       "type": "Online",
       "img": "./uploads/workshop_1_1785140502265_13.png",
       "title": "",
-      "role": "<span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none\" style=\"color: rgba(0,0,0,var(--O42jJQ,1)); caret-color: rgb(0, 0, 0); --Ys-XuQ: none; font-kerning: none;\">Director of Education and International Outreach - Baseet UAE</span>",
+      "role": "Director of Education and International Outreach - Baseet UAE",
       "month": "NEW"
     },
     {
       "month": "NEW",
       "day": "00",
       "title": "",
-      "speaker": "<span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none\" style=\"color: rgba(193,11,11,var(--O42jJQ,1)); caret-color: rgb(193, 11, 11); --Ys-XuQ: none; font-kerning: none;\">Dr. Andrew Samir</span>",
-      "role": "<span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none\" style=\"color: rgba(0,0,0,var(--O42jJQ,1)); caret-color: rgb(0, 0, 0); --Ys-XuQ: none; font-kerning: none;\">Pharmacist &amp; Viral Science Content Creator with over 4 million followers</span>",
+      "speaker": "Dr. Andrew Samir",
+      "role": "Pharmacist &amp; Viral Science Content Creator with over 4 million followers",
       "type": "Online",
       "img": "./uploads/workshop_2_1785140502267_14.png"
     },
@@ -332,8 +332,8 @@
       "month": "NEW",
       "day": "00",
       "title": "",
-      "speaker": "<span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none\" style=\"color: rgba(193,11,11,var(--O42jJQ,1)); caret-color: rgb(193, 11, 11); --Ys-XuQ: none; font-kerning: none;\">Eng. Abdelrahman Roshdy</span>",
-      "role": "<span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none\" style=\"color: rgba(0,0,0,var(--O42jJQ,1)); caret-color: rgb(0, 0, 0); --Ys-XuQ: none; font-kerning: none;\">Science communicator</span><span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none white-space-prewrap\" style=\"color: rgba(0,0,0,var(--O42jJQ,1)); caret-color: rgb(0, 0, 0); --Ys-XuQ: none; font-kerning: none;\">  </span><span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none\" style=\"color: rgba(0,0,0,var(--O42jJQ,1)); caret-color: rgb(0, 0, 0); --Ys-XuQ: none; font-kerning: none;\">with 160M Views</span>",
+      "speaker": "Eng. Abdelrahman Roshdy",
+      "role": "Science communicator  with 160M Views",
       "type": "Online",
       "img": "./uploads/workshop_3_1785140502269_15.png"
     },
@@ -341,8 +341,8 @@
       "month": "NEW",
       "day": "00",
       "title": "",
-      "speaker": "<span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none\" style=\"color: rgba(193,11,11,var(--O42jJQ,1)); caret-color: rgb(193, 11, 11); --Ys-XuQ: none; font-kerning: none;\">Eng. Metwally Hamza</span>",
-      "role": "<span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none\" style=\"color: rgba(0,0,0,var(--O42jJQ,1)); caret-color: rgb(0, 0, 0); --Ys-XuQ: none; font-kerning: none;\">Geologist &amp; Science Journalist</span><span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none white-space-prewrap\" style=\"color: rgba(0,0,0,var(--O42jJQ,1)); caret-color: rgb(0, 0, 0); --Ys-XuQ: none; font-kerning: none;\"></span>",
+      "speaker": "Eng. Metwally Hamza",
+      "role": "Geologist &amp; Science Journalist",
       "type": "Online",
       "img": "./uploads/workshop_4_1785140502271_16.png"
     },
@@ -350,8 +350,8 @@
       "month": "NEW",
       "day": "00",
       "title": "",
-      "speaker": "<span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none\" style=\"color: rgba(193,11,11,var(--O42jJQ,1)); caret-color: rgb(193, 11, 11); --Ys-XuQ: none; font-weight: 500; font-kerning: none;\">Dr. Samaa Ibrahim</span>",
-      "role": "<span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none\" style=\"color: rgba(0,0,0,var(--O42jJQ,1)); caret-color: rgb(0, 0, 0); --Ys-XuQ: none; font-weight: 500; font-kerning: none;\">Content Strategist &amp; Children's Science Communicator</span>",
+      "speaker": "Dr. Samaa Ibrahim",
+      "role": "Content Strategist &amp; Children's Science Communicator",
       "type": "Online",
       "img": "./uploads/workshop_5_1785140502273_17.png"
     },
@@ -359,8 +359,8 @@
       "month": "NEW",
       "day": "00",
       "title": "",
-      "speaker": "<span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none\" style=\"color: rgba(193,11,11,var(--O42jJQ,1)); caret-color: rgb(193, 11, 11); --Ys-XuQ: none; font-kerning: none;\">Mr. Anthony Ragaey</span>",
-      "role": "<span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none\" style=\"color: rgba(0,0,0,var(--O42jJQ,1)); caret-color: rgb(0, 0, 0); --Ys-XuQ: none; font-kerning: none;\">STEM Instructor &amp; Science Communicator at NuttyScientist EG</span>",
+      "speaker": "Mr. Anthony Ragaey",
+      "role": "STEM Instructor &amp; Science Communicator at NuttyScientist EG",
       "type": "Online",
       "img": "./uploads/workshop_6_1785140502275_18.jpg"
     },
@@ -368,8 +368,8 @@
       "month": "NEW",
       "day": "00",
       "title": "",
-      "speaker": "<span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none\" style=\"color: rgba(193,11,11,var(--O42jJQ,1)); caret-color: rgb(193, 11, 11); --Ys-XuQ: none; font-kerning: none;\">Mr. Omar Fawzy</span>",
-      "role": "<span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none\" style=\"color: rgba(0,0,0,var(--O42jJQ,1)); caret-color: rgb(0, 0, 0); --Ys-XuQ: none; font-kerning: none;\">Founder of \"Sciphilia\" &amp; Science Storyteller on YouTube with 20M Views</span>",
+      "speaker": "Mr. Omar Fawzy",
+      "role": "Founder of \"Sciphilia\" &amp; Science Storyteller on YouTube with 20M Views",
       "type": "Online",
       "img": "./uploads/workshop_7_1785140502276_19.png"
     },
@@ -377,8 +377,8 @@
       "month": "NEW",
       "day": "00",
       "title": "",
-      "speaker": "<span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none\" style=\"color: rgba(193,11,11,var(--O42jJQ,1)); caret-color: rgb(193, 11, 11); --Ys-XuQ: none; font-kerning: none;\">Mr. Yossef El-Said</span>",
-      "role": "<span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none\" style=\"color: rgba(0,0,0,var(--O42jJQ,1)); caret-color: rgb(0, 0, 0); --Ys-XuQ: none; font-kerning: none;\">Science Communication Specialist &amp; STEM Edutainment Expert</span><span class=\"a_GcMg font-feature-liga-off font-feature-clig-off font-feature-calt-off text-decoration-none text-strikethrough-none white-space-prewrap\" style=\"color: rgba(0,0,0,var(--O42jJQ,1)); caret-color: rgb(0, 0, 0); --Ys-XuQ: none; font-kerning: none;\"></span>",
+      "speaker": "Mr. Yossef El-Said",
+      "role": "Science Communication Specialist &amp; STEM Edutainment Expert",
       "type": "Online",
       "img": "./uploads/workshop_8_1785140502277_20.jpg"
     }
@@ -443,7 +443,7 @@
   "footerBtn": "Sign Up Now 🚀",
   "galleryImages": [],
   "sparkWordMobileScale": 1.1743169263452558,
-  "updatedAt": 1785140348671,
+  "updatedAt": 1785140738637,
   "sparkWordMobileOffsetY": -89,
   "tagline2MobileOffsetX": 0,
   "heroLogoMobileOffsetX": 234,
