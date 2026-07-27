@@ -69,14 +69,8 @@ export default function Login() {
     try {
       const res = await loginWithGoogle();
       if (res && res.needsCompletion) {
-        setCompletionData(res.googleData);
-        setCompleteForm(prev => ({
-          ...prev,
-          name: res.googleData.name || '',
-          email: '', // Don't prefill email since it must be different!
-          role: 'competitor'
-        }));
-        setIsLoggingIn(false);
+        // Redirect to /register so Google user completes the exact 3-step registration wizard!
+        navigate('/register', { state: { googleData: res.googleData } });
       } else {
         navigate('/dashboard');
       }

@@ -280,6 +280,8 @@ export const AuthProvider = ({ children }) => {
 
     const targetAccount = existingUser || existingEmail;
 
+    const chosenAvatar = extraData.avatar || googleData.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + extraData.username;
+
     let scientistId;
     if (targetAccount) {
       // Update/link to pre-existing or selected username account
@@ -289,13 +291,15 @@ export const AuthProvider = ({ children }) => {
         googleEmail: googleData.email,
         passwordHash: hash,
         name: extraData.name.trim() || googleData.name,
-        avatar: googleData.avatar || targetAccount.avatar || null,
-        avatarUrl: googleData.avatar || targetAccount.avatar || null,
+        avatar: chosenAvatar,
+        avatarUrl: chosenAvatar,
+        phone: extraData.phone ? extraData.phone.trim() : (targetAccount.phone || ''),
         department: extraData.department,
         universityId: isJudge ? '' : (isAlameinStudent && extraData.universityId ? extraData.universityId.trim() : ''),
         title: isMasterAdminEmail ? 'System Administrator (Master) 👑' : (isJudge ? (extraData.title ? extraData.title.trim() : 'Judge') : ''),
         role: role,
         registeredTrack: isJudge ? '' : extraData.registeredTrack || 'pop_science',
+        participationMode: isJudge ? 'individual' : (extraData.participationMode || 'team'),
         accountStatus: accountStatus,
         completedProfile: true,
         nationalId: nationalId,
@@ -313,13 +317,15 @@ export const AuthProvider = ({ children }) => {
         googleEmail: googleData.email,
         passwordHash: hash,
         name: extraData.name.trim() || googleData.name,
-        avatar: googleData.avatar || null,
-        avatarUrl: googleData.avatar || null,
+        avatar: chosenAvatar,
+        avatarUrl: chosenAvatar,
+        phone: extraData.phone ? extraData.phone.trim() : '',
         department: extraData.department,
         universityId: isJudge ? '' : (isAlameinStudent && extraData.universityId ? extraData.universityId.trim() : ''),
         title: isMasterAdminEmail ? 'System Administrator (Master) 👑' : (isJudge ? (extraData.title ? extraData.title.trim() : 'Judge') : ''),
         role: role,
         registeredTrack: isJudge ? '' : extraData.registeredTrack || 'pop_science',
+        participationMode: isJudge ? 'individual' : (extraData.participationMode || 'team'),
         accountStatus: accountStatus,
         employeeId: generatedId,
         nationalId: nationalId,
