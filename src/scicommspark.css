@@ -3496,12 +3496,36 @@ html, body, #root {
   overflow-x: auto !important;
 }
 
+.landing-nav-bar {
+  padding: 0.6rem 1.25rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
+  min-width: 1200px !important;
+  box-sizing: border-box !important;
+}
+
 .landing-nav-center {
   display: flex !important;
+  align-items: center !important;
+  gap: 0.85rem !important;
+  font-size: 0.8rem !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+.landing-nav-center a {
+  white-space: nowrap !important;
+  padding: 0.2rem 0.3rem !important;
 }
 
 .landing-nav-desktop-btn {
   display: inline-flex !important;
+  white-space: nowrap !important;
+  padding: 0.4rem 0.9rem !important;
+  font-size: 0.8rem !important;
 }
 
 .landing-nav-mobile-toggle {
