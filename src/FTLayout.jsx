@@ -613,58 +613,6 @@ export default function FTLayout() {
 
   return (
     <div className="ft-app">
-      {/* ── Admin "View As" Impersonation Banner ─────────── */}
-      {user?.isImpersonating && (
-        <div style={{
-          background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
-          color: '#ffffff',
-          padding: '0.5rem 1.25rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-          fontSize: '0.85rem',
-          fontWeight: 700,
-          boxShadow: '0 4px 14px rgba(0,0,0,0.2)',
-          zIndex: 999999,
-          position: 'sticky',
-          top: 0
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <span style={{ fontSize: '1.1rem' }}>👁️</span>
-            <span>
-              Admin View Mode Active: <strong>
-                {(user.viewAsMode === 'student_pop_team' || user.viewAsMode === 'student_pop') && '🎙️ Student (Pop Science Track) (team)'}
-                {user.viewAsMode === 'student_pop_ind' && '🎙️ Student (Pop Science Track) (individual)'}
-                {(user.viewAsMode === 'student_jour_team' || user.viewAsMode === 'student_jour') && '📰 Student (Science Journalism Track) (team)'}
-                {user.viewAsMode === 'student_jour_ind' && '📰 Student (Science Journalism Track) (individual)'}
-                {user.viewAsMode === 'judge_scicomm' && '🎙️ Judge (SciComm)'}
-                {user.viewAsMode === 'judge_academic' && '🎓 Judge (Academic)'}
-              </strong>
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setViewAsMode(null)}
-            style={{
-              background: '#ffffff',
-              color: '#1e1b4b',
-              border: 'none',
-              padding: '0.35rem 0.9rem',
-              borderRadius: '8px',
-              fontWeight: 800,
-              fontSize: '0.78rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
-            }}
-          >
-            👑 Back to Admin
-          </button>
-        </div>
-      )}
       {/* ── Top Navbar ─────────────────────────────────────── */}
       <nav className="ft-navbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
