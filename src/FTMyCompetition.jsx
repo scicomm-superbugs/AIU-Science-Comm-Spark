@@ -232,7 +232,6 @@ export default function FTMyCompetition() {
           const stageEvals = evaluations.filter(e => Number(e.stageId) === Number(st.stageId));
 
           const isStageActive = Number(st.stageId) === 1 || st.status === 'Active Stage' || st.status === 'Active' || st.acceptSubmissions === true || Boolean(stageSub) || stageEvals.length > 0;
-          const isCollapsed = collapsedStages[st.stageId] !== undefined ? collapsedStages[st.stageId] : !isStageActive;
 
           // Deliverables configured for this stage
           const subFields = (st.submissions && st.submissions.length > 0)
@@ -241,531 +240,54 @@ export default function FTMyCompetition() {
                 ? [{ id: 'sub_def_1', name: 'Short Pop Video URL', type: 'url', deadline: st.deadline, question: 'Paste your YouTube, TikTok, Instagram Reels, or Google Drive video URL:' }]
                 : [{ id: 'sub_def_2', name: 'Science Article PDF Document', type: 'file', deadline: st.deadline, question: 'Upload your formatted science article PDF document:' }]);
 
-          if (isCollapsed) {
-            return (
-              <div key={st.id} style={{
-                background: '#ffffff', borderRadius: '18px', padding: '1.25rem 1.75rem',
-                border: `1.5px solid ${isStageActive ? '#a7f3d0' : '#e2e8f0'}`, boxShadow: '0 4px 14px rgba(0,0,0,0.02)',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 900, color: isStageActive ? '#047857' : '#64748b', background: isStageActive ? '#ecfdf5' : '#f1f5f9', padding: '0.25rem 0.75rem', borderRadius: '20px', border: `1px solid ${isStageActive ? '#a7f3d0' : '#cbd5e1'}` }}>
-                    Stage {st.stageId}
-                  </span>
-                  <div>
-                    <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#334155', margin: 0, fontFamily: "'Outfit', sans-serif" }}>
-                      {st.title}
-                    </h3>
-                    <div style={{ fontSize: '0.8rem', color: isStageActive ? '#059669' : '#94a3b8', marginTop: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', fontWeight: 700 }}>
-                      <span>{isStageActive ? '🟢 Submissions Open / Active Stage' : '🔒 Submissions Closed / Upcoming Stage'}</span>
-                      <span>·</span>
-                      <span>📅 Stage Deadline: {formatUnifiedDate(st.deadline)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-                  {isStageActive && subFields.map((sf, idx) => {
-                    const effDeadline = sf.deadline || st.deadline;
-                    return (
-                      <button
-                        key={sf.id || idx}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenSubmitModal(st, stageSub);
-                        }}
-                        className="ft-btn"
-                        style={{
-                          background: `linear-gradient(135deg, ${trackThemeColor} 0%, #be123c 100%)`,
-                          color: '#ffffff', fontWeight: 800, padding: '0.55rem 1.15rem', borderRadius: '12px',
-                          fontSize: '0.85rem', border: 'none', boxShadow: `0 4px 14px ${trackThemeColor}40`,
-                          cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem'
-                        }}
-                      >
-                        <Send size={15} /> Submit {sf.name || `Stage ${st.stageId}`}
-                        <span style={{ fontSize: '0.72rem', background: 'rgba(255,255,255,0.22)', padding: '0.15rem 0.5rem', borderRadius: '6px', marginLeft: '0.2rem', fontWeight: 800 }}>
-                          ⏰ {formatUnifiedDate(effDeadline)}
-                        </span>
-                      </button>
-                    );
-                  })}
-
-                  <button
-                    onClick={() => toggleCollapse(st.stageId)}
-                    className="ft-btn"
-                    style={{ background: '#f8fafc', color: '#475569', border: '1.5px solid #cbd5e1', fontSize: '0.82rem', fontWeight: 800, padding: '0.55rem 0.9rem', borderRadius: '10px', cursor: 'pointer' }}
-                  >
-                    Details ▼
-                  </button>
-                </div>
-              </div>
-            );
-          }
-
           return (
             <div key={st.id} style={{
-              background: '#ffffff', borderRadius: '22px', padding: '2rem',
-              border: `2px solid ${trackThemeColor}30`,
-              boxShadow: '0 10px 35px rgba(15, 23, 42, 0.05)',
-              position: 'relative', overflow: 'hidden', transition: 'all 0.3s ease'
+              background: '#ffffff', borderRadius: '18px', padding: '1.25rem 1.75rem',
+              border: `1.5px solid ${isStageActive ? '#a7f3d0' : '#e2e8f0'}`, boxShadow: '0 4px 14px rgba(0,0,0,0.02)',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'
             }}>
-              {/* Left Color Accent Bar */}
-              <div style={{
-                position: 'absolute', top: 0, left: 0, bottom: 0, width: '6px',
-                background: `linear-gradient(180deg, ${trackThemeColor} 0%, #7c3aed 100%)`
-              }} />
-
-              {/* Card Header Info */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.25rem', marginBottom: '1.25rem', paddingLeft: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 900, color: isStageActive ? '#047857' : '#64748b', background: isStageActive ? '#ecfdf5' : '#f1f5f9', padding: '0.25rem 0.75rem', borderRadius: '20px', border: `1px solid ${isStageActive ? '#a7f3d0' : '#cbd5e1'}` }}>
+                  Stage {st.stageId}
+                </span>
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
-                    <span style={{
-                      fontSize: '0.78rem', fontWeight: 900, color: '#ffffff', background: trackThemeColor,
-                      padding: '0.25rem 0.75rem', borderRadius: '20px', letterSpacing: '0.04em',
-                      boxShadow: `0 3px 10px ${trackThemeColor}40`
-                    }}>
-                      Stage {st.stageId}
-                    </span>
-                    <span style={{
-                      fontSize: '0.75rem', fontWeight: 700,
-                      background: isStageActive ? '#ecfdf5' : '#f1f5f9',
-                      color: isStageActive ? '#059669' : '#475569',
-                      padding: '0.25rem 0.65rem', borderRadius: '8px', border: `1px solid ${isStageActive ? '#a7f3d0' : '#cbd5e1'}`
-                    }}>
-                      {isStageActive ? '🟢 Submissions Open / Active' : '🔒 Upcoming Stage'}
-                    </span>
-                  </div>
-
-                  <h3 style={{ fontSize: '1.4rem', fontWeight: 900, margin: '0.2rem 0', color: '#0f172a', fontFamily: "'Outfit', sans-serif" }}>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#334155', margin: 0, fontFamily: "'Outfit', sans-serif" }}>
                     {st.title}
                   </h3>
-                  <div style={{ fontSize: '0.9rem', color: trackThemeColor, fontWeight: 700 }}>
-                    {st.sub}
+                  <div style={{ fontSize: '0.8rem', color: isStageActive ? '#059669' : '#94a3b8', marginTop: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', fontWeight: 700 }}>
+                    <span>{isStageActive ? '🟢 Submissions Open / Active Stage' : '🔒 Submissions Closed / Upcoming Stage'}</span>
+                    <span>·</span>
+                    <span>{st.sub}</span>
                   </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  {isStageActive && subFields.map((sf, idx) => {
-                    const effDeadline = sf.deadline || st.deadline;
-                    return (
-                      <button
-                        key={sf.id || idx}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenSubmitModal(st, stageSub);
-                        }}
-                        className="ft-btn"
-                        style={{
-                          background: `linear-gradient(135deg, ${trackThemeColor} 0%, #be123c 100%)`,
-                          color: '#ffffff', fontWeight: 800, padding: '0.55rem 1.15rem', borderRadius: '12px',
-                          fontSize: '0.85rem', border: 'none', boxShadow: `0 4px 14px ${trackThemeColor}40`,
-                          cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem'
-                        }}
-                      >
-                        <Send size={15} /> Submit {sf.name || `Stage ${st.stageId}`}
-                        <span style={{ fontSize: '0.72rem', background: 'rgba(255,255,255,0.22)', padding: '0.15rem 0.5rem', borderRadius: '6px', marginLeft: '0.2rem', fontWeight: 800 }}>
-                          ⏰ {formatUnifiedDate(effDeadline)}
-                        </span>
-                      </button>
-                    );
-                  })}
-
-                  <button
-                    onClick={() => toggleCollapse(st.stageId)}
-                    className="ft-btn"
-                    style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #cbd5e1', fontSize: '0.78rem', fontWeight: 800, padding: '0.45rem 0.8rem', borderRadius: '10px', cursor: 'pointer' }}
-                  >
-                    Collapse ▲
-                  </button>
                 </div>
               </div>
 
-              {/* Stage Description & Guidelines */}
-              <p style={{ fontSize: '0.92rem', color: '#475569', lineHeight: 1.6, margin: '0 0 1.5rem 0', paddingLeft: '0.5rem', maxWidth: '850px' }}>
-                {st.details}
-              </p>
-
-              {/* Grid: Assigned Judges & Dynamic Criteria */}
-              <div style={{
-                display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem',
-                borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem', marginBottom: '1.5rem', paddingLeft: '0.5rem'
-              }}>
-                {/* Left: Assigned Judges */}
-                <div>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span>👥</span> ASSIGNED EVALUATORS:
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
-                    {(st.assignedJudgeIds || []).length === 0 ? (
-                      <span style={{ fontSize: '0.82rem', color: '#94a3b8', fontStyle: 'italic' }}>No judges assigned yet</span>
-                    ) : (
-                      (st.assignedJudgeIds || []).map(judgeId => {
-                        const judge = scientists.find(u => u.id === judgeId);
-                        if (!judge) return null;
-                        const roleColor = judge.role === 'academic_judge' ? '#0284c7' : judge.role === 'scicomm_judge' ? '#e11d48' : '#8b5cf6';
-                        const roleLabel = judge.role === 'academic_judge' ? 'Academic 🎓' : judge.role === 'scicomm_judge' ? 'SciComm 🎙️' : 'Academic & SciComm Judge';
-                        const avatarUrl = judge.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${judge.username || judge.name}`;
-
-                        return (
-                          <div key={judgeId} style={{
-                            display: 'flex', alignItems: 'center', gap: '0.55rem',
-                            background: '#f8fafc', padding: '0.45rem 0.8rem', borderRadius: '12px',
-                            border: `1.5px solid ${roleColor}60`, boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
-                          }}>
-                            <img src={avatarUrl} alt="" style={{ width: '26px', height: '26px', borderRadius: '50%', border: `1.5px solid ${roleColor}`, objectFit: 'cover' }} />
-                            <div>
-                              <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#0f172a' }}>{judge.name}</div>
-                              <div style={{ fontSize: '0.65rem', fontWeight: 900, color: roleColor }}>{roleLabel}</div>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-
-                {/* Right: Judging Criteria Chips */}
-                <div>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span>⚖️</span> DYNAMIC STAGE CRITERIA:
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {(st.criteria || []).length === 0 ? (
-                      <span style={{ fontSize: '0.82rem', color: '#94a3b8', fontStyle: 'italic' }}>No criteria defined yet</span>
-                    ) : (
-                      (st.criteria || []).map(c => (
-                        <div key={c.id} style={{
-                          fontSize: '0.78rem', fontWeight: 800, padding: '0.4rem 0.75rem', borderRadius: '10px',
-                          background: c.category === 'academic' ? '#f0f9ff' : '#fff1f2',
-                          border: `1.5px solid ${c.category === 'academic' ? '#0284c7' : '#e11d48'}`,
-                          color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem'
-                        }}>
-                          <span style={{ fontSize: '0.7rem' }}>{c.category === 'academic' ? '🎓 Academic' : '🎙️ SciComm'}</span>
-                          <span>· {c.name}</span>
-                          <span style={{
-                            fontSize: '0.7rem', fontWeight: 900, background: c.category === 'academic' ? '#0284c7' : '#e11d48',
-                            color: '#ffffff', padding: '0.1rem 0.4rem', borderRadius: '6px'
-                          }}>
-                            {c.maxPoints} pts
-                          </span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                {isStageActive && subFields.map((sf, idx) => {
+                  const effDeadline = sf.deadline || st.deadline;
+                  return (
+                    <button
+                      key={sf.id || idx}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenSubmitModal(st, stageSub);
+                      }}
+                      className="ft-btn"
+                      style={{
+                        background: `linear-gradient(135deg, ${trackThemeColor} 0%, #be123c 100%)`,
+                        color: '#ffffff', fontWeight: 800, padding: '0.55rem 1.15rem', borderRadius: '12px',
+                        fontSize: '0.85rem', border: 'none', boxShadow: `0 4px 14px ${trackThemeColor}40`,
+                        cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem'
+                      }}
+                    >
+                      <Send size={15} /> Submit {sf.name || `Stage ${st.stageId}`}
+                      <span style={{ fontSize: '0.72rem', background: 'rgba(255,255,255,0.22)', padding: '0.15rem 0.5rem', borderRadius: '6px', marginLeft: '0.2rem', fontWeight: 800 }}>
+                        ⏰ {formatUnifiedDate(effDeadline)}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-
-              {/* Bottom: Submission & Scores Row */}
-              <div style={{
-                borderTop: '2px dashed #e2e8f0', paddingTop: '1.5rem',
-                display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem',
-                paddingLeft: '0.5rem'
-              }}>
-                
-                {/* SUBMISSION STATE GRAPHIC BOX */}
-                <div>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span>📤</span> YOUR SUBMISSION:
-                  </div>
-
-                  {stageSub ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div style={{
-                        background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)',
-                        padding: '1.1rem 1.25rem', borderRadius: '16px', border: '2px solid #059669',
-                        boxShadow: '0 4px 15px rgba(5, 150, 105, 0.1)'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                          <span style={{ fontWeight: 900, fontSize: '0.98rem', color: '#065f46', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span>✅</span> {stageSub.title}
-                          </span>
-                          <span style={{ fontSize: '0.72rem', background: '#059669', color: '#ffffff', fontWeight: 900, padding: '0.15rem 0.5rem', borderRadius: '6px' }}>
-                            SUBMITTED
-                          </span>
-                        </div>
-
-                        <div style={{ fontSize: '0.78rem', color: '#047857', fontWeight: 600 }}>
-                          Submitted: {new Date(stageSub.submittedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
-                        </div>
-
-                        {/* Render submitted items list if available */}
-                        {stageSub.submittedItems && Object.keys(stageSub.submittedItems).length > 0 ? (
-                          <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                            {Object.entries(stageSub.submittedItems).map(([fId, item]) => (
-                              <div key={fId} style={{ background: '#ffffff', padding: '0.55rem 0.8rem', borderRadius: '10px', border: '1.5px solid #a7f3d0', fontSize: '0.82rem' }}>
-                                <div style={{ fontWeight: 800, color: '#065f46', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                  <span>{item.type === 'url' ? '🔗' : item.type === 'file' ? '📄' : item.type === 'textbox' ? '📝' : '📁'}</span>
-                                  <span>{item.name}</span>
-                                </div>
-                                {item.value && (
-                                  <div style={{ marginTop: '0.2rem', color: '#1e293b' }}>
-                                    {item.type === 'url' ? (
-                                      <a href={item.value} target="_blank" rel="noreferrer" style={{ color: '#0284c7', fontWeight: 800, textDecoration: 'underline' }}>{item.value} ↗</a>
-                                    ) : (
-                                      <span>"{item.value}"</span>
-                                    )}
-                                  </div>
-                                )}
-                                {item.fileUrl && (
-                                  <div style={{ marginTop: '0.2rem' }}>
-                                    <a href={item.fileUrl} target="_blank" rel="noreferrer" style={{ color: '#047857', fontWeight: 800, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                                      📄 View Deliverable File <ExternalLink size={13} />
-                                    </a>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          (stageSub.videoUrl || stageSub.fileUrl || stageSub.pdfUrl) ? (
-                            <div style={{ marginTop: '0.65rem' }}>
-                              <a href={stageSub.fileUrl || stageSub.pdfUrl || stageSub.videoUrl} target="_blank" rel="noreferrer" className="ft-btn" style={{
-                                fontSize: '0.82rem', background: '#ffffff', border: '1.5px solid #059669',
-                                color: '#065f46', textDecoration: 'none', fontWeight: 800, padding: '0.35rem 0.85rem',
-                                borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem'
-                              }}>
-                                🔗 View Uploaded Deliverable / PDF <ExternalLink size={14} />
-                              </a>
-                            </div>
-                          ) : null
-                        )}
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        {st.acceptSubmissions !== false && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenSubmitModal(st, stageSub);
-                            }}
-                            className="ft-btn"
-                            style={{
-                              background: '#ffffff', border: '2px solid #cbd5e1',
-                              color: '#334155', fontWeight: 800, padding: '0.5rem 1rem', borderRadius: '10px',
-                              fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
-                              position: 'relative', zIndex: 10
-                            }}
-                          >
-                            ✏️ Edit / Resubmit Work
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (window.confirm('Are you sure you want to delete this submission? This action cannot be undone.')) {
-                              await db.submissions.delete(stageSub.id);
-                            }
-                          }}
-                          className="ft-btn"
-                          style={{
-                            background: '#fff1f2', border: '2px solid #fecdd3',
-                            color: '#be123c', fontWeight: 800, padding: '0.5rem 1rem', borderRadius: '10px',
-                            fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
-                            position: 'relative', zIndex: 10
-                          }}
-                        >
-                          🗑️ Delete Submission
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {/* GRAPHICAL UPLOAD DROP-ZONE CARD */}
-                      <div style={{
-                        padding: '1.25rem', borderRadius: '16px',
-                        background: 'linear-gradient(135deg, #fff1f2 0%, #fff7ed 100%)',
-                        border: '2px dashed #f43f5e', color: '#be123c',
-                        display: 'flex', alignItems: 'center', gap: '1rem',
-                        boxShadow: '0 4px 14px rgba(190, 18, 60, 0.06)'
-                      }}>
-                        <div style={{
-                          width: 44, height: 44, borderRadius: '12px', background: '#be123c',
-                          color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          boxShadow: '0 4px 12px rgba(190, 18, 60, 0.3)', flexShrink: 0
-                        }}>
-                          <Send size={20} />
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 900, fontSize: '0.92rem', color: '#9f1239' }}>
-                            No submission uploaded yet
-                          </div>
-                          <div style={{ fontSize: '0.78rem', color: '#be123c', marginTop: '0.15rem', fontWeight: 500 }}>
-                            Upload your project files or video link before the stage deadline.
-                          </div>
-                        </div>
-                      </div>
-
-                      {st.acceptSubmissions !== false ? (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleOpenSubmitModal(st);
-                          }}
-                          className="ft-btn"
-                          style={{
-                            alignSelf: 'flex-start',
-                            background: `linear-gradient(135deg, ${trackThemeColor} 0%, #e11d48 100%)`,
-                            color: '#ffffff', fontWeight: 900, padding: '0.75rem 1.4rem', borderRadius: '12px',
-                            fontSize: '0.92rem', border: 'none', boxShadow: `0 4px 16px ${trackThemeColor}60`,
-                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem',
-                            position: 'relative', zIndex: 10
-                          }}
-                        >
-                          <Send size={16} /> Submit Work for Stage {st.stageId}
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: '0.82rem', color: '#64748b', fontStyle: 'italic', fontWeight: 600 }}>
-                          🔒 Submissions are currently closed for this stage.
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* EVALUATION & SCORING GRAPHIC BOX */}
-                <div>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span>🏆</span> EVALUATIONS & FEEDBACK:
-                  </div>
-
-                  {stageEvals.length === 0 ? (
-                    stageSub ? (
-                      <div style={{
-                        padding: '1.25rem', borderRadius: '16px',
-                        background: 'linear-gradient(135deg, #fffbe6 0%, #fef3c7 100%)',
-                        border: '2px solid #f59e0b', color: '#b45309',
-                        display: 'flex', alignItems: 'center', gap: '0.85rem'
-                      }}>
-                        <div style={{ fontSize: '1.4rem' }}>⏳</div>
-                        <div>
-                          <div style={{ fontWeight: 900, fontSize: '0.92rem', color: '#92400e' }}>
-                            Awaiting Evaluation
-                          </div>
-                          <div style={{ fontSize: '0.78rem', color: '#b45309', marginTop: '0.15rem' }}>
-                            Submission received! Assigned judges are reviewing your work.
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{
-                        padding: '1.25rem', borderRadius: '16px',
-                        background: '#f8fafc', border: '1.5px solid #e2e8f0',
-                        color: '#64748b', fontSize: '0.85rem', fontWeight: 600, fontStyle: 'italic'
-                      }}>
-                        Scores and feedback comments will appear here once your submission is graded by the panel.
-                      </div>
-                    )
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                      {/* Overall Averaged Stage Score Banner across judges */}
-                      {stageEvals.length > 0 && (
-                        <div style={{
-                          background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
-                          border: '1.5px solid #a7f3d0', padding: '0.75rem 1.1rem', borderRadius: '14px',
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: 900, color: '#047857' }}>
-                            <span>📊</span> Overall Stage Averaged Grade ({stageEvals.length} {stageEvals.length === 1 ? 'Judge Evaluation' : 'Judges Averaged'}):
-                          </div>
-                          <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#065f46', background: '#ffffff', padding: '0.2rem 0.75rem', borderRadius: '10px', border: '1px solid #6ee7b7' }}>
-                            {calculateAveragedPoints(stageEvals)} / {(st.criteria || []).reduce((sum, c) => sum + Number(c.maxPoints || 0), 0) || 50} pts
-                          </div>
-                        </div>
-                      )}
-
-                      {stageEvals.map(evalDoc => {
-                        const isAcademic = evalDoc.judgeRole === 'academic_judge';
-                        const judgeRoleColor = isAcademic ? '#0284c7' : evalDoc.judgeRole === 'scicomm_judge' ? '#e11d48' : '#14b8a6';
-                        const judgeRoleLabel = isAcademic ? 'Academic Review 🎓' : evalDoc.judgeRole === 'scicomm_judge' ? 'SciComm Review 🎙️' : 'Official Review';
-
-                        // Calculate total max points of all stage criteria combined (e.g. 25 + 25 = 50 pts)
-                        const stageAllCriteriaMaxSum = (st.criteria || []).reduce((sum, c) => sum + Number(c.maxPoints || 0), 0) || 50;
-                        const displayMaxScore = stageAllCriteriaMaxSum;
-
-                        const dateRaw = evalDoc.evaluatedAt || evalDoc.createdAt;
-                        const dateFormatted = dateRaw && !isNaN(new Date(dateRaw).getTime()) ? new Date(dateRaw).toLocaleDateString([], { dateStyle: 'medium' }) : 'Recently';
-
-                        return (
-                          <div key={evalDoc.id} style={{
-                            background: '#ffffff', padding: '1rem 1.2rem', borderRadius: '16px',
-                            border: `2px solid ${judgeRoleColor}`, boxShadow: '0 4px 14px rgba(0,0,0,0.05)'
-                          }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                              <span style={{ fontSize: '0.75rem', fontWeight: 900, background: judgeRoleColor, color: '#ffffff', padding: '0.25rem 0.65rem', borderRadius: '8px' }}>
-                                {judgeRoleLabel}
-                              </span>
-                               <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', background: '#fef3c7', padding: '0.2rem 0.65rem', borderRadius: '8px', border: '1px solid #f59e0b' }}>
-                                {evalDoc.totalScore} / {displayMaxScore} pts
-                              </span>
-                            </div>
-
-                             {(() => {
-                               const judgeAcc = scientists.find(s => s.name === evalDoc.judgeName || s.username === evalDoc.judgeName || s.id === evalDoc.judgeId);
-                               return (
-                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', margin: '0.4rem 0' }}>
-                                   <img
-                                     src={judgeAcc?.avatarUrl || judgeAcc?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${evalDoc.judgeName}`}
-                                     alt=""
-                                     style={{ width: 34, height: 34, borderRadius: '50%', border: `2px solid ${judgeRoleColor}`, objectFit: 'cover', flexShrink: 0 }}
-                                   />
-                                   <div>
-                                     <div style={{ fontSize: '0.84rem', color: '#0f172a', fontWeight: 800 }}>
-                                       Evaluated by <strong>{evalDoc.judgeName}</strong> on {dateFormatted}
-                                     </div>
-                                     {judgeAcc && (judgeAcc.title || judgeAcc.institutionName || judgeAcc.department) && (
-                                       <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>
-                                         {judgeAcc.title && <span>{judgeAcc.title}</span>}
-                                         {judgeAcc.institutionName && <span>{judgeAcc.title ? ' · ' : ''}🏫 {judgeAcc.institutionName}</span>}
-                                         {!judgeAcc.institutionName && judgeAcc.department && <span>{judgeAcc.title ? ' · ' : ''}🎓 {judgeAcc.department}</span>}
-                                       </div>
-                                     )}
-                                   </div>
-                                 </div>
-                               );
-                             })()}
-                            
-                            {/* Judge Feedback Comments */}
-                            {evalDoc.comments && (
-                              <div style={{
-                                marginTop: '0.6rem', fontSize: '0.85rem', color: '#1e293b', fontStyle: 'italic',
-                                background: '#f8fafc', padding: '0.6rem 0.85rem', borderRadius: '10px',
-                                borderLeft: `4px solid ${judgeRoleColor}`, fontWeight: 500
-                              }}>
-                                "{evalDoc.comments}"
-                              </div>
-                            )}
-
-                            {/* Criteria Score Chips */}
-                            {evalDoc.criteriaBreakdown && (
-                              <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
-                                {Object.entries(evalDoc.criteriaBreakdown).map(([critId, score]) => {
-                                  const cDetail = st.criteria?.find(c => c.id === critId);
-                                  if (!cDetail) return null;
-                                  return (
-                                    <span key={critId} style={{
-                                      fontSize: '0.72rem', fontWeight: 800, padding: '0.25rem 0.55rem', borderRadius: '6px',
-                                      background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#0f172a'
-                                    }}>
-                                      {cDetail.name}: <strong style={{ color: judgeRoleColor }}>{score} pts</strong>
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-              </div>
-
             </div>
           );
         })}
