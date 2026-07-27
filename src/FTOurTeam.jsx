@@ -168,9 +168,10 @@ export default function FTOurTeam() {
     setIsSubmitting(true);
 
     try {
+      const userTrack = user?.registeredTrack || meDoc?.registeredTrack || 'pop_science';
       const newTeam = {
         name: createTeamName.trim(),
-        track: createTrack,
+        track: userTrack,
         code: generateTeamCode(),
         leaderId: user.id,
         leaderUsername: user.username,
@@ -453,7 +454,7 @@ export default function FTOurTeam() {
             </div>
 
             <form onSubmit={handleCreateTeam}>
-              <div className="ft-input-group" style={{ marginBottom: '1.2rem' }}>
+              <div className="ft-input-group" style={{ marginBottom: '1.5rem' }}>
                 <label className="ft-label">Team Name / اسم الفريق *</label>
                 <input
                   type="text"
@@ -463,14 +464,6 @@ export default function FTOurTeam() {
                   onChange={(e) => setCreateTeamName(e.target.value)}
                   placeholder="e.g. Quantum Communicators"
                 />
-              </div>
-
-              <div className="ft-input-group" style={{ marginBottom: '1.5rem' }}>
-                <label className="ft-label">Competition Track / مسار المسابقة *</label>
-                <select className="ft-select" value={createTrack} onChange={(e) => setCreateTrack(e.target.value)}>
-                  <option value="pop_science">Pop Science Videos 🎥</option>
-                  <option value="science_journalism">Science Journalism 📰</option>
-                </select>
               </div>
 
               <button

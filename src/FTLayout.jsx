@@ -562,7 +562,9 @@ export default function FTLayout() {
 
   const navItems = useMemo(() => {
     const isCompetitor = isCompetitorRole(userRole) || userRole === 'user';
-    const partMode = user?.participationMode || meDoc?.participationMode || (myTeam ? 'team' : 'individual');
+    const partMode = user?.isImpersonating
+      ? user?.participationMode
+      : (meDoc?.participationMode === 'team' || Boolean(myTeam) ? 'team' : 'individual');
     const isTeamCompetitor = isCompetitor && partMode === 'team';
     const leaderboardLabel = isTeamCompetitor ? 'Our Team & Leaderboard' : 'Leaderboard & Progress';
 
