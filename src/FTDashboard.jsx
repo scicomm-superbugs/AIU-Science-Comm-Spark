@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Sparkles, Video, Newspaper, Calendar, Clock, ArrowRight, Award, CheckCircle2, Play, BookOpen, Layers, GitCommit, Zap, Mic, Users, Globe, Mail, ChevronRight, FileText, Check, Radio, ExternalLink, Pencil } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { db, useLiveCollection } from './db';
-import { COMPETITION_TRACKS, DEFAULT_JUDGING_CRITERIA, normalizeTrackKey } from './ftConstants';
+import { COMPETITION_TRACKS, DEFAULT_JUDGING_CRITERIA, normalizeTrackKey, formatUnifiedDate } from './ftConstants';
 import { CanvaTransformBox, EditableLogo } from './Landing';
 import WorkshopManager from './WorkshopManager';
 import './scicommspark.css';
