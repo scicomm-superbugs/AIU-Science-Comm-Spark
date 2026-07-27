@@ -585,7 +585,7 @@ export default function FTLayout() {
       if (!user?.isImpersonating && (userRole === 'master' || userRole === 'admin')) return true;
       return item.roles?.includes(userRole);
     });
-  }, [userRole, meDoc, myTeam, user?.isImpersonating]);
+  }, [userRole, meDoc, myTeam, user?.isImpersonating, user?.participationMode, user?.viewAsMode]);
 
   const isAdmin = userRole === 'master' || userRole === 'admin';
   const isStaff = userRole === 'master' || userRole === 'admin' || userRole === 'judge' || userRole === 'faculty';
