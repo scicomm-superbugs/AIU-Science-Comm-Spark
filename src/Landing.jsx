@@ -761,15 +761,16 @@ export function EditableImage({ src, onUpload, onRemove, editing, style = {}, al
     reader.onload = async (ev) => {
       const base64 = ev.target?.result;
       if (base64) {
-        // Show preview immediately
+        // 1. Show preview INSTANTLY — update parent state with base64 right now
         setPendingImage(base64);
-        // Upload to Firebase Storage in background → pass URL (not base64) to parent
+        if (onUpload) onUpload(base64);
+        // 2. Upload to Firebase Storage in background, then silently replace base64 with URL
         setUploading(true);
         try {
           const url = await quickUpload(base64, 800, 0.65);
-          if (onUpload) onUpload(url);
+          if (url && url !== base64 && onUpload) onUpload(url);
         } catch {
-          if (onUpload) onUpload(base64); // fallback
+          // base64 already set — no action needed
         } finally {
           setUploading(false);
         }
@@ -1400,46 +1401,58 @@ export default function Landing() {
     });
   };
 
-  // Strip any remaining base64 strings from the content (safety net).
-  // All images should already be URLs from instant upload on selection.
-  const stripRemainingBase64 = (val) => {
+  // If any base64 images remain (user saved before background upload finished),
+  // upload them now as a fallback. Otherwise pass through URLs unchanged.
+  const ensureUploaded = async (val) => {
     if (!val || typeof val !== 'string') return val;
-    if (val.startsWith('data:image')) return ''; // should never happen — images upload on selection
+    if (val.startsWith('data:image')) {
+      try { return await quickUpload(val, 800, 0.65); } catch { return val; }
+    }
     return val;
   };
 
-  const optimizeLandingContent = (data) => {
+  const optimizeLandingContent = async (data) => {
     const clone = structuredClone(data);
+    const tasks = [];
 
-    // Top-level image fields — should already be URLs
-    if (clone.navLogo) clone.navLogo = stripRemainingBase64(clone.navLogo);
-    if (clone.heroLogo) clone.heroLogo = stripRemainingBase64(clone.heroLogo);
-    if (clone.footerLogo) clone.footerLogo = stripRemainingBase64(clone.footerLogo);
-    if (clone.heroBgImage) clone.heroBgImage = stripRemainingBase64(clone.heroBgImage);
+    const enqueue = (getter, setter) => {
+      const val = getter();
+      if (val && typeof val === 'string' && val.startsWith('data:image')) {
+        tasks.push(ensureUploaded(val).then(url => setter(url)));
+      }
+    };
 
-    // Array fields
+    enqueue(() => clone.navLogo, (u) => { clone.navLogo = u; });
+    enqueue(() => clone.heroLogo, (u) => { clone.heroLogo = u; });
+    enqueue(() => clone.footerLogo, (u) => { clone.footerLogo = u; });
+    enqueue(() => clone.heroBgImage, (u) => { clone.heroBgImage = u; });
+
     if (Array.isArray(clone.workshops)) {
-      clone.workshops.forEach((t, i) => { clone.workshops[i].img = stripRemainingBase64(t.img); });
+      clone.workshops.forEach((t, i) => { enqueue(() => t.img, (u) => { clone.workshops[i].img = u; }); });
     }
     if (Array.isArray(clone.teamMembers)) {
-      clone.teamMembers.forEach((tm, i) => { clone.teamMembers[i].img = stripRemainingBase64(tm.img); });
+      clone.teamMembers.forEach((tm, i) => { enqueue(() => tm.img, (u) => { clone.teamMembers[i].img = u; }); });
     }
     if (Array.isArray(clone.hallOfFameChampions)) {
       clone.hallOfFameChampions.forEach((c, ci) => {
         if (Array.isArray(c.members)) {
-          c.members.forEach((m, mi) => { clone.hallOfFameChampions[ci].members[mi].img = stripRemainingBase64(m.img); });
+          c.members.forEach((m, mi) => { enqueue(() => m.img, (u) => { clone.hallOfFameChampions[ci].members[mi].img = u; }); });
         }
         delete clone.hallOfFameChampions[ci].img;
       });
     }
     if (Array.isArray(clone.galleryImages)) {
-      clone.galleryImages = clone.galleryImages.map(img => stripRemainingBase64(img));
+      clone.galleryImages.forEach((img, i) => { enqueue(() => img, (u) => { clone.galleryImages[i] = u; }); });
     }
     if (Array.isArray(clone.collaborators)) {
-      clone.collaborators.forEach((col, i) => { clone.collaborators[i].logo = stripRemainingBase64(col.logo); });
+      clone.collaborators.forEach((col, i) => { enqueue(() => col.logo, (u) => { clone.collaborators[i].logo = u; }); });
     }
     if (Array.isArray(clone.aboutSlides)) {
-      clone.aboutSlides.forEach((slide, i) => { clone.aboutSlides[i].img = stripRemainingBase64(slide.img); });
+      clone.aboutSlides.forEach((slide, i) => { enqueue(() => slide.img, (u) => { clone.aboutSlides[i].img = u; }); });
+    }
+
+    if (tasks.length > 0) {
+      await Promise.all(tasks);
     }
 
     return clone;
@@ -1473,8 +1486,8 @@ export default function Landing() {
         updatedAt: timestamp
       };
 
-      // 1. Strip any leftover base64 (images already uploaded to Storage on selection)
-      let sanitized = sanitizeForFirestore(optimizeLandingContent(payloadToSave));
+      // 1. Ensure all images (including any pending background uploads) are turned into Firebase Storage URLs
+      let sanitized = sanitizeForFirestore(await optimizeLandingContent(payloadToSave));
       sanitized.updatedAt = timestamp;
       const jsonStr = JSON.stringify(sanitized);
 
