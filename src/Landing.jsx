@@ -1355,21 +1355,32 @@ export default function Landing() {
     });
   };
 
+  // Compress a base64 image, then upload to Firebase Storage → returns a short download URL
+  const compressAndUpload = async (str, maxDimension = 800, quality = 0.65, isPng = false) => {
+    if (!str || typeof str !== 'string') return str;
+    // Already a URL (https:// or ./ relative path) — no processing needed
+    if (!str.startsWith('data:image')) return str;
+    const compressed = await compressBase64(str, maxDimension, quality, isPng);
+    // Upload to Firebase Storage and get a short download URL (~200 bytes vs ~100KB+ base64)
+    const url = await uploadBase64ToStorage(compressed, 'landing');
+    return url;
+  };
+
   const optimizeLandingContent = async (data, maxDim = 800, qual = 0.65) => {
     const clone = structuredClone(data);
 
-    if (clone.navLogo) clone.navLogo = await compressBase64(clone.navLogo, maxDim, qual, true);
-    if (clone.heroLogo) clone.heroLogo = await compressBase64(clone.heroLogo, maxDim, qual, true);
-    if (clone.footerLogo) clone.footerLogo = await compressBase64(clone.footerLogo, maxDim, qual, true);
+    if (clone.navLogo) clone.navLogo = await compressAndUpload(clone.navLogo, maxDim, qual, true);
+    if (clone.heroLogo) clone.heroLogo = await compressAndUpload(clone.heroLogo, maxDim, qual, true);
+    if (clone.footerLogo) clone.footerLogo = await compressAndUpload(clone.footerLogo, maxDim, qual, true);
     if (clone.heroBgImage && clone.heroBgImage.startsWith('data:image')) {
-      clone.heroBgImage = await compressBase64(clone.heroBgImage, maxDim, qual, false);
+      clone.heroBgImage = await compressAndUpload(clone.heroBgImage, maxDim, qual, false);
     }
 
     if (Array.isArray(clone.workshops)) {
       clone.workshops = await Promise.all(
         clone.workshops.map(async (t) => ({
           ...t,
-          img: await compressBase64(t.img, maxDim, qual, false)
+          img: await compressAndUpload(t.img, maxDim, qual, false)
         }))
       );
     }
@@ -1378,7 +1389,7 @@ export default function Landing() {
       clone.teamMembers = await Promise.all(
         clone.teamMembers.map(async (tm) => ({
           ...tm,
-          img: await compressBase64(tm.img, maxDim, qual, false)
+          img: await compressAndUpload(tm.img, maxDim, qual, false)
         }))
       );
     }
@@ -1391,7 +1402,7 @@ export default function Landing() {
             updatedMembers = await Promise.all(
               c.members.map(async (m) => ({
                 ...m,
-                img: m.img ? await compressBase64(m.img, maxDim, qual, false) : ''
+                img: m.img ? await compressAndUpload(m.img, maxDim, qual, false) : ''
               }))
             );
           }
@@ -1404,7 +1415,7 @@ export default function Landing() {
 
     if (Array.isArray(clone.galleryImages)) {
       clone.galleryImages = await Promise.all(
-        clone.galleryImages.map((img) => compressBase64(img, maxDim, qual, false))
+        clone.galleryImages.map((img) => compressAndUpload(img, maxDim, qual, false))
       );
     }
 
@@ -1412,7 +1423,7 @@ export default function Landing() {
       clone.collaborators = await Promise.all(
         clone.collaborators.map(async (col) => ({
           ...col,
-          logo: await compressBase64(col.logo, 500, qual, true)
+          logo: await compressAndUpload(col.logo, 500, qual, true)
         }))
       );
     }
@@ -1421,7 +1432,7 @@ export default function Landing() {
       clone.aboutSlides = await Promise.all(
         clone.aboutSlides.map(async (slide) => ({
           ...slide,
-          img: await compressBase64(slide.img, maxDim, qual, false)
+          img: await compressAndUpload(slide.img, maxDim, qual, false)
         }))
       );
     }
@@ -1457,18 +1468,10 @@ export default function Landing() {
         updatedAt: timestamp
       };
 
-      // 1. Fast Canvas compression (~12KB per image, takes <0.1s)
+      // 1. Compress all base64 images and upload to Firebase Storage → short URLs stored in Firestore
       let sanitized = sanitizeForFirestore(await optimizeLandingContent(payloadToSave, 800, 0.65));
       sanitized.updatedAt = timestamp;
-
-      // 2. Ensure payload size is strictly under Firestore's 1MB limit (target < 600KB)
-      let jsonStr = JSON.stringify(sanitized);
-      if (jsonStr.length > 700000) {
-        console.warn(`Payload size (${jsonStr.length} bytes) near Firestore limit. Running second-pass compression...`);
-        sanitized = sanitizeForFirestore(await optimizeLandingContent(payloadToSave, 600, 0.55));
-        sanitized.updatedAt = timestamp;
-        jsonStr = JSON.stringify(sanitized);
-      }
+      const jsonStr = JSON.stringify(sanitized);
 
       // 3. Save to LocalStorage immediately (1ms)
       try {
