@@ -106,6 +106,7 @@ export default function FTMyCompetition() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [editingSubId, setEditingSubId] = useState(null);
+  const [subItems, setSubItems] = useState({});
 
   const handleOpenSubmitModal = (stage, existingSub = null) => {
     setSubmitStage(stage);
@@ -113,6 +114,26 @@ export default function FTMyCompetition() {
     setPolicyConsent(Boolean(existingSub));
     setSubPdfFile(null);
     setPdfUploading(false);
+
+    const fields = (stage.submissions && stage.submissions.length > 0)
+      ? stage.submissions
+      : (competitorTrack === 'pop_science'
+          ? [{ id: 'sub_def_1', name: 'Submission 1: Short Pop Video URL', type: 'url', question: 'Paste your YouTube, TikTok, Instagram Reels, or Google Drive video URL:' }]
+          : [{ id: 'sub_def_2', name: 'Submission 1: Science Article Document', type: 'file', question: 'Upload your formatted science article PDF document (.pdf):' }]);
+
+    const initialItems = {};
+    fields.forEach(f => {
+      const savedItem = existingSub?.submittedItems?.[f.id];
+      initialItems[f.id] = {
+        name: f.name,
+        type: f.type,
+        question: f.question,
+        value: savedItem?.value || (f.type === 'url' ? existingSub?.videoUrl || '' : f.type === 'textbox' ? existingSub?.articleContent || '' : existingSub?.fileUrl || ''),
+        fileUrl: savedItem?.fileUrl || existingSub?.fileUrl || existingSub?.pdfUrl || ''
+      };
+    });
+
+    setSubItems(initialItems);
 
     if (existingSub) {
       setEditingSubId(existingSub.id);
@@ -134,20 +155,29 @@ export default function FTMyCompetition() {
     e.preventDefault();
     setSubmitError('');
     if (!subTitle.trim()) {
-      setSubmitError('Please enter a submission title.');
-      return;
-    }
-
-    if (competitorTrack === 'science_journalism' && !subFileUrl.trim() && !subPdfFile) {
-      setSubmitError('Please select and upload a PDF article document.');
+      setSubmitError('Please enter a submission project title.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      let finalFileUrl = subFileUrl.trim();
-      if (subPdfFile && !finalFileUrl) {
-        finalFileUrl = await uploadFile(subPdfFile, `articles/${Date.now()}_${subPdfFile.name}`);
+      let mainVideoUrl = subVideoUrl.trim();
+      let mainFileUrl = subFileUrl.trim();
+
+      Object.values(subItems).forEach(item => {
+        if (item.type === 'url' && item.value && !mainVideoUrl) {
+          mainVideoUrl = item.value.trim();
+        }
+        if ((item.type === 'file' || item.type === 'link_file') && item.fileUrl && !mainFileUrl) {
+          mainFileUrl = item.fileUrl.trim();
+        }
+        if (item.type === 'link_file' && item.value && !mainVideoUrl) {
+          mainVideoUrl = item.value.trim();
+        }
+      });
+
+      if (subPdfFile && !mainFileUrl) {
+        mainFileUrl = await uploadFile(subPdfFile, `articles/${Date.now()}_${subPdfFile.name}`);
       }
 
       const data = {
@@ -158,10 +188,11 @@ export default function FTMyCompetition() {
         track: competitorTrack,
         stageId: Number(submitStage.stageId),
         title: subTitle.trim(),
-        videoUrl: competitorTrack === 'pop_science' ? subVideoUrl.trim() : finalFileUrl,
-        fileUrl: finalFileUrl,
-        pdfUrl: finalFileUrl,
+        videoUrl: mainVideoUrl || mainFileUrl,
+        fileUrl: mainFileUrl,
+        pdfUrl: mainFileUrl,
         articleContent: subArticleContent.trim(),
+        submittedItems: subItems,
         status: 'pending',
         submittedAt: new Date().toISOString()
       };
@@ -288,7 +319,7 @@ export default function FTMyCompetition() {
                       Deadline Date
                     </div>
                     <div style={{ fontWeight: 900, color: '#be123c', fontSize: '1rem', marginTop: '0.1rem' }}>
-                      📅 {new Date(st.deadline).toLocaleDateString([], { dateStyle: 'medium' })}
+                      📅 {st.deadline === 'TBD' || st.isTbd || !st.deadline ? 'TBD (To Be Determined)' : (isNaN(new Date(st.deadline).getTime()) ? st.deadline : new Date(st.deadline).toLocaleDateString([], { dateStyle: 'medium' }))}
                     </div>
                   </div>
 
@@ -403,7 +434,7 @@ export default function FTMyCompetition() {
                             <span>✅</span> {stageSub.title}
                           </span>
                           <span style={{ fontSize: '0.72rem', background: '#059669', color: '#ffffff', fontWeight: 900, padding: '0.15rem 0.5rem', borderRadius: '6px' }}>
-                            UPLOADED
+                            SUBMITTED
                           </span>
                         </div>
 
@@ -411,16 +442,46 @@ export default function FTMyCompetition() {
                           Submitted: {new Date(stageSub.submittedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
                         </div>
 
-                        {(stageSub.videoUrl || stageSub.fileUrl || stageSub.pdfUrl) && (
-                          <div style={{ marginTop: '0.65rem' }}>
-                            <a href={stageSub.fileUrl || stageSub.pdfUrl || stageSub.videoUrl} target="_blank" rel="noreferrer" className="ft-btn" style={{
-                              fontSize: '0.82rem', background: '#ffffff', border: '1.5px solid #059669',
-                              color: '#065f46', textDecoration: 'none', fontWeight: 800, padding: '0.35rem 0.85rem',
-                              borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem'
-                            }}>
-                              🔗 View Uploaded Deliverable / PDF <ExternalLink size={14} />
-                            </a>
+                        {/* Render submitted items list if available */}
+                        {stageSub.submittedItems && Object.keys(stageSub.submittedItems).length > 0 ? (
+                          <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            {Object.entries(stageSub.submittedItems).map(([fId, item]) => (
+                              <div key={fId} style={{ background: '#ffffff', padding: '0.55rem 0.8rem', borderRadius: '10px', border: '1.5px solid #a7f3d0', fontSize: '0.82rem' }}>
+                                <div style={{ fontWeight: 800, color: '#065f46', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                  <span>{item.type === 'url' ? '🔗' : item.type === 'file' ? '📄' : item.type === 'textbox' ? '📝' : '📁'}</span>
+                                  <span>{item.name}</span>
+                                </div>
+                                {item.value && (
+                                  <div style={{ marginTop: '0.2rem', color: '#1e293b' }}>
+                                    {item.type === 'url' ? (
+                                      <a href={item.value} target="_blank" rel="noreferrer" style={{ color: '#0284c7', fontWeight: 800, textDecoration: 'underline' }}>{item.value} ↗</a>
+                                    ) : (
+                                      <span>"{item.value}"</span>
+                                    )}
+                                  </div>
+                                )}
+                                {item.fileUrl && (
+                                  <div style={{ marginTop: '0.2rem' }}>
+                                    <a href={item.fileUrl} target="_blank" rel="noreferrer" style={{ color: '#047857', fontWeight: 800, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                                      📄 View Deliverable File <ExternalLink size={13} />
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
                           </div>
+                        ) : (
+                          (stageSub.videoUrl || stageSub.fileUrl || stageSub.pdfUrl) ? (
+                            <div style={{ marginTop: '0.65rem' }}>
+                              <a href={stageSub.fileUrl || stageSub.pdfUrl || stageSub.videoUrl} target="_blank" rel="noreferrer" className="ft-btn" style={{
+                                fontSize: '0.82rem', background: '#ffffff', border: '1.5px solid #059669',
+                                color: '#065f46', textDecoration: 'none', fontWeight: 800, padding: '0.35rem 0.85rem',
+                                borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem'
+                              }}>
+                                🔗 View Uploaded Deliverable / PDF <ExternalLink size={14} />
+                              </a>
+                            </div>
+                          ) : null
                         )}
                       </div>
 
@@ -729,67 +790,102 @@ export default function FTMyCompetition() {
                 />
               </div>
 
-              {/* Deliverable Work Input */}
-              {competitorTrack === 'pop_science' ? (
-                <div>
-                  <label className="ft-label">Video / Deliverable URL (YouTube / Reels / TikTok / Google Drive) *</label>
-                  <div style={{ position: 'relative' }}>
-                    <Video size={18} style={{ position: 'absolute', left: 14, top: 12, color: 'var(--ft-primary)' }} />
-                    <input 
-                      type="url" 
-                      className="ft-input" 
-                      required
-                      style={{ paddingLeft: '2.5rem', fontSize: '0.9rem', fontWeight: 700 }} 
-                      placeholder="https://youtube.com/watch?v=... or https://drive.google.com/..." 
-                      value={subVideoUrl}
-                      onChange={e => setSubVideoUrl(e.target.value)}
-                    />
+              {/* DYNAMIC MULTI-SUBMISSION DELIVERABLE FIELDS */}
+              {((submitStage.submissions && submitStage.submissions.length > 0) ? submitStage.submissions : [
+                competitorTrack === 'pop_science'
+                  ? { id: 'sub_def_1', name: 'Submission 1: Short Pop Video URL', type: 'url', question: 'Paste your YouTube, TikTok, Instagram Reels, or Google Drive video URL:' }
+                  : { id: 'sub_def_2', name: 'Submission 1: Science Article Document', type: 'file', question: 'Upload your formatted science article PDF document (.pdf):' }
+              ]).map((field, idx) => {
+                const currentItem = subItems[field.id] || { value: '', fileUrl: '' };
+
+                return (
+                  <div key={field.id} style={{ background: '#ffffff', padding: '1.1rem 1.25rem', borderRadius: '16px', border: '1.5px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                    <label className="ft-label" style={{ margin: 0, fontSize: '0.92rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 800 }}>
+                      <span>{field.type === 'url' ? '🔗' : field.type === 'file' ? '📄' : field.type === 'textbox' ? '📝' : '📁'}</span>
+                      <span>{field.name}</span>
+                    </label>
+                    
+                    {field.question && (
+                      <div style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>
+                        ❓ {field.question}
+                      </div>
+                    )}
+
+                    {/* Field Inputs by Type */}
+                    {(field.type === 'url' || field.type === 'link_file') && (
+                      <div style={{ position: 'relative' }}>
+                        <Video size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--ft-primary)' }} />
+                        <input
+                          type="url"
+                          className="ft-input"
+                          style={{ paddingLeft: '2.4rem', fontSize: '0.88rem', fontWeight: 600 }}
+                          placeholder="https://youtube.com/watch?v=... or https://drive.google.com/..."
+                          value={currentItem.value || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSubItems(prev => ({
+                              ...prev,
+                              [field.id]: { ...prev[field.id], name: field.name, type: field.type, question: field.question, value: val }
+                            }));
+                            if (idx === 0) setSubVideoUrl(val);
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {(field.type === 'file' || field.type === 'link_file') && (
+                      <div>
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.mp4,.png,.jpg,.jpeg,application/pdf"
+                          className="ft-input"
+                          style={{ fontSize: '0.82rem', padding: '0.45rem' }}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setPdfUploading(true);
+                              try {
+                                const url = await uploadFile(file, `submissions/${Date.now()}_${file.name}`);
+                                setSubItems(prev => ({
+                                  ...prev,
+                                  [field.id]: { ...prev[field.id], name: field.name, type: field.type, question: field.question, fileUrl: url }
+                                }));
+                                if (idx === 0) setSubFileUrl(url);
+                              } catch (err) {
+                                setSubmitError('Upload failed: ' + err.message);
+                              } finally {
+                                setPdfUploading(false);
+                              }
+                            }
+                          }}
+                        />
+                        {currentItem.fileUrl && (
+                          <div style={{ marginTop: '0.35rem', fontSize: '0.8rem', color: '#047857', background: '#ecfdf5', padding: '0.35rem 0.65rem', borderRadius: '6px', border: '1px solid #a7f3d0' }}>
+                            📄 File Uploaded: <a href={currentItem.fileUrl} target="_blank" rel="noreferrer" style={{ color: '#047857', fontWeight: 800, textDecoration: 'underline' }}>View File ↗</a>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {field.type === 'textbox' && (
+                      <textarea
+                        className="ft-textarea"
+                        rows={3}
+                        placeholder="Type your response / answer / notes here..."
+                        value={currentItem.value || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSubItems(prev => ({
+                            ...prev,
+                            [field.id]: { ...prev[field.id], name: field.name, type: field.type, question: field.question, value: val }
+                          }));
+                          if (idx === 0) setSubArticleContent(val);
+                        }}
+                      />
+                    )}
                   </div>
-                </div>
-              ) : (
-                <div>
-                  {/* PDF File Picker */}
-                  <label className="ft-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <FileText size={16} style={{ color: '#2563eb' }} /> Upload Science Article PDF Document (.pdf) *
-                  </label>
-                  <input 
-                    type="file" 
-                    accept=".pdf,application/pdf"
-                    className="ft-input"
-                    style={{ fontSize: '0.85rem', padding: '0.5rem' }}
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setSubPdfFile(file);
-                        setPdfUploading(true);
-                        try {
-                          const url = await uploadFile(file, `articles/${Date.now()}_${file.name}`);
-                          setSubFileUrl(url);
-                        } catch (err) {
-                          setSubmitError('Failed to upload PDF: ' + err.message);
-                        } finally {
-                          setPdfUploading(false);
-                        }
-                      }
-                    }}
-                  />
-
-                  {pdfUploading && (
-                    <div style={{ fontSize: '0.82rem', color: '#2563eb', fontWeight: 800, marginTop: '0.35rem' }}>
-                      ⏳ Uploading PDF article document...
-                    </div>
-                  )}
-
-                  {subFileUrl && !pdfUploading && (
-                    <div style={{ marginTop: '0.4rem', fontSize: '0.82rem', color: '#047857', background: '#ecfdf5', padding: '0.4rem 0.75rem', borderRadius: '8px', border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span>📄 PDF Uploaded & Ready</span>
-                      <a href={subFileUrl} target="_blank" rel="noreferrer" style={{ color: '#047857', fontWeight: 900, textDecoration: 'underline' }}>
-                        View Document ↗
-                      </a>
-                    </div>
-                  )}
-                </div>
-              )}
+                );
+              })}
 
               {/* Ethics & Policy Consent Checkbox */}
               <div style={{ background: '#fff1f2', padding: '0.85rem 1rem', borderRadius: '12px', border: '1.5px solid #fecdd3', display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>

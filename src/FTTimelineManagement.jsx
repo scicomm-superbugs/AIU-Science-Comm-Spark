@@ -16,6 +16,11 @@ export default function FTTimelineManagement() {
   const [newCritCategory, setNewCritCategory] = useState('academic');
   const [newCritPoints, setNewCritPoints] = useState(25);
 
+  // Local state for adding custom submission fields within a stage editor
+  const [newSubName, setNewSubName] = useState('');
+  const [newSubType, setNewSubType] = useState('url');
+  const [newSubQuestion, setNewSubQuestion] = useState('');
+
   // Default Stage Configurations with custom stage criteria
   const defaultStages = {
     pop_science: [
@@ -25,6 +30,9 @@ export default function FTTimelineManagement() {
         criteria: [
           { id: 'c1', name: 'Scientific Accuracy', category: 'academic', maxPoints: 25 },
           { id: 'c2', name: 'Hook & Visual Engagement', category: 'scicomm', maxPoints: 25 }
+        ],
+        submissions: [
+          { id: 'sub_def_1', name: 'Submission 1: Short Pop Video URL', type: 'url', question: 'Paste your YouTube, TikTok, Instagram Reels, or Google Drive video URL:' }
         ]
       },
       {
@@ -33,6 +41,9 @@ export default function FTTimelineManagement() {
         criteria: [
           { id: 'c3', name: 'Research Depth & Rigor', category: 'academic', maxPoints: 25 },
           { id: 'c4', name: 'Video Editing & Narrative Flow', category: 'scicomm', maxPoints: 25 }
+        ],
+        submissions: [
+          { id: 'sub_def_2', name: 'Submission 1: Long Pop Video URL', type: 'url', question: 'Paste your YouTube or Google Drive long video URL:' }
         ]
       },
       {
@@ -41,6 +52,9 @@ export default function FTTimelineManagement() {
         criteria: [
           { id: 'c5', name: 'Scientific Q&A Defense', category: 'academic', maxPoints: 25 },
           { id: 'c6', name: 'Stage Confidence & Delivery', category: 'scicomm', maxPoints: 25 }
+        ],
+        submissions: [
+          { id: 'sub_def_3', name: 'Submission 1: Slide Deck Presentation', type: 'file', question: 'Upload your final presentation slides (PDF/PPTX):' }
         ]
       }
     ],
@@ -51,6 +65,9 @@ export default function FTTimelineManagement() {
         criteria: [
           { id: 'c7', name: 'Literature Review & Citation', category: 'academic', maxPoints: 25 },
           { id: 'c8', name: 'Journalistic Angle', category: 'scicomm', maxPoints: 25 }
+        ],
+        submissions: [
+          { id: 'sub_def_4', name: 'Submission 1: Research & Interview Notes', type: 'textbox', question: 'Summarize your research sources, academic literature citations, and interview transcripts:' }
         ]
       },
       {
@@ -59,6 +76,9 @@ export default function FTTimelineManagement() {
         criteria: [
           { id: 'c9', name: 'Academic Fact Checking', category: 'academic', maxPoints: 25 },
           { id: 'c10', name: 'Article Readability & Style', category: 'scicomm', maxPoints: 25 }
+        ],
+        submissions: [
+          { id: 'sub_def_5', name: 'Submission 1: Article PDF Document', type: 'file', question: 'Upload your formatted science article PDF document:' }
         ]
       },
       {
@@ -67,6 +87,9 @@ export default function FTTimelineManagement() {
         criteria: [
           { id: 'c11', name: 'Expert Q&A Handling', category: 'academic', maxPoints: 25 },
           { id: 'c12', name: 'Interview Dynamics', category: 'scicomm', maxPoints: 25 }
+        ],
+        submissions: [
+          { id: 'sub_def_6', name: 'Submission 1: Talk Show Script & Outline', type: 'link_file', question: 'Provide live stage talk show script, outline URL, or PDF document:' }
         ]
       }
     ]
@@ -107,6 +130,33 @@ export default function FTTimelineManagement() {
     });
   };
 
+  const handleAddSubmissionFieldToStage = () => {
+    if (!newSubName.trim() || !editingStage) return;
+    const newField = {
+      id: 'sub_field_' + Date.now(),
+      name: newSubName.trim(),
+      type: newSubType,
+      question: newSubQuestion.trim() || `Please submit item for ${newSubName.trim()}`
+    };
+    const currentList = editingStage.submissions || [];
+    setEditingStage({
+      ...editingStage,
+      submissions: [...currentList, newField]
+    });
+    setNewSubName('');
+    setNewSubQuestion('');
+    setNewSubType('url');
+  };
+
+  const handleDeleteSubmissionFieldFromStage = (fieldId) => {
+    if (!editingStage) return;
+    const currentList = editingStage.submissions || [];
+    setEditingStage({
+      ...editingStage,
+      submissions: currentList.filter(f => f.id !== fieldId)
+    });
+  };
+
   const handleSave = async (stage) => {
     setSavingId(stage.id);
     setMsg('');
@@ -117,10 +167,12 @@ export default function FTTimelineManagement() {
         stageId: stage.stageId,
         title: stage.title,
         sub: stage.sub,
-        deadline: stage.deadline,
+        deadline: stage.deadline || 'TBD',
+        isTbd: stage.deadline === 'TBD' || stage.isTbd,
         status: stage.status,
         details: stage.details,
         criteria: stage.criteria || [],
+        submissions: stage.submissions || [],
         assignedJudgeIds: stage.assignedJudgeIds || [],
         acceptSubmissions: stage.acceptSubmissions !== false,
         googleFormUrl: stage.googleFormUrl || '',
@@ -228,12 +280,30 @@ export default function FTTimelineManagement() {
                       />
                     </div>
                     <div>
-                      <label className="ft-label">Deadline Date *</label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label className="ft-label" style={{ margin: 0 }}>Deadline Date *</label>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#be123c', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <input
+                            type="checkbox"
+                            checked={editingStage.deadline === 'TBD' || editingStage.isTbd}
+                            onChange={(e) => {
+                              setEditingStage({
+                                ...editingStage,
+                                deadline: e.target.checked ? 'TBD' : '',
+                                isTbd: e.target.checked
+                              });
+                            }}
+                          />
+                          Mark as TBD (To Be Determined)
+                        </label>
+                      </div>
                       <input
-                        type="date"
+                        type={editingStage.deadline === 'TBD' || editingStage.isTbd ? 'text' : 'date'}
                         className="ft-input"
-                        value={editingStage.deadline}
-                        onChange={e => setEditingStage({ ...editingStage, deadline: e.target.value })}
+                        disabled={editingStage.deadline === 'TBD' || editingStage.isTbd}
+                        value={editingStage.deadline === 'TBD' || editingStage.isTbd ? 'TBD (To Be Determined)' : editingStage.deadline || ''}
+                        onChange={e => setEditingStage({ ...editingStage, deadline: e.target.value, isTbd: false })}
+                        style={{ marginTop: '0.35rem', fontWeight: editingStage.deadline === 'TBD' ? 800 : 500, color: editingStage.deadline === 'TBD' ? '#be123c' : '#0f172a' }}
                       />
                     </div>
                   </div>
@@ -293,6 +363,87 @@ export default function FTTimelineManagement() {
                       value={editingStage.googleFormUrl || ''}
                       onChange={e => setEditingStage({ ...editingStage, googleFormUrl: e.target.value })}
                     />
+                  </div>
+
+                  {/* STAGE SUBMISSION REQUIREMENTS & FIELDS */}
+                  <div style={{ background: '#ffffff', padding: '1.25rem', borderRadius: '12px', border: '1px solid #cbd5e1' }}>
+                    <label className="ft-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '1rem', color: '#0f172a' }}>
+                      <Layers size={18} style={{ color: 'var(--ft-primary)' }} /> Stage {st.stageId} Required Submissions & Questions
+                    </label>
+                    <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '1rem' }}>
+                      Configure 1, 2, or more separate submissions in this stage (e.g. Submission 1: Short Video Link, Submission 2: Script PDF, Submission 3: Q&A Text Box).
+                    </p>
+
+                    {/* New Submission Field Input Controls */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr auto', gap: '0.6rem' }}>
+                        <input
+                          type="text"
+                          className="ft-input"
+                          placeholder="Submission Field Name (e.g. Submission 2: Script PDF)"
+                          value={newSubName}
+                          onChange={e => setNewSubName(e.target.value)}
+                        />
+                        <select
+                          className="ft-select"
+                          value={newSubType}
+                          onChange={e => setNewSubType(e.target.value)}
+                        >
+                          <option value="url">URL / Link 🔗 (Video, Drive, Web)</option>
+                          <option value="file">File Upload 📄 (PDF, Doc, MP4, Image)</option>
+                          <option value="textbox">Text Box 📝 (Written Answer / Essay)</option>
+                          <option value="link_file">URL or File 📁 (Link or Upload)</option>
+                        </select>
+                        <button className="ft-btn ft-btn-outline" onClick={handleAddSubmissionFieldToStage} type="button">
+                          <Plus size={16} /> Add Submission Field
+                        </button>
+                      </div>
+
+                      <input
+                        type="text"
+                        className="ft-input"
+                        placeholder="Question Prompt / Instructions for competitor (e.g. Upload your script document in PDF format)"
+                        value={newSubQuestion}
+                        onChange={e => setNewSubQuestion(e.target.value)}
+                      />
+                    </div>
+
+                    {/* Configured Submission Requirements List */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                      {(editingStage.submissions || []).length === 0 && (
+                        <div style={{ fontSize: '0.82rem', color: '#94a3b8', fontStyle: 'italic', padding: '0.5rem' }}>
+                          No custom submission fields added yet. Default single submission will be used.
+                        </div>
+                      )}
+                      {(editingStage.submissions || []).map((subField, idx) => (
+                        <div key={subField.id || idx} style={{
+                          padding: '0.75rem 1rem', borderRadius: '10px', background: '#f8fafc',
+                          border: '1.5px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem'
+                        }}>
+                          <div>
+                            <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span>{subField.type === 'url' ? '🔗' : subField.type === 'file' ? '📄' : subField.type === 'textbox' ? '📝' : '📁'}</span>
+                              <span>{subField.name}</span>
+                              <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: '#ffffff', color: '#0284c7', fontWeight: 800, border: '1px solid #bae6fd' }}>
+                                {subField.type === 'url' ? 'URL Link' : subField.type === 'file' ? 'File Upload' : subField.type === 'textbox' ? 'Text Box' : 'Link or File'}
+                              </span>
+                            </div>
+                            {subField.question && (
+                              <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '0.25rem', fontWeight: 600 }}>
+                                ❓ {subField.question}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSubmissionFieldFromStage(subField.id)}
+                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.3rem' }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   {/* STAGE CUSTOM JUDGING CRITERIA SETTINGS */}
