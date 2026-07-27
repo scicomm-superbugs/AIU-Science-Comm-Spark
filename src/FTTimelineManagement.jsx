@@ -38,14 +38,20 @@ export default function FTTimelineManagement() {
 
   const handleAddSubmissionFieldToStage = () => {
     if (!newSubName.trim() || !editingStage) return;
+
+    // Ensure questions exist; if none added yet, auto-create a default field
+    const finalQuestions = subQuestionsList.length > 0 ? [...subQuestionsList] : [
+      { id: 'q_' + Date.now(), label: `Submit ${newSubName.trim()}`, type: 'file', description: 'Upload or provide required submission materials.' }
+    ];
+
     const newField = {
       id: 'sub_field_' + Date.now(),
       name: newSubName.trim(),
-      type: subQuestionsList.length > 0 ? 'mixed' : newSubType,
+      type: 'mixed',
       deadline: newSubDeadline || editingStage.deadline || '2026-09-01',
-      description: newSubQuestion.trim() || `Please submit required items for ${newSubName.trim()}`,
-      question: newSubQuestion.trim() || `Please submit required items for ${newSubName.trim()}`,
-      questions: subQuestionsList.length > 0 ? [...subQuestionsList] : []
+      description: newSubQuestion.trim() || `Please complete the required submission for ${newSubName.trim()}`,
+      question: newSubQuestion.trim() || `Please complete the required submission for ${newSubName.trim()}`,
+      questions: finalQuestions
     };
     const currentList = editingStage.submissions || [];
     setEditingStage({
@@ -55,9 +61,9 @@ export default function FTTimelineManagement() {
     setNewSubName('');
     setNewSubQuestion('');
     setNewSubDeadline('');
-    setNewSubType('url');
     setSubQuestionsList([]);
     setNewQLabel('');
+    setNewQDescription('');
   };
 
   // Default Stage Configurations with custom stage criteria
@@ -547,7 +553,7 @@ export default function FTTimelineManagement() {
                   <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <span>➕</span> Add New Deliverable / Submission Option
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1.3fr auto', gap: '0.6rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1.5fr auto', gap: '0.6rem' }}>
                     <input
                       type="text"
                       className="ft-input"
@@ -555,16 +561,6 @@ export default function FTTimelineManagement() {
                       value={newSubName}
                       onChange={e => setNewSubName(e.target.value)}
                     />
-                    <select
-                      className="ft-select"
-                      value={newSubType}
-                      onChange={e => setNewSubType(e.target.value)}
-                    >
-                      <option value="url">URL / Link 🔗</option>
-                      <option value="file">File Upload 📄</option>
-                      <option value="textbox">Paragraph Text Box 📝</option>
-                      <option value="link_file">URL or File 📁</option>
-                    </select>
                     <input
                       type="date"
                       className="ft-input"
