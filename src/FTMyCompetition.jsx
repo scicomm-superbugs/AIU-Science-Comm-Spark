@@ -126,18 +126,20 @@ export default function FTMyCompetition() {
   const myTeam = teams.find(t => (t.members || []).some(m => m.userId === user?.id || m.userId === meDoc?.id));
 
   const isAdminOrStaff = Boolean(
-    user?.role === 'admin' ||
-    user?.role === 'system_administrator' ||
-    user?.isMasterAdmin ||
-    user?.role === 'trainer' ||
-    user?.role === 'academic_judge' ||
-    user?.role === 'scicomm_judge' ||
-    !user?.registeredTrack
+    !user?.isImpersonating && (
+      user?.role === 'admin' ||
+      user?.role === 'system_administrator' ||
+      user?.isMasterAdmin ||
+      user?.role === 'trainer' ||
+      user?.role === 'academic_judge' ||
+      user?.role === 'scicomm_judge' ||
+      !user?.registeredTrack
+    )
   );
 
   const [adminSelectedTrack, setAdminSelectedTrack] = useState('pop_science');
 
-  const actualCompetitorTrack = normalizeTrackKey(meDoc?.registeredTrack || user?.registeredTrack || myTeam?.track || user?.track) || 'pop_science';
+  const actualCompetitorTrack = normalizeTrackKey(user?.registeredTrack || meDoc?.registeredTrack || myTeam?.track || user?.track) || 'pop_science';
   const competitorTrack = isAdminOrStaff ? adminSelectedTrack : actualCompetitorTrack;
 
   const rawStages = DEFAULT_STAGES[competitorTrack] || DEFAULT_STAGES.pop_science;

@@ -31,8 +31,8 @@ export default function FTDashboard() {
   
   // Find competitor doc & lock track
   const meDoc = useMemo(() => scientists.find(s => s.id === user?.id || s.username === user?.username) || user, [scientists, user]);
-  const isCompetitorUser = !user || user.role === 'competitor' || user.role === 'user';
-  const userTrack = normalizeTrackKey(meDoc?.registeredTrack || user?.registeredTrack || user?.track);
+  const isCompetitorUser = user?.isImpersonating || !user || user.role === 'competitor' || user.role === 'user';
+  const userTrack = normalizeTrackKey(user?.registeredTrack || meDoc?.registeredTrack || user?.track) || 'pop_science';
 
   const [selectedTrack, setSelectedTrack] = useState(isCompetitorUser ? userTrack : 'pop_science');
   const [selectedStepId, setSelectedStepId] = useState(1);

@@ -46,13 +46,15 @@ export default function FTOurTeam() {
     return !role || role === 'competitor' || role === 'user';
   }, [user, meDoc]);
 
+  const partMode = user?.participationMode || meDoc?.participationMode || (myTeam ? 'team' : 'individual');
+
   const isIndividualMode = useMemo(() => {
-    return isCompetitorUser && meDoc?.participationMode === 'individual' && !myTeam;
-  }, [isCompetitorUser, meDoc, myTeam]);
+    return isCompetitorUser && partMode === 'individual' && !myTeam;
+  }, [isCompetitorUser, partMode, myTeam]);
 
   const showTeamSetup = useMemo(() => {
-    return isCompetitorUser && !myTeam && meDoc?.participationMode === 'team';
-  }, [isCompetitorUser, myTeam, meDoc]);
+    return isCompetitorUser && !myTeam && partMode === 'team';
+  }, [isCompetitorUser, myTeam, partMode]);
 
   const formatSimpleCode = (rawCode, isTeam = false) => {
     if (!rawCode) return isTeam ? 'T-101' : 'C-101';
