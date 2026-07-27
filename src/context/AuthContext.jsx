@@ -171,7 +171,7 @@ export const AuthProvider = ({ children }) => {
           // Force update existing record to Master Admin status
           await db.scientists.update(scientist.id, {
             role: 'master',
-            title: (extraData && extraData.title) ? extraData.title.trim() : 'Teaching Assistant at Alamein International University',
+            title: 'Teaching Assistant at Alamein International University',
             accountStatus: 'active',
             completedProfile: true,
             googleEmail: userEmail,
@@ -189,7 +189,7 @@ export const AuthProvider = ({ children }) => {
             avatarUrl: photo || null,
             department: 'Science Communication',
             universityId: '',
-            title: (extraData && extraData.title) ? extraData.title.trim() : 'Teaching Assistant at Alamein International University',
+            title: 'Teaching Assistant at Alamein International University',
             role: 'master',
             registeredTrack: 'pop_science',
             accountStatus: 'active',
