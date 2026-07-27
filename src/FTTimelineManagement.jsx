@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { useLiveCollection, db } from './db';
 import { Calendar, Clock, Edit3, Save, CheckCircle2, Video, Newspaper, Layers, AlertCircle, Plus, Trash2, Award, UserCheck, X } from 'lucide-react';
 import { formatUnifiedDate } from './ftConstants';
+import WorkshopManager from './WorkshopManager';
+import './scicommspark.css';
 
 export default function FTTimelineManagement() {
   const customConfig = useLiveCollection('timeline_config') || [];
