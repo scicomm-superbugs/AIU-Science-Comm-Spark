@@ -454,25 +454,6 @@ export default function FTMyCompetition() {
                 </div>
               )}
 
-              {/* Submission Instructions Box */}
-              <div style={{ background: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '14px', border: '1.5px solid #cbd5e1', fontSize: '0.82rem', color: '#334155', lineHeight: 1.5 }}>
-                <div style={{ fontWeight: 900, color: '#0f172a', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  📋 Submission Instructions & Guidelines:
-                </div>
-                {competitorTrack === 'pop_science' ? (
-                  <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', color: '#475569' }}>
-                    <li>Provide a valid video URL (YouTube, TikTok, Instagram Reels, or Google Drive link).</li>
-                    <li>If using a <strong>Google Drive link</strong>, set sharing access to <strong>"Anyone with link can view"</strong>.</li>
-                    <li>Ensure scientific facts and media content comply with AIU SciComm Spark competition ethics.</li>
-                  </ul>
-                ) : (
-                  <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', color: '#475569' }}>
-                    <li>Upload your Science Journalism Article as a <strong>PDF Document (.pdf file)</strong>.</li>
-                    <li>Ensure research citations, literature references, and journalistic ethics are adhered to.</li>
-                  </ul>
-                )}
-              </div>
-
               {/* Submission Title */}
               <div>
                 <label className="ft-label">Submission Project Title *</label>
