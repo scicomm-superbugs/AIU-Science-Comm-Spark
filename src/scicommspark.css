@@ -3489,14 +3489,11 @@
    Landing Page Mobile & Tablet Responsive Utilities
    ══════════════════════════════════════════════════════════════════════ */
 /* ══════════════════════════════════════════════════════════════════════
-   Native Desktop Horizontal Banners System (Zoomed-to-Fit on Mobile)
+   Global Forced Desktop Layout Rules (Mobile Layout Disabled)
    ══════════════════════════════════════════════════════════════════════ */
-
 html, body, #root {
   min-width: 1200px !important;
-  width: 1200px !important;
-  margin: 0 auto !important;
-  overflow-x: hidden !important;
+  overflow-x: auto !important;
 }
 
 .landing-nav-bar {
