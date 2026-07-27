@@ -816,8 +816,9 @@ export function EditableImage({ src, onUpload, onRemove, editing, style = {}, al
   };
 
   const openCropModal = () => {
-    if (src) {
-      setPendingImage(src);
+    const targetSrc = pendingImage || src;
+    if (targetSrc) {
+      setPendingImage(targetSrc);
       setCropModalOpen(true);
     }
   };
@@ -855,7 +856,7 @@ export function EditableImage({ src, onUpload, onRemove, editing, style = {}, al
           <Upload size={12} /> Replace
         </button>
 
-        {src && (
+        {(src || pendingImage) && (
           <button
             type="button"
             onClick={openCropModal}
@@ -892,14 +893,20 @@ export function EditableImage({ src, onUpload, onRemove, editing, style = {}, al
 
       <ImageCropModal
         isOpen={cropModalOpen}
-        imageSrc={pendingImage}
+        imageSrc={pendingImage || src}
         onClose={() => setCropModalOpen(false)}
         onSave={async (croppedBase64) => {
+          // 1. Apply cropped image to UI INSTANTLY!
+          setPendingImage(croppedBase64);
+          if (onUpload) onUpload(croppedBase64);
+          // 2. Upload to Firebase Storage in background, then update URL
           try {
             const url = await quickUpload(croppedBase64, 800, 0.65);
-            if (onUpload) onUpload(url);
-          } catch {
-            if (onUpload) onUpload(croppedBase64);
+            if (url && url !== croppedBase64 && onUpload) {
+              onUpload(url);
+            }
+          } catch (e) {
+            console.warn('Crop background upload fallback:', e);
           }
         }}
       />
