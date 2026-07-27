@@ -1013,8 +1013,8 @@ export default function FTDashboard() {
                       (activeStep.assignedJudgeIds || []).map(judgeId => {
                         const judge = scientists.find(u => u.id === judgeId);
                         if (!judge) return null;
-                        const roleColor = judge.role === 'academic_judge' ? '#38bdf8' : judge.role === 'scicomm_judge' ? '#fb7185' : ['admin', 'master'].includes(judge.role) ? '#c084fc' : '#2dd4bf';
-                        const roleLabel = judge.role === 'academic_judge' ? 'Academic Judge 🎓' : judge.role === 'scicomm_judge' ? 'SciComm Judge 🎙️' : ['admin', 'master'].includes(judge.role) ? 'Admin Judge 🔑' : 'Judge';
+                        const roleColor = judge.role === 'academic_judge' ? '#38bdf8' : judge.role === 'scicomm_judge' ? '#fb7185' : '#c084fc';
+                        const roleLabel = judge.role === 'academic_judge' ? 'Academic Judge 🎓' : judge.role === 'scicomm_judge' ? 'SciComm Judge 🎙️' : 'Academic & SciComm Judge';
                         const avatarUrl = judge.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${judge.username || judge.name}`;
 
                         return (

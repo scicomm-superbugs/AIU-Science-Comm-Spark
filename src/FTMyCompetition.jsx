@@ -355,8 +355,8 @@ export default function FTMyCompetition() {
                       (st.assignedJudgeIds || []).map(judgeId => {
                         const judge = scientists.find(u => u.id === judgeId);
                         if (!judge) return null;
-                        const roleColor = judge.role === 'academic_judge' ? '#0284c7' : judge.role === 'scicomm_judge' ? '#e11d48' : ['admin', 'master'].includes(judge.role) ? '#8b5cf6' : '#14b8a6';
-                        const roleLabel = judge.role === 'academic_judge' ? 'Academic 🎓' : judge.role === 'scicomm_judge' ? 'SciComm 🎙️' : ['admin', 'master'].includes(judge.role) ? 'Admin Judge 🔑' : 'Judge';
+                        const roleColor = judge.role === 'academic_judge' ? '#0284c7' : judge.role === 'scicomm_judge' ? '#e11d48' : '#8b5cf6';
+                        const roleLabel = judge.role === 'academic_judge' ? 'Academic 🎓' : judge.role === 'scicomm_judge' ? 'SciComm 🎙️' : 'Academic & SciComm Judge';
                         const avatarUrl = judge.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${judge.username || judge.name}`;
 
                         return (
