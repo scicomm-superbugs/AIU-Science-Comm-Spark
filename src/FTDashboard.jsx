@@ -143,17 +143,26 @@ export default function FTDashboard() {
     return { ...st, criteria: [], assignedJudgeIds: [] };
   };
 
+  const getRawDate = (dateStr, fallbackIdx = 0) => {
+    if (!dateStr || dateStr === 'TBD') return new Date(2099, 11, 31, 23, 59, 59 + fallbackIdx);
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? new Date(2099, 11, 31, 23, 59, 59 + fallbackIdx) : d;
+  };
+
   const steps = useMemo(() => {
     // 1. Get default stages for this track merged with timeline_config settings
-    const stages = (defaultStages[selectedTrack] || defaultStages.pop_science).map(st => ({
-      ...getMergedStage(st, selectedTrack),
-      _rawDate: new Date(st.deadline)
-    }));
+    const stages = (defaultStages[selectedTrack] || defaultStages.pop_science).map((st, idx) => {
+      const merged = getMergedStage(st, selectedTrack);
+      return {
+        ...merged,
+        _rawDate: getRawDate(merged.deadline, idx)
+      };
+    });
 
     // 2. Map dynamic workshops for this track
     const trackWorkshops = dynamicWorkshops
       .filter(ws => ws.targetTrack === 'both' || ws.targetTrack === selectedTrack)
-      .map(ws => ({
+      .map((ws, idx) => ({
         id: ws.id,
         type: 'workshop',
         title: ws.title,
@@ -162,9 +171,9 @@ export default function FTDashboard() {
         sub: ws.trainerName ? `Trainer: ${ws.trainerName}` : 'Training Session',
         trainerName: ws.trainerName || '',
         trainerId: ws.trainerId || '',
-        deadline: ws.startDate ? new Date(ws.startDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : 'TBD',
+        deadline: ws.startDate ? (isNaN(new Date(ws.startDate).getTime()) ? ws.startDate : new Date(ws.startDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })) : 'TBD',
         startDate: ws.startDate,
-        _rawDate: ws.startDate ? new Date(ws.startDate) : new Date('2099-01-01'),
+        _rawDate: getRawDate(ws.startDate, 100 + idx),
         icon: ws.type === 'Orientation' ? <Zap size={20} />
             : ws.type === 'Lecture' ? <Mic size={20} />
             : ws.type === 'Office Hours' ? <Clock size={20} />
@@ -183,8 +192,8 @@ export default function FTDashboard() {
     // 3. Combine stages and workshops
     const combined = [...stages, ...trackWorkshops];
 
-    // 4. Sort chronologically by _rawDate
-    combined.sort((a, b) => a._rawDate - b._rawDate);
+    // 4. Sort strictly chronologically by _rawDate (earliest first)
+    combined.sort((a, b) => a._rawDate.getTime() - b._rawDate.getTime());
 
     // 5. Assign step sequential numbers
     return combined.map((item, idx) => ({
