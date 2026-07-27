@@ -737,8 +737,8 @@ export function EditableImage({ src, onUpload, onRemove, editing, style = {}, al
     reader.onload = (ev) => {
       const base64 = ev.target?.result;
       if (base64) {
+        if (onUpload) onUpload(base64);
         setPendingImage(base64);
-        setCropModalOpen(true);
       }
     };
     reader.readAsDataURL(file);
@@ -2481,22 +2481,73 @@ export default function Landing() {
                   </div>
                 )}
 
-                {/* Add New Champion Slide in Edit Mode */}
+                {/* Admin Static Champions Member Photos Manager Panel */}
                 {E && (
-                  <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-                    <button
-                      onClick={() => addArrayItem('hallOfFameChampions', {
-                        icon: '🏆',
-                        place: 'Honorable Mention',
-                        badgeBg: '#f0fdf4',
-                        badgeColor: '#15803d',
-                        borderColor: '#bbf7d0',
-                        members: [{ name: 'Champion Name', faculty: 'Faculty Name, AIU', img: '' }]
-                      })}
-                      style={{ background: '#f8fafc', color: '#be123c', border: '1.5px dashed #fecdd3', padding: '0.55rem 1.5rem', borderRadius: '12px', fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-                    >
-                      <Plus size={16} /> Add Champion Slide
-                    </button>
+                  <div style={{ marginTop: '2rem', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '18px', padding: '1.25rem' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 900, color: '#be123c', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>🏆 Champions Photo & Member Manager Panel ({champions.length} Champion Slides)</span>
+                      <button
+                        onClick={() => addArrayItem('hallOfFameChampions', {
+                          icon: '🏆',
+                          place: 'Honorable Mention',
+                          badgeBg: '#f0fdf4',
+                          badgeColor: '#15803d',
+                          borderColor: '#bbf7d0',
+                          members: [{ name: 'Champion Name', faculty: 'Faculty Name, AIU', img: '' }]
+                        })}
+                        style={{ background: '#be123c', color: '#fff', border: 'none', padding: '0.4rem 0.9rem', borderRadius: '10px', fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                      >
+                        <Plus size={14} /> Add Champion Slide
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {champions.map((c, cIdx) => (
+                        <div key={cIdx} style={{ background: '#ffffff', border: cIdx === currentChampIndex ? '2px solid #be123c' : '1px solid #cbd5e1', borderRadius: '14px', padding: '1rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px dashed #e2e8f0' }}>
+                            <span style={{ fontWeight: 900, fontSize: '0.9rem', color: c.badgeColor || '#0f172a' }}>
+                              #{cIdx + 1}: {c.place} ({c.members?.length || 0} Members)
+                            </span>
+                            <button
+                              onClick={() => setFameSlide(cIdx)}
+                              style={{ background: cIdx === currentChampIndex ? '#be123c' : '#f1f5f9', color: cIdx === currentChampIndex ? '#fff' : '#475569', border: 'none', padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer' }}
+                            >
+                              {cIdx === currentChampIndex ? 'Active Slide' : 'Switch to Slide'}
+                            </button>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                            {(c.members || []).map((m, mIdx) => (
+                              <div key={mIdx} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', textAlign: 'center' }}>
+                                <div style={{ width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden', border: '2px solid #be123c', background: '#e2e8f0', flexShrink: 0 }}>
+                                  <EditableImage
+                                    src={m.img}
+                                    onUpload={(base64) => {
+                                      const copy = structuredClone(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions);
+                                      if (copy[cIdx] && copy[cIdx].members && copy[cIdx].members[mIdx]) {
+                                        copy[cIdx].members[mIdx].img = base64;
+                                        updateField('hallOfFameChampions', copy);
+                                      }
+                                    }}
+                                    onRemove={() => {
+                                      const copy = structuredClone(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions);
+                                      if (copy[cIdx] && copy[cIdx].members && copy[cIdx].members[mIdx]) {
+                                        copy[cIdx].members[mIdx].img = '';
+                                        updateField('hallOfFameChampions', copy);
+                                      }
+                                    }}
+                                    editing={true}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  />
+                                </div>
+                                <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0f172a' }}>{m.name || 'Member'}</div>
+                                <div style={{ fontSize: '0.7rem', color: '#64748b', fontStyle: 'italic' }}>{m.faculty || 'Faculty'}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
