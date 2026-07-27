@@ -58,8 +58,8 @@ export default function FTLayout() {
     if (meDoc?.competitorIdNumber) return meDoc.competitorIdNumber;
     if (meDoc?.employeeId) return meDoc.employeeId;
     if (meDoc?.universityId) return meDoc.universityId;
-    if (user?.id) return `SCS-2026-${user.id.substring(0, 5).toUpperCase()}`;
-    return 'SCS-2026-0001';
+    if (user?.id) return `C-${user.id.substring(0, 4).toUpperCase()}`;
+    return 'C-101';
   }, [myTeam, meDoc, user]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showReleaseNotesModal, setShowReleaseNotesModal] = useState(false);
@@ -726,7 +726,7 @@ export default function FTLayout() {
                           border: `1px solid ${myTeam ? '#fecdd3' : '#bfdbfe'}`,
                           display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
                         }}>
-                          🏷️ ID: {effectiveCode}
+                          🏷️ Competitor Code: {effectiveCode}
                         </span>
                       )}
                     </div>
