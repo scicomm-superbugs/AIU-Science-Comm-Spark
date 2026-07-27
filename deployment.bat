@@ -10,7 +10,7 @@ echo.
 rem Configure Git path in environment session
 set PATH=C:\Users\amage\AppData\Roaming\kimi-desktop\daimon-bundle\runtime\git\cmd;%PATH%
 
-echo [1/3] Building production bundle with Vite...
+echo [1/4] Building production bundle with Vite...
 call npm run build
 if %errorlevel% neq 0 (
     color 0C
@@ -21,13 +21,23 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo [2/3] Staging and committing all project changes...
+echo [2/4] Staging and committing all project changes...
 git add .
-git commit -m "feat(deploy): update production deployment and global state fixes"
+git commit -m "feat(deploy): update production deployment and gh-pages live site"
 
 echo.
-echo [3/3] Pushing updates to GitHub (main branch)...
+echo [3/4] Pushing updates to GitHub (main branch)...
 git push origin main
+
+echo.
+echo [4/4] Deploying dist assets to GitHub Pages (gh-pages branch)...
+git checkout -B gh-pages-deploy-temp
+git add -f dist
+git commit -m "Deploy dist build to gh-pages"
+for /f "tokens=*" %%t in ('git subtree split --prefix dist gh-pages-deploy-temp') do set TREE_HASH=%%t
+git push -f origin %TREE_HASH%:refs/heads/gh-pages
+git checkout main
+git branch -D gh-pages-deploy-temp
 
 if %errorlevel% neq 0 (
     color 0C
@@ -39,6 +49,6 @@ if %errorlevel% neq 0 (
 
 echo.
 echo ============================================================
-echo   SUCCESS! Deployment complete and pushed to GitHub!
+echo   SUCCESS! Deployment complete on main ^& gh-pages!
 echo ============================================================
 pause
