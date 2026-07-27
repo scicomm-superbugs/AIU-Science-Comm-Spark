@@ -491,19 +491,23 @@ export function ImageCropModal({ isOpen, imageSrc, onClose, onSave }) {
   }
 
   const handleMouseDown = (e) => {
-    e.preventDefault();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
     isDraggingRef.current = true;
     dragStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
+      x: clientX,
+      y: clientY,
       initialX: offset.x,
       initialY: offset.y
     };
 
     const handleMouseMove = (me) => {
       if (!isDraggingRef.current) return;
-      const dx = me.clientX - dragStartRef.current.x;
-      const dy = me.clientY - dragStartRef.current.y;
+      const curX = me.touches ? me.touches[0].clientX : me.clientX;
+      const curY = me.touches ? me.touches[0].clientY : me.clientY;
+      const dx = curX - dragStartRef.current.x;
+      const dy = curY - dragStartRef.current.y;
       setOffset({
         x: dragStartRef.current.initialX + dx,
         y: dragStartRef.current.initialY + dy
@@ -514,41 +518,72 @@ export function ImageCropModal({ isOpen, imageSrc, onClose, onSave }) {
       isDraggingRef.current = false;
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchmove', handleMouseMove);
+      window.removeEventListener('touchend', handleMouseUp);
     };
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('touchmove', handleMouseMove);
+    window.addEventListener('touchend', handleMouseUp);
   };
 
   const handleApplyCrop = () => {
+    if (!imageSrc) {
+      onClose();
+      return;
+    }
+
+    const processCrop = (img) => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = boxWidth * 2;
+        canvas.height = boxHeight * 2;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          onSave(imageSrc);
+          onClose();
+          return;
+        }
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.save();
+
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.translate(offset.x * 2, offset.y * 2);
+        ctx.rotate((rotation * Math.PI) / 180);
+        ctx.scale(zoom, zoom);
+
+        const scaleFit = Math.max(canvas.width / (img.width || 1), canvas.height / (img.height || 1));
+        const drawWidth = (img.width || boxWidth) * scaleFit;
+        const drawHeight = (img.height || boxHeight) * scaleFit;
+
+        ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+        ctx.restore();
+
+        const isPng = typeof imageSrc === 'string' && imageSrc.startsWith('data:image/png');
+        const croppedBase64 = isPng ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.88);
+        onSave(croppedBase64);
+        onClose();
+      } catch (err) {
+        console.warn('Canvas crop export warning:', err);
+        onSave(imageSrc);
+        onClose();
+      }
+    };
+
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = boxWidth * 2;
-      canvas.height = boxHeight * 2;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.save();
-
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      ctx.translate(offset.x * 2, offset.y * 2);
-      ctx.rotate((rotation * Math.PI) / 180);
-      ctx.scale(zoom, zoom);
-
-      const scaleFit = Math.max(canvas.width / img.width, canvas.height / img.height);
-      const drawWidth = img.width * scaleFit;
-      const drawHeight = img.height * scaleFit;
-
-      ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-      ctx.restore();
-
-      const isPng = imageSrc.startsWith('data:image/png');
-      const croppedBase64 = isPng ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.88);
-      onSave(croppedBase64);
-      onClose();
+    img.onload = () => processCrop(img);
+    img.onerror = () => {
+      // Retry without CORS crossOrigin attribute in case server rejected anonymous CORS
+      const img2 = new Image();
+      img2.onload = () => processCrop(img2);
+      img2.onerror = () => {
+        onSave(imageSrc);
+        onClose();
+      };
+      img2.src = imageSrc;
     };
     img.src = imageSrc;
   };
@@ -591,6 +626,7 @@ export function ImageCropModal({ isOpen, imageSrc, onClose, onSave }) {
         }}>
           <div
             onMouseDown={handleMouseDown}
+            onTouchStart={handleMouseDown}
             style={{
               width: `${boxWidth}px`, height: `${boxHeight}px`,
               position: 'relative', overflow: 'hidden',
