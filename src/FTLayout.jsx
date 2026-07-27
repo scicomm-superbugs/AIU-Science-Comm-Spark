@@ -675,10 +675,10 @@ export default function FTLayout() {
                 }}
               >
                 <option value="normal">👑 Back to Admin</option>
-                <option value="student_pop_team">🎙️ Student (Pop Science Track) (team)</option>
-                <option value="student_pop_ind">🎙️ Student (Pop Science Track) (individual)</option>
-                <option value="student_jour_team">📰 Student (Science Journalism Track) (team)</option>
-                <option value="student_jour_ind">📰 Student (Science Journalism Track) (individual)</option>
+                <option value="student_pop_team">🎙️ Competitor (Pop Science Track) (team)</option>
+                <option value="student_pop_ind">🎙️ Competitor (Pop Science Track) (individual)</option>
+                <option value="student_jour_team">📰 Competitor (Science Journalism Track) (team)</option>
+                <option value="student_jour_ind">📰 Competitor (Science Journalism Track) (individual)</option>
                 <option value="judge_academic">🎓 Judge (Academic)</option>
                 <option value="judge_scicomm">🎙️ Judge (SciComm)</option>
               </select>
@@ -814,28 +814,28 @@ export default function FTLayout() {
                         style={{ background: (user?.viewAsMode === 'student_pop_team' || user?.viewAsMode === 'student_pop') ? '#f0fdf4' : 'transparent', fontWeight: 700 }}
                         onClick={() => { setViewAsMode('student_pop_team'); setUserMenuOpen(false); navigate('/dashboard/my-competition'); }}
                       >
-                        🎙️ Student (Pop Science Track) (team)
+                        🎙️ Competitor (Pop Science Track) (team)
                       </button>
                       <button
                         className="ft-user-dropdown-item"
                         style={{ background: user?.viewAsMode === 'student_pop_ind' ? '#f0fdf4' : 'transparent', fontWeight: 700 }}
                         onClick={() => { setViewAsMode('student_pop_ind'); setUserMenuOpen(false); navigate('/dashboard/my-competition'); }}
                       >
-                        🎙️ Student (Pop Science Track) (individual)
+                        🎙️ Competitor (Pop Science Track) (individual)
                       </button>
                       <button
                         className="ft-user-dropdown-item"
                         style={{ background: (user?.viewAsMode === 'student_jour_team' || user?.viewAsMode === 'student_jour') ? '#eff6ff' : 'transparent', fontWeight: 700 }}
                         onClick={() => { setViewAsMode('student_jour_team'); setUserMenuOpen(false); navigate('/dashboard/my-competition'); }}
                       >
-                        📰 Student (Science Journalism Track) (team)
+                        📰 Competitor (Science Journalism Track) (team)
                       </button>
                       <button
                         className="ft-user-dropdown-item"
                         style={{ background: user?.viewAsMode === 'student_jour_ind' ? '#eff6ff' : 'transparent', fontWeight: 700 }}
                         onClick={() => { setViewAsMode('student_jour_ind'); setUserMenuOpen(false); navigate('/dashboard/my-competition'); }}
                       >
-                        📰 Student (Science Journalism Track) (individual)
+                        📰 Competitor (Science Journalism Track) (individual)
                       </button>
                       <button
                         className="ft-user-dropdown-item"
