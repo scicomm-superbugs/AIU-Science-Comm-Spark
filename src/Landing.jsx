@@ -1043,7 +1043,13 @@ export default function Landing() {
     editModeRef.current = editMode;
   }, [editMode]);
 
-  const isMobile = false; // Forced Desktop layout on all devices
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [savedContent, setSavedContent] = useState(null); // snapshot before editing
   const [saving, setSaving] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -1553,10 +1559,24 @@ export default function Landing() {
             </>
           )}
 
-          {/* Mobile Hamburger Toggle */}
-          <div className="landing-nav-mobile-toggle" style={{ display: 'none', alignItems: 'center' }}>
+          {/* Mobile Quick Journal & Hamburger Toggle */}
+          <div className="landing-nav-mobile-toggle" style={{ display: 'none', alignItems: 'center', gap: '0.4rem' }}>
+            <a
+              href="https://scicomm-superbugs.github.io/Portal/#/aiuscicomm/explore"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: '#be123c', background: 'rgba(190,18,60,0.08)',
+                padding: '0.3rem 0.6rem', borderRadius: '16px', textDecoration: 'none',
+                fontWeight: 900, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.2rem',
+                border: '1px solid rgba(190,18,60,0.2)'
+              }}
+            >
+              <BookOpen size={13} /> Journal
+            </a>
             <button
               onClick={() => setMobileMenuOpen(prev => !prev)}
+              aria-label="Toggle navigation menu"
               style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0.45rem', color: '#0f172a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
