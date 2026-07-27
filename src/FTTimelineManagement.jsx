@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLiveCollection, db } from './db';
 import { Calendar, Clock, Edit3, Save, CheckCircle2, Video, Newspaper, Layers, AlertCircle, Plus, Trash2, Award, UserCheck, X } from 'lucide-react';
-import WorkshopManager from './WorkshopManager';
-import './scicommspark.css';
+import { formatUnifiedDate } from './ftConstants';
 
 export default function FTTimelineManagement() {
   const customConfig = useLiveCollection('timeline_config') || [];
@@ -137,6 +136,7 @@ export default function FTTimelineManagement() {
       id: 'sub_field_' + Date.now(),
       name: newSubName.trim(),
       type: newSubType,
+      deadline: newSubDeadline || editingStage.deadline || '2026-09-01',
       question: newSubQuestion.trim() || `Please submit item for ${newSubName.trim()}`
     };
     const currentList = editingStage.submissions || [];
@@ -146,6 +146,7 @@ export default function FTTimelineManagement() {
     });
     setNewSubName('');
     setNewSubQuestion('');
+    setNewSubDeadline('');
     setNewSubType('url');
   };
 
@@ -493,14 +494,12 @@ export default function FTTimelineManagement() {
                 <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '1rem' }}>
                   Configure 1, 2, or more separate submissions in this stage (e.g. Submission 1: Short Video Link, Submission 2: Script PDF, Submission 3: Q&A Text Box).
                 </p>
-
-                {/* New Submission Field Input Controls */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '1rem', background: '#ffffff', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr auto', gap: '0.6rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1.3fr auto', gap: '0.6rem' }}>
                     <input
                       type="text"
                       className="ft-input"
-                      placeholder="Submission Field Name (e.g. Submission 2: Script PDF)"
+                      placeholder="Submission Name (e.g. Submission 2: Script PDF)"
                       value={newSubName}
                       onChange={e => setNewSubName(e.target.value)}
                     />
@@ -509,11 +508,18 @@ export default function FTTimelineManagement() {
                       value={newSubType}
                       onChange={e => setNewSubType(e.target.value)}
                     >
-                      <option value="url">URL / Link 🔗 (Video, Drive, Web)</option>
-                      <option value="file">File Upload 📄 (PDF, Doc, MP4, Image)</option>
-                      <option value="textbox">Text Box 📝 (Written Answer / Essay)</option>
-                      <option value="link_file">URL or File 📁 (Link or Upload)</option>
+                      <option value="url">URL / Link 🔗</option>
+                      <option value="file">File Upload 📄</option>
+                      <option value="textbox">Text Box 📝</option>
+                      <option value="link_file">URL or File 📁</option>
                     </select>
+                    <input
+                      type="date"
+                      className="ft-input"
+                      title="Deliverable Custom Deadline (Optional)"
+                      value={newSubDeadline}
+                      onChange={e => setNewSubDeadline(e.target.value)}
+                    />
                     <button className="ft-btn ft-btn-outline" onClick={handleAddSubmissionFieldToStage} type="button">
                       <Plus size={16} /> Add Field
                     </button>
@@ -535,34 +541,56 @@ export default function FTTimelineManagement() {
                       No custom submission fields added yet. Default single submission will be used.
                     </div>
                   )}
-                  {(editingStage.submissions || []).map((subField, idx) => (
-                    <div key={subField.id || idx} style={{
-                      padding: '0.75rem 1rem', borderRadius: '10px', background: '#ffffff',
-                      border: '1.5px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem'
-                    }}>
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span>{subField.type === 'url' ? '🔗' : subField.type === 'file' ? '📄' : subField.type === 'textbox' ? '📝' : '📁'}</span>
-                          <span>{subField.name}</span>
-                          <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: '#f0f9ff', color: '#0284c7', fontWeight: 800, border: '1px solid #bae6fd' }}>
-                            {subField.type === 'url' ? 'URL Link' : subField.type === 'file' ? 'File Upload' : subField.type === 'textbox' ? 'Text Box' : 'Link or File'}
-                          </span>
-                        </div>
-                        {subField.question && (
-                          <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '0.25rem', fontWeight: 600 }}>
-                            ❓ {subField.question}
+                  {(editingStage.submissions || []).map((subField, idx) => {
+                    const effectiveDeadline = subField.deadline || editingStage.deadline || '2026-09-01';
+                    return (
+                      <div key={subField.id || idx} style={{
+                        padding: '0.75rem 1rem', borderRadius: '10px', background: '#ffffff',
+                        border: '1.5px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap'
+                      }}>
+                        <div style={{ flex: 1, minWidth: '240px' }}>
+                          <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <span>{subField.type === 'url' ? '🔗' : subField.type === 'file' ? '📄' : subField.type === 'textbox' ? '📝' : '📁'}</span>
+                            <span>{subField.name}</span>
+                            <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: '#f0f9ff', color: '#0284c7', fontWeight: 800, border: '1px solid #bae6fd' }}>
+                              {subField.type === 'url' ? 'URL Link' : subField.type === 'file' ? 'File Upload' : subField.type === 'textbox' ? 'Text Box' : 'Link or File'}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: '#fff1f2', color: '#be123c', fontWeight: 800, border: '1px solid #fecdd3' }}>
+                              📅 Deadline: {formatUnifiedDate(effectiveDeadline)}
+                            </span>
                           </div>
-                        )}
+                          {subField.question && (
+                            <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '0.25rem', fontWeight: 600 }}>
+                              ❓ {subField.question}
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <input
+                            type="date"
+                            className="ft-input"
+                            style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem', width: 'auto' }}
+                            value={subField.deadline || ''}
+                            onChange={(e) => {
+                              const nextVal = e.target.value;
+                              const updatedSubmissions = (editingStage.submissions || []).map(f =>
+                                f.id === subField.id ? { ...f, deadline: nextVal } : f
+                              );
+                              setEditingStage({ ...editingStage, submissions: updatedSubmissions });
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSubmissionFieldFromStage(subField.id)}
+                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.3rem' }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteSubmissionFieldFromStage(subField.id)}
-                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.3rem' }}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

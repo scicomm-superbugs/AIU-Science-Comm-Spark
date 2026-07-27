@@ -4,7 +4,7 @@ import { useAuth } from './context/AuthContext';
 import { useLiveCollection, db, getCollectionName, firestore, uploadFile } from './db';
 import { collection, getDocs } from 'firebase/firestore';
 import { Award, Star, MessageSquare, CheckCircle, Clock, X, Send, Video, FileText, ExternalLink } from 'lucide-react';
-import { DEFAULT_JUDGING_CRITERIA, calculateAveragedPoints, normalizeTrackKey } from './ftConstants';
+import { DEFAULT_JUDGING_CRITERIA, calculateAveragedPoints, normalizeTrackKey, formatUnifiedDate } from './ftConstants';
 import './scicommspark.css';
 
 export const DEFAULT_STAGES = {
@@ -234,6 +234,13 @@ export default function FTMyCompetition() {
           const isStageActive = Number(st.stageId) === 1 || st.status === 'Active Stage' || st.status === 'Active' || st.acceptSubmissions === true || Boolean(stageSub) || stageEvals.length > 0;
           const isCollapsed = collapsedStages[st.stageId] !== undefined ? collapsedStages[st.stageId] : !isStageActive;
 
+          // Deliverables configured for this stage
+          const subFields = (st.submissions && st.submissions.length > 0)
+            ? st.submissions
+            : (competitorTrack === 'pop_science'
+                ? [{ id: 'sub_def_1', name: 'Short Pop Video URL', type: 'url', deadline: st.deadline, question: 'Paste your YouTube, TikTok, Instagram Reels, or Google Drive video URL:' }]
+                : [{ id: 'sub_def_2', name: 'Science Article PDF Document', type: 'file', deadline: st.deadline, question: 'Upload your formatted science article PDF document:' }]);
+
           if (isCollapsed) {
             return (
               <div key={st.id} style={{
@@ -252,18 +259,45 @@ export default function FTMyCompetition() {
                     <div style={{ fontSize: '0.8rem', color: isStageActive ? '#059669' : '#94a3b8', marginTop: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', fontWeight: 700 }}>
                       <span>{isStageActive ? '🟢 Submissions Open / Active Stage' : '🔒 Submissions Closed / Upcoming Stage'}</span>
                       <span>·</span>
-                      <span>📅 Deadline: {new Date(st.deadline).toLocaleDateString([], { dateStyle: 'medium' })}</span>
+                      <span>📅 Stage Deadline: {formatUnifiedDate(st.deadline)}</span>
                     </div>
                   </div>
                 </div>
 
-                <button
-                  onClick={() => toggleCollapse(st.stageId)}
-                  className="ft-btn"
-                  style={{ background: '#f8fafc', color: '#475569', border: '1.5px solid #cbd5e1', fontSize: '0.82rem', fontWeight: 800, padding: '0.45rem 1rem', borderRadius: '10px', cursor: 'pointer' }}
-                >
-                  Show Stage Details ▼
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                  {isStageActive && subFields.map((sf, idx) => {
+                    const effDeadline = sf.deadline || st.deadline;
+                    return (
+                      <button
+                        key={sf.id || idx}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenSubmitModal(st, stageSub);
+                        }}
+                        className="ft-btn"
+                        style={{
+                          background: `linear-gradient(135deg, ${trackThemeColor} 0%, #be123c 100%)`,
+                          color: '#ffffff', fontWeight: 800, padding: '0.55rem 1.15rem', borderRadius: '12px',
+                          fontSize: '0.85rem', border: 'none', boxShadow: `0 4px 14px ${trackThemeColor}40`,
+                          cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem'
+                        }}
+                      >
+                        <Send size={15} /> Submit {sf.name || `Stage ${st.stageId}`}
+                        <span style={{ fontSize: '0.72rem', background: 'rgba(255,255,255,0.22)', padding: '0.15rem 0.5rem', borderRadius: '6px', marginLeft: '0.2rem', fontWeight: 800 }}>
+                          ⏰ {formatUnifiedDate(effDeadline)}
+                        </span>
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    onClick={() => toggleCollapse(st.stageId)}
+                    className="ft-btn"
+                    style={{ background: '#f8fafc', color: '#475569', border: '1.5px solid #cbd5e1', fontSize: '0.82rem', fontWeight: 800, padding: '0.55rem 0.9rem', borderRadius: '10px', cursor: 'pointer' }}
+                  >
+                    Details ▼
+                  </button>
+                </div>
               </div>
             );
           }
@@ -310,18 +344,31 @@ export default function FTMyCompetition() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{
-                    background: '#fff1f2', border: '1px solid #fecdd3', padding: '0.65rem 1.1rem',
-                    borderRadius: '14px', textAlign: 'right', boxShadow: '0 2px 8px rgba(190, 18, 60, 0.05)'
-                  }}>
-                    <div style={{ fontSize: '0.72rem', color: '#9f1239', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Deadline Date
-                    </div>
-                    <div style={{ fontWeight: 900, color: '#be123c', fontSize: '1rem', marginTop: '0.1rem' }}>
-                      📅 {st.deadline === 'TBD' || st.isTbd || !st.deadline ? 'TBD (To Be Determined)' : (isNaN(new Date(st.deadline).getTime()) ? st.deadline : new Date(st.deadline).toLocaleDateString([], { dateStyle: 'medium' }))}
-                    </div>
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  {isStageActive && subFields.map((sf, idx) => {
+                    const effDeadline = sf.deadline || st.deadline;
+                    return (
+                      <button
+                        key={sf.id || idx}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenSubmitModal(st, stageSub);
+                        }}
+                        className="ft-btn"
+                        style={{
+                          background: `linear-gradient(135deg, ${trackThemeColor} 0%, #be123c 100%)`,
+                          color: '#ffffff', fontWeight: 800, padding: '0.55rem 1.15rem', borderRadius: '12px',
+                          fontSize: '0.85rem', border: 'none', boxShadow: `0 4px 14px ${trackThemeColor}40`,
+                          cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem'
+                        }}
+                      >
+                        <Send size={15} /> Submit {sf.name || `Stage ${st.stageId}`}
+                        <span style={{ fontSize: '0.72rem', background: 'rgba(255,255,255,0.22)', padding: '0.15rem 0.5rem', borderRadius: '6px', marginLeft: '0.2rem', fontWeight: 800 }}>
+                          ⏰ {formatUnifiedDate(effDeadline)}
+                        </span>
+                      </button>
+                    );
+                  })}
 
                   <button
                     onClick={() => toggleCollapse(st.stageId)}
@@ -821,11 +868,16 @@ export default function FTMyCompetition() {
 
                 return (
                   <div key={field.id} style={{ background: '#ffffff', padding: '1.1rem 1.25rem', borderRadius: '16px', border: '1.5px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                    <label className="ft-label" style={{ margin: 0, fontSize: '0.92rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 800 }}>
-                      <span>{field.type === 'url' ? '🔗' : field.type === 'file' ? '📄' : field.type === 'textbox' ? '📝' : '📁'}</span>
-                      <span>{field.name}</span>
-                    </label>
-                    
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <label className="ft-label" style={{ margin: 0, fontSize: '0.92rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 800 }}>
+                        <span>{field.type === 'url' ? '🔗' : field.type === 'file' ? '📄' : field.type === 'textbox' ? '📝' : '📁'}</span>
+                        <span>{field.name}</span>
+                      </label>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '8px', background: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3' }}>
+                        ⏰ Deadline: {formatUnifiedDate(field.deadline || submitStage.deadline)}
+                      </span>
+                    </div>
+
                     {field.question && (
                       <div style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>
                         ❓ {field.question}
