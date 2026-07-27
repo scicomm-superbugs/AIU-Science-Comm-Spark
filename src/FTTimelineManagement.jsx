@@ -29,6 +29,7 @@ export default function FTTimelineManagement() {
   // Local state for adding custom submission fields within a stage editor
   const [newSubName, setNewSubName] = useState('');
   const [newSubType, setNewSubType] = useState('url');
+  const [newSubOpenDate, setNewSubOpenDate] = useState('');
   const [newSubDeadline, setNewSubDeadline] = useState('');
   const [newSubQuestion, setNewSubQuestion] = useState('');
   const [subQuestionsList, setSubQuestionsList] = useState([]);
@@ -56,6 +57,7 @@ export default function FTTimelineManagement() {
       id: 'sub_field_' + Date.now(),
       name: newSubName.trim(),
       type: 'mixed',
+      openDate: newSubOpenDate || '',
       deadline: newSubDeadline || editingStage.deadline || '2026-09-01',
       description: newSubQuestion.trim() || `Please complete the required submission for ${newSubName.trim()}`,
       question: newSubQuestion.trim() || `Please complete the required submission for ${newSubName.trim()}`,
@@ -69,6 +71,7 @@ export default function FTTimelineManagement() {
     });
     setNewSubName('');
     setNewSubQuestion('');
+    setNewSubOpenDate('');
     setNewSubDeadline('');
     setSubQuestionsList([]);
     setNewQLabel('');
@@ -563,7 +566,7 @@ export default function FTTimelineManagement() {
                   <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <span>➕</span> Add New Deliverable / Submission Option
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1.5fr auto', gap: '0.6rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1fr 1fr auto', gap: '0.6rem' }}>
                     <input
                       type="text"
                       className="ft-input"
@@ -571,16 +574,33 @@ export default function FTTimelineManagement() {
                       value={newSubName}
                       onChange={e => setNewSubName(e.target.value)}
                     />
-                    <input
-                      type="date"
-                      className="ft-input"
-                      title="Deliverable Custom Deadline (Optional)"
-                      value={newSubDeadline}
-                      onChange={e => setNewSubDeadline(e.target.value)}
-                    />
-                    <button className="ft-btn ft-btn-primary" onClick={handleAddSubmissionFieldToStage} type="button" style={{ fontWeight: 800 }}>
-                      <Plus size={16} /> Add Submission Option
-                    </button>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', marginBottom: '0.15rem' }}>📅 Opens</span>
+                      <input
+                        type="date"
+                        className="ft-input"
+                        title="Submission Open Date (when submissions start)"
+                        value={newSubOpenDate}
+                        onChange={e => setNewSubOpenDate(e.target.value)}
+                        style={{ fontSize: '0.82rem' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#be123c', marginBottom: '0.15rem' }}>📅 Closes</span>
+                      <input
+                        type="date"
+                        className="ft-input"
+                        title="Submission End Date / Deadline"
+                        value={newSubDeadline}
+                        onChange={e => setNewSubDeadline(e.target.value)}
+                        style={{ fontSize: '0.82rem' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                      <button className="ft-btn ft-btn-primary" onClick={handleAddSubmissionFieldToStage} type="button" style={{ fontWeight: 800 }}>
+                        <Plus size={16} /> Add
+                      </button>
+                    </div>
                   </div>
 
                   {/* Accepting Submissions Checkbox */}
@@ -735,8 +755,8 @@ export default function FTTimelineManagement() {
                             </button>
                           </div>
 
-                          {/* Title & Custom Deadline */}
-                          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.3fr 1.2fr', gap: '0.6rem' }}>
+                          {/* Title & Submission Window */}
+                          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.6rem' }}>
                             <div>
                               <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem' }}>Deliverable Title *</label>
                               <input
@@ -748,7 +768,17 @@ export default function FTTimelineManagement() {
                               />
                             </div>
                             <div>
-                              <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem' }}>Custom Deadline</label>
+                              <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem', color: '#059669' }}>📅 Opens</label>
+                              <input
+                                type="date"
+                                className="ft-input"
+                                style={{ fontSize: '0.85rem' }}
+                                value={editSubData.openDate || ''}
+                                onChange={e => setEditSubData({ ...editSubData, openDate: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem', color: '#be123c' }}>📅 Closes</label>
                               <input
                                 type="date"
                                 className="ft-input"
@@ -757,16 +787,16 @@ export default function FTTimelineManagement() {
                                 onChange={e => setEditSubData({ ...editSubData, deadline: e.target.value })}
                               />
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-                              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 800, color: editSubData.isOpen !== false ? '#15803d' : '#be123c', background: editSubData.isOpen !== false ? '#ffffff' : '#fff1f2', padding: '0.45rem 0.65rem', borderRadius: '8px', border: editSubData.isOpen !== false ? '1px solid #bbf7d0' : '1px solid #fecdd3' }}>
-                                <input
-                                  type="checkbox"
-                                  checked={editSubData.isOpen !== false}
-                                  onChange={e => setEditSubData({ ...editSubData, isOpen: e.target.checked })}
-                                />
-                                <span>{editSubData.isOpen !== false ? '✅ Open' : '🛑 Closed'}</span>
-                              </label>
-                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 800, color: editSubData.isOpen !== false ? '#15803d' : '#be123c', background: editSubData.isOpen !== false ? '#ffffff' : '#fff1f2', padding: '0.35rem 0.65rem', borderRadius: '8px', border: editSubData.isOpen !== false ? '1px solid #bbf7d0' : '1px solid #fecdd3' }}>
+                              <input
+                                type="checkbox"
+                                checked={editSubData.isOpen !== false}
+                                onChange={e => setEditSubData({ ...editSubData, isOpen: e.target.checked })}
+                              />
+                              <span>{editSubData.isOpen !== false ? '✅ Accepting Submissions' : '🛑 Submissions Closed'}</span>
+                            </label>
                           </div>
 
                           {/* Description & Requirements Box */}
@@ -921,8 +951,13 @@ export default function FTTimelineManagement() {
                             <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: '#f0f9ff', color: '#0284c7', fontWeight: 800, border: '1px solid #bae6fd' }}>
                               {hasSubQuestions ? `${subField.questions.length} Multi-Questions` : subField.type === 'url' ? 'URL Link' : subField.type === 'file' ? 'File Upload' : subField.type === 'textbox' ? 'Text Box' : 'Link or File'}
                             </span>
+                            {subField.openDate && (
+                              <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: '#f0fdf4', color: '#059669', fontWeight: 800, border: '1px solid #bbf7d0' }}>
+                                📅 Opens: {formatUnifiedDate(subField.openDate)}
+                              </span>
+                            )}
                             <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: '#fff1f2', color: '#be123c', fontWeight: 800, border: '1px solid #fecdd3' }}>
-                              📅 Deadline: {formatUnifiedDate(effectiveDeadline)}
+                              📅 Closes: {formatUnifiedDate(effectiveDeadline)}
                             </span>
                             <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 800, color: subField.isOpen !== false ? '#15803d' : '#be123c', background: subField.isOpen !== false ? '#f0fdf4' : '#fff1f2', padding: '0.15rem 0.5rem', borderRadius: '6px', border: subField.isOpen !== false ? '1px solid #bbf7d0' : '1px solid #fecdd3' }}>
                               <input
@@ -975,19 +1010,40 @@ export default function FTTimelineManagement() {
                           >
                             <Edit3 size={14} /> Edit
                           </button>
-                          <input
-                            type="date"
-                            className="ft-input"
-                            style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem', width: 'auto' }}
-                            value={subField.deadline || ''}
-                            onChange={(e) => {
-                              const nextVal = e.target.value;
-                              const updatedSubmissions = (editingStage.submissions || []).map(f =>
-                                f.id === subField.id ? { ...f, deadline: nextVal } : f
-                              );
-                              setEditingStage({ ...editingStage, submissions: updatedSubmissions });
-                            }}
-                          />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#059669' }}>Opens</span>
+                              <input
+                                type="date"
+                                className="ft-input"
+                                style={{ padding: '0.2rem 0.35rem', fontSize: '0.72rem', width: 'auto' }}
+                                value={subField.openDate || ''}
+                                onChange={(e) => {
+                                  const nextVal = e.target.value;
+                                  const updatedSubmissions = (editingStage.submissions || []).map(f =>
+                                    f.id === subField.id ? { ...f, openDate: nextVal } : f
+                                  );
+                                  setEditingStage({ ...editingStage, submissions: updatedSubmissions });
+                                }}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#be123c' }}>Closes</span>
+                              <input
+                                type="date"
+                                className="ft-input"
+                                style={{ padding: '0.2rem 0.35rem', fontSize: '0.72rem', width: 'auto' }}
+                                value={subField.deadline || ''}
+                                onChange={(e) => {
+                                  const nextVal = e.target.value;
+                                  const updatedSubmissions = (editingStage.submissions || []).map(f =>
+                                    f.id === subField.id ? { ...f, deadline: nextVal } : f
+                                  );
+                                  setEditingStage({ ...editingStage, submissions: updatedSubmissions });
+                                }}
+                              />
+                            </div>
+                          </div>
                           <button
                             type="button"
                             onClick={() => handleDeleteSubmissionFieldFromStage(subField.id)}

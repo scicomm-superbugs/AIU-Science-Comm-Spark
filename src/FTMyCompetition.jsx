@@ -434,7 +434,7 @@ export default function FTMyCompetition() {
                         marginLeft: '0.2rem',
                         fontWeight: 800
                       }}>
-                        ⏰ {formatUnifiedDate(effDeadline)}
+                        {sf.openDate ? `📅 ${formatUnifiedDate(sf.openDate)} → ${formatUnifiedDate(effDeadline)}` : `⏰ ${formatUnifiedDate(effDeadline)}`}
                       </span>
                     </button>
                   );
@@ -534,7 +534,9 @@ export default function FTMyCompetition() {
                         <span>{field.name}</span>
                       </label>
                       <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '8px', background: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3' }}>
-                        ⏰ Deadline: {formatUnifiedDate(field.deadline || submitStage.deadline)}
+                        {field.openDate
+                          ? `📅 ${formatUnifiedDate(field.openDate)} → ${formatUnifiedDate(field.deadline || submitStage.deadline)}`
+                          : `⏰ Deadline: ${formatUnifiedDate(field.deadline || submitStage.deadline)}`}
                       </span>
                     </div>
 
