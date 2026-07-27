@@ -12,7 +12,7 @@ import './scicommspark.css';
 const ALL_STAGES = [
   {
     id: 'pop_stage_1', stageId: 1, track: 'pop_science', trackTitle: 'Pop Science Videos',
-    title: 'Stage 1: Short Pop Video', sub: 'Reels / TikTok Video (max 90 seconds)', deadline: '2026-07-31', status: 'Active Stage',
+    title: 'Stage 1: Short Pop Video', sub: 'Reels / TikTok Video (max 90 seconds)', deadline: '2026-09-01', status: 'Active Stage',
     details: 'Produce a punchy, highly engaging short video introducing a core scientific concept for social media.',
     criteria: [
       { id: 'c1', name: 'Scientific Accuracy', category: 'academic', maxPoints: 25 },
@@ -21,7 +21,7 @@ const ALL_STAGES = [
   },
   {
     id: 'pop_stage_2', stageId: 2, track: 'pop_science', trackTitle: 'Pop Science Videos',
-    title: 'Stage 2: Long Pop Video', sub: 'YouTube SciComm Video (up to 3 minutes)', deadline: '2026-08-20', status: 'Upcoming Stage',
+    title: 'Stage 2: Long Pop Video', sub: 'YouTube SciComm Video (up to 3 minutes)', deadline: '2026-09-20', status: 'Upcoming Stage',
     details: 'Deep scientific storytelling featuring comprehensive explanation, visual graphics, and clear narration.',
     criteria: [
       { id: 'c3', name: 'Research Depth & Rigor', category: 'academic', maxPoints: 25 },
@@ -30,7 +30,7 @@ const ALL_STAGES = [
   },
   {
     id: 'pop_stage_3', stageId: 3, track: 'pop_science', trackTitle: 'Pop Science Videos',
-    title: 'Stage 3 (Finals): Live Stage Show', sub: 'Interactive Live Presentation (5 mins on stage)', deadline: '2026-09-10', status: 'Grand Finale',
+    title: 'Stage 3 (Finals): Live Stage Show', sub: 'Interactive Live Presentation (5 mins on stage)', deadline: '2026-10-10', status: 'Grand Finale',
     details: 'Deliver an interactive live science presentation on stage before expert judges, audience, and broadcast.',
     criteria: [
       { id: 'c5', name: 'Scientific Q&A Defense', category: 'academic', maxPoints: 25 },
@@ -39,7 +39,7 @@ const ALL_STAGES = [
   },
   {
     id: 'jour_stage_1', stageId: 1, track: 'science_journalism', trackTitle: 'Science Journalism',
-    title: 'Stage 1: Research Field Prep', sub: 'Topic Research & Expert Interviews Prep', deadline: '2026-07-31', status: 'Active Stage',
+    title: 'Stage 1: Research Field Prep', sub: 'Topic Research & Expert Interviews Prep', deadline: '2026-09-01', status: 'Active Stage',
     details: 'Select a scientific topic, gather research data, and conduct interviews with researchers & academic experts.',
     criteria: [
       { id: 'c7', name: 'Literature Review & Citation', category: 'academic', maxPoints: 25 },
@@ -48,7 +48,7 @@ const ALL_STAGES = [
   },
   {
     id: 'jour_stage_2', stageId: 2, track: 'science_journalism', trackTitle: 'Science Journalism',
-    title: 'Stage 2: Article Publication', sub: 'Simplified Science Article Publication', deadline: '2026-08-20', status: 'Upcoming Stage',
+    title: 'Stage 2: Article Publication', sub: 'Simplified Science Article Publication', deadline: '2026-09-20', status: 'Upcoming Stage',
     details: 'Write a simplified science news article published on the digital platform with opportunity for magazine feature.',
     criteria: [
       { id: 'c9', name: 'Academic Fact Checking', category: 'academic', maxPoints: 25 },
@@ -57,7 +57,7 @@ const ALL_STAGES = [
   },
   {
     id: 'jour_stage_3', stageId: 3, track: 'science_journalism', trackTitle: 'Science Journalism',
-    title: 'Stage 3 (Finals): Live Stage Show', sub: 'Live Science Talk Show Interview on Stage', deadline: '2026-09-10', status: 'Grand Finale',
+    title: 'Stage 3 (Finals): Live Stage Show', sub: 'Live Science Talk Show Interview on Stage', deadline: '2026-10-10', status: 'Grand Finale',
     details: 'Host a simulated live science talk show interview on stage in front of judges and public audience.',
     criteria: [
       { id: 'c11', name: 'Expert Q&A Handling', category: 'academic', maxPoints: 25 },

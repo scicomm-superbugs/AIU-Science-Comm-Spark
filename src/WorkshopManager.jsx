@@ -22,74 +22,84 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
   const [success, setSuccess] = useState('');
 
   // Default Stage Milestones for both competition tracks
-  const defaultStageMilestones = useMemo(() => [
-    {
-      id: 'stage_pop_1',
-      stageId: 1,
-      isStage: true,
-      title: 'Stage 1 Submission Deadline: Short Pop Video (Reels/TikTok)',
-      type: 'Stage Milestone',
-      targetTrack: 'pop_science',
-      description: 'Submission deadline for 90-second Short Pop-Science video concept.',
-      startDate: customConfig.find(c => c.stageId === 1 && c.trackId === 'pop_science')?.deadline || '2026-07-31T23:59',
-      endDate: customConfig.find(c => c.stageId === 1 && c.trackId === 'pop_science')?.deadline || '2026-07-31T23:59'
-    },
-    {
-      id: 'stage_pop_2',
-      stageId: 2,
-      isStage: true,
-      title: 'Stage 2 Submission Deadline: Long Pop Video (YouTube)',
-      type: 'Stage Milestone',
-      targetTrack: 'pop_science',
-      description: 'Submission deadline for up to 3-minute YouTube Pop-Science video.',
-      startDate: customConfig.find(c => c.stageId === 2 && c.trackId === 'pop_science')?.deadline || '2026-08-20T23:59',
-      endDate: customConfig.find(c => c.stageId === 2 && c.trackId === 'pop_science')?.deadline || '2026-08-20T23:59'
-    },
-    {
-      id: 'stage_pop_3',
-      stageId: 3,
-      isStage: true,
-      title: 'Stage 3 (Finals) Grand Finale: Live Stage Show',
-      type: 'Stage Milestone',
-      targetTrack: 'pop_science',
-      description: 'Grand Finale live stage show presentation in front of judges.',
-      startDate: customConfig.find(c => c.stageId === 3 && c.trackId === 'pop_science')?.deadline || '2026-09-10T23:59',
-      endDate: customConfig.find(c => c.stageId === 3 && c.trackId === 'pop_science')?.deadline || '2026-09-10T23:59'
-    },
-    {
-      id: 'stage_jour_1',
-      stageId: 1,
-      isStage: true,
-      title: 'Stage 1 Submission Deadline: Field Research & Prep',
-      type: 'Stage Milestone',
-      targetTrack: 'science_journalism',
-      description: 'Submission deadline for field interviews & scientific preparation.',
-      startDate: customConfig.find(c => c.stageId === 1 && c.trackId === 'science_journalism')?.deadline || '2026-07-31T23:59',
-      endDate: customConfig.find(c => c.stageId === 1 && c.trackId === 'science_journalism')?.deadline || '2026-07-31T23:59'
-    },
-    {
-      id: 'stage_jour_2',
-      stageId: 2,
-      isStage: true,
-      title: 'Stage 2 Submission Deadline: Digital Science Article',
-      type: 'Stage Milestone',
-      targetTrack: 'science_journalism',
-      description: 'Submission deadline for published digital journalism science article.',
-      startDate: customConfig.find(c => c.stageId === 2 && c.trackId === 'science_journalism')?.deadline || '2026-08-20T23:59',
-      endDate: customConfig.find(c => c.stageId === 2 && c.trackId === 'science_journalism')?.deadline || '2026-08-20T23:59'
-    },
-    {
-      id: 'stage_jour_3',
-      stageId: 3,
-      isStage: true,
-      title: 'Stage 3 (Finals) Grand Finale: Live Talk Show',
-      type: 'Stage Milestone',
-      targetTrack: 'science_journalism',
-      description: 'Grand Finale live stage talk show interview in front of judges.',
-      startDate: customConfig.find(c => c.stageId === 3 && c.trackId === 'science_journalism')?.deadline || '2026-09-10T23:59',
-      endDate: customConfig.find(c => c.stageId === 3 && c.trackId === 'science_journalism')?.deadline || '2026-09-10T23:59'
-    }
-  ], [customConfig]);
+  const defaultStageMilestones = useMemo(() => {
+    const getDeadline = (stageId, trackId, fallback) => {
+      const found = customConfig.find(c => c.stageId === stageId && c.trackId === trackId);
+      if (found && found.deadline && found.deadline !== '2026-07-31' && found.deadline !== 'TBD') {
+        return found.deadline.includes('T') ? found.deadline : `${found.deadline}T23:59`;
+      }
+      return fallback;
+    };
+
+    return [
+      {
+        id: 'stage_pop_1',
+        stageId: 1,
+        isStage: true,
+        title: 'Stage 1 Submission Deadline: Short Pop Video (Reels/TikTok)',
+        type: 'Stage Milestone',
+        targetTrack: 'pop_science',
+        description: 'Submission deadline for 90-second Short Pop-Science video concept.',
+        startDate: getDeadline(1, 'pop_science', '2026-09-01T23:59'),
+        endDate: getDeadline(1, 'pop_science', '2026-09-01T23:59')
+      },
+      {
+        id: 'stage_pop_2',
+        stageId: 2,
+        isStage: true,
+        title: 'Stage 2 Submission Deadline: Long Pop Video (YouTube)',
+        type: 'Stage Milestone',
+        targetTrack: 'pop_science',
+        description: 'Submission deadline for up to 3-minute YouTube Pop-Science video.',
+        startDate: getDeadline(2, 'pop_science', '2026-09-20T23:59'),
+        endDate: getDeadline(2, 'pop_science', '2026-09-20T23:59')
+      },
+      {
+        id: 'stage_pop_3',
+        stageId: 3,
+        isStage: true,
+        title: 'Stage 3 (Finals) Grand Finale: Live Stage Show',
+        type: 'Stage Milestone',
+        targetTrack: 'pop_science',
+        description: 'Grand Finale live stage show presentation in front of judges.',
+        startDate: getDeadline(3, 'pop_science', '2026-10-10T23:59'),
+        endDate: getDeadline(3, 'pop_science', '2026-10-10T23:59')
+      },
+      {
+        id: 'stage_jour_1',
+        stageId: 1,
+        isStage: true,
+        title: 'Stage 1 Submission Deadline: Field Research & Prep',
+        type: 'Stage Milestone',
+        targetTrack: 'science_journalism',
+        description: 'Submission deadline for field interviews & scientific preparation.',
+        startDate: getDeadline(1, 'science_journalism', '2026-09-01T23:59'),
+        endDate: getDeadline(1, 'science_journalism', '2026-09-01T23:59')
+      },
+      {
+        id: 'stage_jour_2',
+        stageId: 2,
+        isStage: true,
+        title: 'Stage 2 Submission Deadline: Digital Science Article',
+        type: 'Stage Milestone',
+        targetTrack: 'science_journalism',
+        description: 'Submission deadline for published digital journalism science article.',
+        startDate: getDeadline(2, 'science_journalism', '2026-09-20T23:59'),
+        endDate: getDeadline(2, 'science_journalism', '2026-09-20T23:59')
+      },
+      {
+        id: 'stage_jour_3',
+        stageId: 3,
+        isStage: true,
+        title: 'Stage 3 (Finals) Grand Finale: Live Talk Show',
+        type: 'Stage Milestone',
+        targetTrack: 'science_journalism',
+        description: 'Grand Finale live stage talk show interview in front of judges.',
+        startDate: getDeadline(3, 'science_journalism', '2026-10-10T23:59'),
+        endDate: getDeadline(3, 'science_journalism', '2026-10-10T23:59')
+      }
+    ];
+  }, [customConfig]);
 
   const [trackFilter, setTrackFilter] = useState(currentTrack || 'all');
 
@@ -461,7 +471,7 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.35rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-            🗓️ Master Competition & Training Schedule
+            🗓️ Competition & Training Schedule
           </h2>
           <p style={{ color: 'var(--ft-text-muted)', fontSize: '0.88rem', marginTop: '0.2rem' }}>
             All competition stage submission deadlines, orientation sessions, lectures, and masterclasses in exact chronological order.
@@ -488,7 +498,7 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
               cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', transition: 'all 0.2s ease'
             }}
           >
-            <Calendar size={15} /> Google Calendar View
+            <Calendar size={15} /> Calendar View
           </button>
 
           <button
