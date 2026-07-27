@@ -34,6 +34,7 @@ export default function FTTimelineManagement() {
   const [subQuestionsList, setSubQuestionsList] = useState([]);
   const [newQLabel, setNewQLabel] = useState('');
   const [newQType, setNewQType] = useState('short_text');
+  const [newQDescription, setNewQDescription] = useState('');
 
   const handleAddSubmissionFieldToStage = () => {
     if (!newSubName.trim() || !editingStage) return;
@@ -592,16 +593,17 @@ export default function FTTimelineManagement() {
                   </div>
 
                   {/* Multi-Question / Requirements Builder */}
-                  <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '12px', border: '1px dashed #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       <span>❓</span> Add Sub-Questions / Specific Fields (Optional Multiple Questions):
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr auto', gap: '0.5rem', marginBottom: '0.5rem' }}>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr auto', gap: '0.5rem' }}>
                       <input
                         type="text"
                         className="ft-input"
                         style={{ fontSize: '0.82rem', padding: '0.4rem 0.6rem' }}
-                        placeholder="Question Prompt / Field Label (e.g. Interviewee Full Name & Title)"
+                        placeholder="Question Prompt / Field Label (e.g. 1. Interviewee Profile)"
                         value={newQLabel}
                         onChange={e => setNewQLabel(e.target.value)}
                       />
@@ -622,28 +624,56 @@ export default function FTTimelineManagement() {
                         style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', background: '#ffffff' }}
                         onClick={() => {
                           if (!newQLabel.trim()) return;
-                          setSubQuestionsList(prev => [...prev, { id: 'q_' + Date.now(), label: newQLabel.trim(), type: newQType }]);
+                          setSubQuestionsList(prev => [
+                            ...prev, 
+                            { 
+                              id: 'q_' + Date.now(), 
+                              label: newQLabel.trim(), 
+                              type: newQType,
+                              description: newQDescription.trim()
+                            }
+                          ]);
                           setNewQLabel('');
+                          setNewQDescription('');
                         }}
                       >
                         <Plus size={14} /> Add Sub-Question
                       </button>
                     </div>
 
+                    {/* Sub-Question Description Textarea */}
+                    <div>
+                      <textarea
+                        className="ft-textarea"
+                        rows={2}
+                        style={{ fontSize: '0.8rem', padding: '0.4rem 0.65rem' }}
+                        placeholder="Sub-Question Description & Guidelines (Optional - Supports Markdown bullets, bold, & text)..."
+                        value={newQDescription}
+                        onChange={e => setNewQDescription(e.target.value)}
+                      />
+                    </div>
+
                     {subQuestionsList.length > 0 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.2rem' }}>
                         {subQuestionsList.map((q, qIdx) => (
-                          <div key={q.id || qIdx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', padding: '0.35rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.78rem' }}>
-                            <span style={{ fontWeight: 700, color: '#0f172a' }}>
-                              <strong>Question {qIdx + 1}:</strong> {q.label} <em style={{ color: '#0284c7', fontWeight: 600 }}>({q.type === 'short_text' ? 'Short Text' : q.type === 'textbox' ? 'Paragraph' : q.type === 'file' ? 'File Upload' : 'URL Link'})</em>
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setSubQuestionsList(prev => prev.filter(item => item.id !== q.id))}
-                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.1rem' }}
-                            >
-                              <X size={14} />
-                            </button>
+                          <div key={q.id || qIdx} style={{ background: '#ffffff', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                              <span style={{ fontWeight: 800, color: '#0f172a' }}>
+                                <strong>Question {qIdx + 1}:</strong> {q.label} <em style={{ color: '#0284c7', fontWeight: 600 }}>({q.type === 'short_text' ? 'Short Text' : q.type === 'textbox' ? 'Paragraph' : q.type === 'file' ? 'File Upload' : 'URL Link'})</em>
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setSubQuestionsList(prev => prev.filter(item => item.id !== q.id))}
+                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.1rem' }}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                            {q.description && (
+                              <div style={{ color: '#475569', fontSize: '0.75rem', background: '#f8fafc', padding: '0.35rem 0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                📝 {q.description}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

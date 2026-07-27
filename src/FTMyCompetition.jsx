@@ -51,12 +51,42 @@ export const DEFAULT_STAGES = {
           description: 'Before the interview, each participant is required to submit a Pre-Interview Preparation document demonstrating their research, planning, and understanding of the interview topic.\n\nThe document must include:\n1. Interviewee Profile (Full name, position, affiliation, expertise, bio)\n2. Research Abstract (150-250 words)\n3. Interview Objective (Main purpose & story message)\n4. Interview Questions (8-10 open-ended questions)\n5. Audience Impact (Public relevance & expected takeaway)',
           question: 'Complete all 5 required pre-interview preparation sections below:',
           questions: [
-            { id: 'q_profile', label: '1. Interviewee Profile (Full Name, Position/Affiliation, Expertise & Bio)', type: 'textbox' },
-            { id: 'q_abstract', label: '2. Research Abstract (150–250 words summarizing interviewee research)', type: 'textbox' },
-            { id: 'q_objective', label: '3. Interview Objective (Main purpose & story message)', type: 'textbox' },
-            { id: 'q_questions', label: '4. Interview Questions (8–10 open-ended questions in logical sequence)', type: 'textbox' },
-            { id: 'q_impact', label: '5. Audience Impact (Public relevance & expected takeaway)', type: 'textbox' },
-            { id: 'q_pdf_doc', label: 'Upload Complete Preparation Document PDF (Optional / Attachment)', type: 'file' }
+            {
+              id: 'q_profile',
+              label: '1. Interviewee Profile',
+              type: 'textbox',
+              description: 'Provide a brief introduction to the selected interviewee, including:\n* Full name\n* Current position and affiliation\n* Field of expertise\n* A short professional biography (**50–100 words**)'
+            },
+            {
+              id: 'q_abstract',
+              label: '2. Research Abstract',
+              type: 'textbox',
+              description: "Write a clear and concise abstract (**150–250 words**) summarizing the interviewee's research, project, or area of expertise. The abstract should explain the significance of the work in language that is understandable to a general audience."
+            },
+            {
+              id: 'q_objective',
+              label: '3. Interview Objective',
+              type: 'textbox',
+              description: 'In one short paragraph, explain the main purpose of the interview and the story or scientific message you intend to communicate to the audience.'
+            },
+            {
+              id: 'q_questions',
+              label: '4. Interview Questions',
+              type: 'textbox',
+              description: 'Prepare **8–10 open-ended questions** arranged in a logical sequence. The questions should demonstrate thorough background research and encourage meaningful discussion rather than simple yes/no responses.'
+            },
+            {
+              id: 'q_impact',
+              label: '5. Audience Impact',
+              type: 'textbox',
+              description: 'Briefly explain why this topic is relevant to the public and what key takeaway you expect the audience to gain from the interview.'
+            },
+            {
+              id: 'q_pdf_doc',
+              label: 'Upload Preparation Document PDF (Optional / Attachment)',
+              type: 'file',
+              description: 'Attach your single combined preparation document in PDF format if preferred.'
+            }
           ]
         }
       ]
@@ -508,10 +538,16 @@ export default function FTMyCompetition() {
                           const qFileUrl = subItems[qKey]?.fileUrl || '';
 
                           return (
-                            <div key={q.id || qIdx} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                              <label className="ft-label" style={{ margin: 0, fontSize: '0.85rem', color: '#0f172a', fontWeight: 800 }}>
-                                ❓ Question {qIdx + 1}: {q.label} *
+                            <div key={q.id || qIdx} style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '14px', border: '1.5px solid #cbd5e1' }}>
+                              <label className="ft-label" style={{ margin: 0, fontSize: '0.9rem', color: '#0f172a', fontWeight: 900 }}>
+                                ❓ {q.label} *
                               </label>
+
+                              {q.description && (
+                                <div style={{ fontSize: '0.82rem', color: '#475569', lineHeight: 1.5, background: '#ffffff', padding: '0.6rem 0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                  {renderFormattedDescription(q.description)}
+                                </div>
+                              )}
 
                               {q.type === 'short_text' && (
                                 <input
