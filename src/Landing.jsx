@@ -1126,6 +1126,9 @@ export default function Landing() {
 
   const isAdmin = user?.role === 'master' || user?.role === 'admin';
   const [editMode, setEditMode] = useState(false);
+  const editModeRef = useRef(false);
+  const savingRef = useRef(false);
+  const skipNextSnapshotRef = useRef(false);
   const [content, setContent] = useState(() => {
     try {
       const cached = localStorage.getItem('scicomm_landing_content');
@@ -1144,6 +1147,11 @@ export default function Landing() {
   useEffect(() => {
     contentRef.current = content;
   }, [content]);
+
+  // Keep editModeRef in sync so onSnapshot closure always reads the latest value
+  useEffect(() => {
+    editModeRef.current = editMode;
+  }, [editMode]);
 
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
   const [savedContent, setSavedContent] = useState(null); // snapshot before editing
@@ -1179,6 +1187,7 @@ export default function Landing() {
   }, [content.hallOfFameChampions, editMode]);
 
   // ── Load from LocalStorage & Real-time Firestore Sync ──
+  // Subscribe ONCE on mount. Use refs to guard against overwriting in-progress edits.
   useEffect(() => {
     // Ensure anonymous Firebase Auth session for public visitors without accounts
     try {
@@ -1192,8 +1201,14 @@ export default function Landing() {
 
     const unsubscribe = onSnapshot(ref, (snap) => {
       try {
-        // CRITICAL: Do NOT overwrite admin's active local draft edits while in Edit Mode!
-        if (editMode) return;
+        // CRITICAL: Do NOT overwrite admin's active local draft edits while in Edit Mode or saving!
+        if (editModeRef.current || savingRef.current) return;
+
+        // After a save, the first onSnapshot fires with our own write — skip stale echoes
+        if (skipNextSnapshotRef.current) {
+          skipNextSnapshotRef.current = false;
+          return;
+        }
 
         if (snap.exists()) {
           const remoteData = snap.data();
@@ -1220,7 +1235,7 @@ export default function Landing() {
     });
 
     return () => unsubscribe();
-  }, [editMode]);
+  }, []); // Subscribe ONCE — refs handle edit/save guards
 
   // ── Auto slide timer for About Gallery ──
   useEffect(() => {
@@ -1434,6 +1449,7 @@ export default function Landing() {
     }
 
     setSaving(true);
+    savingRef.current = true;
     try {
       const timestamp = Date.now();
       const payloadToSave = {
@@ -1454,8 +1470,6 @@ export default function Landing() {
         jsonStr = JSON.stringify(sanitized);
       }
 
-      setContent(sanitized);
-
       // 3. Save to LocalStorage immediately (1ms)
       try {
         localStorage.setItem('scicomm_landing_content', jsonStr);
@@ -1463,13 +1477,14 @@ export default function Landing() {
         console.warn('LocalStorage save warning:', e);
       }
 
-      // 4. Save directly to Firestore with 4-second timeout race (instant save!)
+      // 4. Write to Firestore — AWAIT FULLY, no timeout race that could silently skip the write
       const ref = doc(firestore, getCollectionName('landing_content'), 'main');
-      const firestoreSave = setDoc(ref, sanitized);
-      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Cloud sync timeout')), 4500));
+      await setDoc(ref, sanitized);
 
-      await Promise.race([firestoreSave, timeout]).catch(err => console.warn('Firestore write race:', err));
-
+      // 5. NOW update local state and exit edit mode.
+      //    Skip the next onSnapshot echo (our own write bouncing back) to prevent stale overwrite.
+      skipNextSnapshotRef.current = true;
+      setContent(sanitized);
       setSavedContent(null);
       setEditMode(false);
       alert('⚡ All changes saved & published globally across all devices in real time!');
@@ -1478,6 +1493,7 @@ export default function Landing() {
       console.error('Firestore save error:', err);
       alert('❌ Save error: ' + (err.message || 'Unknown error'));
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
