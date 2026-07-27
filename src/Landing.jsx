@@ -8,7 +8,7 @@ import {
   Pencil, Save, X, Upload, Trash2, Image as ImageIcon, Menu, ZoomIn, ZoomOut
 } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
-import { firestore, getCollectionName, uploadFile, getFirebaseAuth } from './db';
+import { firestore, getCollectionName, uploadFile, getFirebaseAuth, uploadBase64ToStorage } from './db';
 import { signInAnonymously } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import './scicommspark.css';
@@ -1301,13 +1301,13 @@ export default function Landing() {
     setEditMode(false);
   };
 
-  const compressBase64 = async (str, maxDimension = 1200, quality = 0.78, isPng = false) => {
+  const compressBase64 = async (str, maxDimension = 800, quality = 0.65, isPng = false) => {
     if (!str || typeof str !== 'string' || !str.startsWith('data:image')) return str;
 
     return new Promise((resolve) => {
       const img = new Image();
       img.src = str;
-      img.onload = () => {
+      img.onload = async () => {
         let { width, height } = img;
         if (width > maxDimension || height > maxDimension) {
           if (width > height) {
@@ -1327,19 +1327,19 @@ export default function Landing() {
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, width, height);
 
-        if (isPng || str.startsWith('data:image/png')) {
-          // PNG image re-encoding
-          resolve(canvas.toDataURL('image/png'));
-        } else {
-          // JPEG compression (~30KB per image)
-          resolve(canvas.toDataURL('image/jpeg', quality));
-        }
+        const compressedData = isPng || str.startsWith('data:image/png')
+          ? canvas.toDataURL('image/png')
+          : canvas.toDataURL('image/jpeg', quality);
+
+        // Upload to Firebase Storage to turn Base64 into a tiny 90-byte HTTPS URL!
+        const cloudUrl = await uploadBase64ToStorage(compressedData, 'landing');
+        resolve(cloudUrl);
       };
       img.onerror = () => resolve(str);
     });
   };
 
-  const optimizeLandingContent = async (data, maxDim = 1200, qual = 0.78) => {
+  const optimizeLandingContent = async (data, maxDim = 800, qual = 0.65) => {
     const clone = structuredClone(data);
 
     if (clone.navLogo) clone.navLogo = await compressBase64(clone.navLogo, maxDim, qual, true);
@@ -1396,7 +1396,7 @@ export default function Landing() {
       clone.collaborators = await Promise.all(
         clone.collaborators.map(async (col) => ({
           ...col,
-          logo: await compressBase64(col.logo, 600, qual, true)
+          logo: await compressBase64(col.logo, 500, qual, true)
         }))
       );
     }
@@ -1440,15 +1440,15 @@ export default function Landing() {
         updatedAt: timestamp
       };
 
-      // 1. Optimize & compress all Base64 photos (~30KB per image)
-      let sanitized = sanitizeForFirestore(await optimizeLandingContent(payloadToSave, 1200, 0.78));
+      // 1. Convert photos to Firebase Storage URLs / 800px ultra-compact fallbacks (~12KB per image)
+      let sanitized = sanitizeForFirestore(await optimizeLandingContent(payloadToSave, 800, 0.65));
       sanitized.updatedAt = timestamp;
 
-      // 2. Ensure payload size is strictly under Firestore's 1MB limit (target < 750KB)
+      // 2. Ensure payload size is strictly under Firestore's 1MB limit (target < 600KB)
       let jsonStr = JSON.stringify(sanitized);
       if (jsonStr.length > 700000) {
         console.warn(`Payload size (${jsonStr.length} bytes) near Firestore 1MB limit. Running second-pass compression...`);
-        sanitized = sanitizeForFirestore(await optimizeLandingContent(payloadToSave, 900, 0.70));
+        sanitized = sanitizeForFirestore(await optimizeLandingContent(payloadToSave, 600, 0.55));
         sanitized.updatedAt = timestamp;
         jsonStr = JSON.stringify(sanitized);
       }

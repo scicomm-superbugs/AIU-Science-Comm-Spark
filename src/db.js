@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, setDoc, deleteDoc, getDoc, getDocs, collection, query, where, addDoc, updateDoc, onSnapshot, enableIndexedDbPersistence } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
 import { useState, useEffect } from "react";
 
 const firebaseConfig = {
@@ -35,7 +35,23 @@ export const getFirebaseAuth = () => {
   return authInstance;
 };
 
-const compressImageToBase64 = (file, maxWidth = 1200, quality = 0.80) => {
+export const uploadBase64ToStorage = async (base64Str, folder = 'landing') => {
+  if (!base64Str || typeof base64Str !== 'string' || !base64Str.startsWith('data:image')) {
+    return base64Str;
+  }
+  try {
+    const filename = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 9)}.jpg`;
+    const storageRef = ref(storage, filename);
+    await uploadString(storageRef, base64Str, 'data_url');
+    const downloadURL = await getDownloadURL(storageRef);
+    return downloadURL;
+  } catch (err) {
+    console.warn('Firebase storage upload fallback to compressed base64:', err);
+    return base64Str;
+  }
+};
+
+const compressImageToBase64 = (file, maxWidth = 900, quality = 0.70) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
