@@ -380,28 +380,41 @@ export default function FTMyCompetition() {
                       key={sf.id || idx}
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (sf.isOpen === false) return;
                         handleOpenSubmitModal(st, stageSub);
                       }}
                       className="ft-btn"
+                      disabled={sf.isOpen === false}
                       style={{
-                        background: isFieldSubmitted
-                          ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
-                          : '#f1f5f9',
-                        color: isFieldSubmitted ? '#ffffff' : '#334155',
+                        background: sf.isOpen === false
+                          ? '#fff1f2'
+                          : isFieldSubmitted
+                            ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                            : '#f1f5f9',
+                        color: sf.isOpen === false
+                          ? '#be123c'
+                          : isFieldSubmitted ? '#ffffff' : '#334155',
                         fontWeight: 800,
                         padding: '0.55rem 1.15rem',
                         borderRadius: '12px',
                         fontSize: '0.85rem',
-                        border: isFieldSubmitted ? 'none' : '1.5px solid #cbd5e1',
-                        boxShadow: isFieldSubmitted ? '0 4px 14px rgba(5, 150, 105, 0.3)' : 'none',
-                        cursor: 'pointer',
+                        border: sf.isOpen === false
+                          ? '1.5px solid #fecdd3'
+                          : isFieldSubmitted ? 'none' : '1.5px solid #cbd5e1',
+                        boxShadow: isFieldSubmitted && sf.isOpen !== false ? '0 4px 14px rgba(5, 150, 105, 0.3)' : 'none',
+                        cursor: sf.isOpen === false ? 'not-allowed' : 'pointer',
+                        opacity: sf.isOpen === false ? 0.85 : 1,
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '0.45rem',
                         transition: 'all 0.2s ease'
                       }}
                     >
-                      {isFieldSubmitted ? (
+                      {sf.isOpen === false ? (
+                        <>
+                          <span>🛑 Closed:</span> {sf.name || `Stage ${st.stageId}`}
+                        </>
+                      ) : isFieldSubmitted ? (
                         <>
                           <span>✅ Submitted:</span> {sf.name || `Stage ${st.stageId}`}
                         </>
@@ -412,8 +425,8 @@ export default function FTMyCompetition() {
                       )}
                       <span style={{
                         fontSize: '0.72rem',
-                        background: isFieldSubmitted ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
-                        color: isFieldSubmitted ? '#ffffff' : '#475569',
+                        background: sf.isOpen === false ? 'rgba(190,18,60,0.1)' : isFieldSubmitted ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+                        color: sf.isOpen === false ? '#be123c' : isFieldSubmitted ? '#ffffff' : '#475569',
                         padding: '0.15rem 0.5rem',
                         borderRadius: '6px',
                         marginLeft: '0.2rem',
@@ -507,7 +520,12 @@ export default function FTMyCompetition() {
                 const currentItem = subItems[field.id] || { value: '', fileUrl: '' };
 
                 return (
-                  <div key={field.id} style={{ background: '#ffffff', padding: '1.1rem 1.25rem', borderRadius: '16px', border: '1.5px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  <div key={field.id} style={{ background: field.isOpen === false ? '#fef2f2' : '#ffffff', padding: '1.1rem 1.25rem', borderRadius: '16px', border: field.isOpen === false ? '1.5px solid #fecdd3' : '1.5px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.65rem', opacity: field.isOpen === false ? 0.7 : 1 }}>
+                    {field.isOpen === false && (
+                      <div style={{ padding: '0.65rem 1rem', borderRadius: '10px', background: '#fff1f2', color: '#be123c', fontSize: '0.85rem', fontWeight: 800, border: '1.5px solid #fecdd3', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        🛑 Submissions for this deliverable are currently <strong>closed</strong> by the competition administrators.
+                      </div>
+                    )}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <label className="ft-label" style={{ margin: 0, fontSize: '0.92rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 800 }}>
                         <span>{field.type === 'url' ? '🔗' : field.type === 'file' ? '📄' : field.type === 'textbox' ? '📝' : '📁'}</span>

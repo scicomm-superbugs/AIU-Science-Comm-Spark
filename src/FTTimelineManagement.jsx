@@ -35,6 +35,7 @@ export default function FTTimelineManagement() {
   const [newQLabel, setNewQLabel] = useState('');
   const [newQType, setNewQType] = useState('short_text');
   const [newQDescription, setNewQDescription] = useState('');
+  const [newSubIsOpen, setNewSubIsOpen] = useState(true);
 
   // Inline Editing for existing submissions
   const [editingSubFieldId, setEditingSubFieldId] = useState(null);
@@ -58,7 +59,8 @@ export default function FTTimelineManagement() {
       deadline: newSubDeadline || editingStage.deadline || '2026-09-01',
       description: newSubQuestion.trim() || `Please complete the required submission for ${newSubName.trim()}`,
       question: newSubQuestion.trim() || `Please complete the required submission for ${newSubName.trim()}`,
-      questions: finalQuestions
+      questions: finalQuestions,
+      isOpen: newSubIsOpen !== false
     };
     const currentList = editingStage.submissions || [];
     setEditingStage({
@@ -71,6 +73,7 @@ export default function FTTimelineManagement() {
     setSubQuestionsList([]);
     setNewQLabel('');
     setNewQDescription('');
+    setNewSubIsOpen(true);
   };
 
   // Default Stage Configurations with custom stage criteria
@@ -580,6 +583,18 @@ export default function FTTimelineManagement() {
                     </button>
                   </div>
 
+                  {/* Accepting Submissions Checkbox */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 800, color: newSubIsOpen ? '#15803d' : '#be123c', background: newSubIsOpen ? '#f0fdf4' : '#fff1f2', padding: '0.3rem 0.75rem', borderRadius: '8px', border: newSubIsOpen ? '1px solid #bbf7d0' : '1px solid #fecdd3' }}>
+                      <input
+                        type="checkbox"
+                        checked={newSubIsOpen}
+                        onChange={e => setNewSubIsOpen(e.target.checked)}
+                      />
+                      <span>{newSubIsOpen ? '✅ Accepting Submissions (Open)' : '🛑 Not Accepting Submissions (Closed)'}</span>
+                    </label>
+                  </div>
+
                   {/* Multi-Line Description & Requirements Box */}
                   <div>
                     <label className="ft-label" style={{ fontSize: '0.82rem', color: '#334155', fontWeight: 800, margin: '0 0 0.3rem 0' }}>
@@ -721,7 +736,7 @@ export default function FTTimelineManagement() {
                           </div>
 
                           {/* Title & Custom Deadline */}
-                          <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1.5fr', gap: '0.6rem' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.3fr 1.2fr', gap: '0.6rem' }}>
                             <div>
                               <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem' }}>Deliverable Title *</label>
                               <input
@@ -741,6 +756,16 @@ export default function FTTimelineManagement() {
                                 value={editSubData.deadline || ''}
                                 onChange={e => setEditSubData({ ...editSubData, deadline: e.target.value })}
                               />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 800, color: editSubData.isOpen !== false ? '#15803d' : '#be123c', background: editSubData.isOpen !== false ? '#ffffff' : '#fff1f2', padding: '0.45rem 0.65rem', borderRadius: '8px', border: editSubData.isOpen !== false ? '1px solid #bbf7d0' : '1px solid #fecdd3' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={editSubData.isOpen !== false}
+                                  onChange={e => setEditSubData({ ...editSubData, isOpen: e.target.checked })}
+                                />
+                                <span>{editSubData.isOpen !== false ? '✅ Open' : '🛑 Closed'}</span>
+                              </label>
                             </div>
                           </div>
 
@@ -899,6 +924,20 @@ export default function FTTimelineManagement() {
                             <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: '#fff1f2', color: '#be123c', fontWeight: 800, border: '1px solid #fecdd3' }}>
                               📅 Deadline: {formatUnifiedDate(effectiveDeadline)}
                             </span>
+                            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 800, color: subField.isOpen !== false ? '#15803d' : '#be123c', background: subField.isOpen !== false ? '#f0fdf4' : '#fff1f2', padding: '0.15rem 0.5rem', borderRadius: '6px', border: subField.isOpen !== false ? '1px solid #bbf7d0' : '1px solid #fecdd3' }}>
+                              <input
+                                type="checkbox"
+                                checked={subField.isOpen !== false}
+                                onChange={(e) => {
+                                  const nextIsOpen = e.target.checked;
+                                  const updatedSubmissions = (editingStage.submissions || []).map(f =>
+                                    f.id === subField.id ? { ...f, isOpen: nextIsOpen } : f
+                                  );
+                                  setEditingStage({ ...editingStage, submissions: updatedSubmissions });
+                                }}
+                              />
+                              <span>{subField.isOpen !== false ? '✅ Accepting Submissions' : '🛑 Submissions Closed'}</span>
+                            </label>
                           </div>
 
                           {(subField.description || subField.question) && (
