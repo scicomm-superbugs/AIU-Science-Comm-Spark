@@ -12,6 +12,14 @@ export default function FTTimelineManagement() {
   const [activeTrack, setActiveTrack] = useState('pop_science');
   const [savingId, setSavingId] = useState(null);
   const [msg, setMsg] = useState('');
+  const [expandedBreakdowns, setExpandedBreakdowns] = useState({});
+
+  const toggleBreakdown = (stageId) => {
+    setExpandedBreakdowns(prev => ({
+      ...prev,
+      [stageId]: !prev[stageId]
+    }));
+  };
 
   // Local state for adding criteria within a stage editor
   const [newCritName, setNewCritName] = useState('');
@@ -256,95 +264,110 @@ export default function FTTimelineManagement() {
                   <div style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>{st.sub}</div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="ft-btn"
+                    onClick={() => toggleBreakdown(st.stageId)}
+                    style={{
+                      background: expandedBreakdowns[st.stageId] ? '#e2e8f0' : '#ffffff',
+                      color: '#334155', border: '1.5px solid #cbd5e1', fontWeight: 800,
+                      fontSize: '0.85rem', padding: '0.55rem 1rem', borderRadius: '10px',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem'
+                    }}
+                  >
+                    {expandedBreakdowns[st.stageId] ? '🙈 Hide Breakdown' : '🔍 View Breakdown'}
+                  </button>
                   <button className="ft-btn ft-btn-outline" onClick={() => setEditingStage({ ...st })}>
                     <Edit3 size={16} /> Edit Stage Settings & Criteria
                   </button>
                 </div>
               </div>
 
-              {/* Clean Uncollapsed Stage Summary View */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', background: '#f8fafc', padding: '1.25rem', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.9rem', color: '#1e293b', flexWrap: 'wrap' }}>
-                  <span>📅 <strong>Deadline:</strong> {st.deadline === 'TBD' || st.isTbd || !st.deadline ? 'TBD (To Be Determined)' : (isNaN(new Date(st.deadline).getTime()) ? st.deadline : new Date(st.deadline).toLocaleDateString([], { dateStyle: 'full' }))}</span>
-                  <span>🏷️ <strong>Status:</strong> {st.status}</span>
-                </div>
-                <p style={{ margin: 0, fontSize: '0.88rem', color: '#475569', lineHeight: 1.5 }}>
-                  {st.details}
-                </p>
+              {/* Stage Details Breakdown — Expandable View */}
+              {expandedBreakdowns[st.stageId] && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', background: '#f8fafc', padding: '1.25rem', borderRadius: '14px', border: '1px solid #e2e8f0', marginTop: '1rem' }}>
+                  <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.9rem', color: '#1e293b', flexWrap: 'wrap' }}>
+                    <span>📅 <strong>Deadline:</strong> {st.deadline === 'TBD' || st.isTbd || !st.deadline ? 'TBD (To Be Determined)' : (isNaN(new Date(st.deadline).getTime()) ? st.deadline : new Date(st.deadline).toLocaleDateString([], { dateStyle: 'full' }))}</span>
+                    <span>🏷️ <strong>Status:</strong> {st.status}</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.88rem', color: '#475569', lineHeight: 1.5 }}>
+                    {st.details}
+                  </p>
 
-                {/* Submissions Configured Deliverable Items */}
-                {(st.submissions || []).length > 0 && (
-                  <div style={{ marginTop: '0.35rem', paddingTop: '0.5rem', borderTop: '1px solid #cbd5e1' }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <Layers size={14} style={{ color: 'var(--ft-primary)' }} /> Stage {st.stageId} Configured Deliverables ({st.submissions.length}):
+                  {/* Submissions Configured Deliverable Items */}
+                  {(st.submissions || []).length > 0 && (
+                    <div style={{ marginTop: '0.35rem', paddingTop: '0.5rem', borderTop: '1px solid #cbd5e1' }}>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Layers size={14} style={{ color: 'var(--ft-primary)' }} /> Stage {st.stageId} Configured Deliverables ({st.submissions.length}):
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {st.submissions.map((subItem, sIdx) => (
+                          <span key={subItem.id || sIdx} style={{
+                            fontSize: '0.78rem', fontWeight: 700, padding: '0.25rem 0.65rem', borderRadius: '8px',
+                            background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', display: 'inline-flex', alignItems: 'center', gap: '0.35rem'
+                          }}>
+                            <span>{subItem.type === 'url' ? '🔗' : subItem.type === 'file' ? '📄' : subItem.type === 'textbox' ? '📝' : '📁'}</span>
+                            <span>{subItem.name}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Criteria Badge Display for Stage */}
+                  <div style={{ marginTop: '0.35rem', paddingTop: '0.5rem', borderTop: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b', marginBottom: '0.4rem' }}>
+                      ⚖️ Stage {st.stageId} Judging Criteria:
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      {st.submissions.map((subItem, sIdx) => (
-                        <span key={subItem.id || sIdx} style={{
-                          fontSize: '0.78rem', fontWeight: 700, padding: '0.25rem 0.65rem', borderRadius: '8px',
-                          background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', display: 'inline-flex', alignItems: 'center', gap: '0.35rem'
-                        }}>
-                          <span>{subItem.type === 'url' ? '🔗' : subItem.type === 'file' ? '📄' : subItem.type === 'textbox' ? '📝' : '📁'}</span>
-                          <span>{subItem.name}</span>
-                        </span>
-                      ))}
+                      {(st.criteria || []).length === 0 ? (
+                        <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic' }}>No criteria assigned yet</span>
+                      ) : (
+                        (st.criteria || []).map(c => (
+                          <span key={c.id} style={{
+                            fontSize: '0.78rem', fontWeight: 700, padding: '0.25rem 0.65rem', borderRadius: '8px',
+                            background: '#ffffff', border: `1px solid ${c.category === 'academic' ? '#0284c7' : '#e11d48'}`,
+                            color: '#0f172a'
+                          }}>
+                            {c.category === 'academic' ? '🎓 Academic' : '🎙️ SciComm'} · {c.name} ({c.maxPoints} pts)
+                          </span>
+                        ))
+                      )}
                     </div>
                   </div>
-                )}
 
-                {/* Criteria Badge Display for Stage */}
-                <div style={{ marginTop: '0.35rem', paddingTop: '0.5rem', borderTop: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b', marginBottom: '0.4rem' }}>
-                    ⚖️ Stage {st.stageId} Judging Criteria:
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {(st.criteria || []).length === 0 ? (
-                      <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic' }}>No criteria assigned yet</span>
-                    ) : (
-                      (st.criteria || []).map(c => (
-                        <span key={c.id} style={{
-                          fontSize: '0.78rem', fontWeight: 700, padding: '0.25rem 0.65rem', borderRadius: '8px',
-                          background: '#ffffff', border: `1px solid ${c.category === 'academic' ? '#0284c7' : '#e11d48'}`,
-                          color: '#0f172a'
-                        }}>
-                          {c.category === 'academic' ? '🎓 Academic' : '🎙️ SciComm'} · {c.name} ({c.maxPoints} pts)
-                        </span>
-                      ))
-                    )}
+                  {/* Assigned Judges Display for Stage */}
+                  <div style={{ marginTop: '0.35rem', paddingTop: '0.5rem', borderTop: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b', marginBottom: '0.4rem' }}>
+                      👥 Assigned Judges:
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      {(st.assignedJudgeIds || []).length === 0 ? (
+                        <span style={{ fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>No judges assigned yet</span>
+                      ) : (
+                        (st.assignedJudgeIds || []).map(judgeId => {
+                          const judge = scientists.find(u => u.id === judgeId);
+                          if (!judge) return null;
+                          const roleColor = judge.role === 'academic_judge' ? '#0284c7' : judge.role === 'scicomm_judge' ? '#e11d48' : '#14b8a6';
+                          const avatarUrl = judge.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${judge.username || judge.name}`;
+
+                          return (
+                            <span key={judgeId} style={{
+                              fontSize: '0.78rem', fontWeight: 700, padding: '0.25rem 0.6rem', borderRadius: '20px',
+                              background: '#ffffff', border: `1.5px solid ${roleColor}`,
+                              color: '#0f172a', display: 'inline-flex', alignItems: 'center', gap: '0.35rem'
+                            }}>
+                              <img src={avatarUrl} alt="" style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover' }} />
+                              {judge.name}
+                            </span>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                {/* Assigned Judges Display for Stage */}
-                <div style={{ marginTop: '0.35rem', paddingTop: '0.5rem', borderTop: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b', marginBottom: '0.4rem' }}>
-                    👥 Assigned Judges:
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {(st.assignedJudgeIds || []).length === 0 ? (
-                      <span style={{ fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>No judges assigned yet</span>
-                    ) : (
-                      (st.assignedJudgeIds || []).map(judgeId => {
-                        const judge = scientists.find(u => u.id === judgeId);
-                        if (!judge) return null;
-                        const roleColor = judge.role === 'academic_judge' ? '#0284c7' : judge.role === 'scicomm_judge' ? '#e11d48' : '#14b8a6';
-                        const avatarUrl = judge.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${judge.username || judge.name}`;
-
-                        return (
-                          <span key={judgeId} style={{
-                            fontSize: '0.78rem', fontWeight: 700, padding: '0.25rem 0.6rem', borderRadius: '20px',
-                            background: '#ffffff', border: `1.5px solid ${roleColor}`,
-                            color: '#0f172a', display: 'inline-flex', alignItems: 'center', gap: '0.35rem'
-                          }}>
-                            <img src={avatarUrl} alt="" style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover' }} />
-                            {judge.name}
-                          </span>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           );
         })}
