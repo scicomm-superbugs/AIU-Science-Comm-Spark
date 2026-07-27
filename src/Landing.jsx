@@ -1543,52 +1543,49 @@ export default function Landing() {
     return cleaned;
   };
 
-  const saveChanges = async () => {
+  const saveChanges = () => {
     // 0. Force any focused element to blur so its last edits are committed
     if (document.activeElement && typeof document.activeElement.blur === 'function') {
       document.activeElement.blur();
     }
 
-    setSaving(true);
-    savingRef.current = true;
+    const timestamp = Date.now();
+    const payloadToSave = {
+      ...content,
+      updatedAt: timestamp
+    };
+
+    const sanitized = sanitizeForFirestore(payloadToSave);
+    sanitized.updatedAt = timestamp;
+    const jsonStr = JSON.stringify(sanitized);
+
+    // 1. Save to LocalStorage IMMEDIATELY (1ms)
     try {
-      const timestamp = Date.now();
-      const payloadToSave = {
-        ...content,
-        updatedAt: timestamp
-      };
-
-      // 1. Ensure all images (including any pending background uploads) are turned into Firebase Storage URLs
-      let sanitized = sanitizeForFirestore(await optimizeLandingContent(payloadToSave));
-      sanitized.updatedAt = timestamp;
-      const jsonStr = JSON.stringify(sanitized);
-
-      // 3. Save to LocalStorage immediately (1ms)
-      try {
-        localStorage.setItem('scicomm_landing_content', jsonStr);
-      } catch (e) {
-        console.warn('LocalStorage save warning:', e);
-      }
-
-      // 4. Write to Firestore — AWAIT FULLY, no timeout race that could silently skip the write
-      const ref = doc(firestore, getCollectionName('landing_content'), 'main');
-      await setDoc(ref, sanitized);
-
-      // 5. NOW update local state and exit edit mode.
-      //    Skip the next onSnapshot echo (our own write bouncing back) to prevent stale overwrite.
-      skipNextSnapshotRef.current = true;
-      setContent(sanitized);
-      setSavedContent(null);
-      setEditMode(false);
-      alert('⚡ All changes saved & published globally across all devices in real time!');
-
-    } catch (err) {
-      console.error('Firestore save error:', err);
-      alert('❌ Save error: ' + (err.message || 'Unknown error'));
-    } finally {
-      savingRef.current = false;
-      setSaving(false);
+      localStorage.setItem('scicomm_landing_content', jsonStr);
+    } catch (e) {
+      console.warn('LocalStorage save warning:', e);
     }
+
+    // 2. Exit Edit Mode INSTANTLY (0.01 seconds!) — zero wait time for the user!
+    skipNextSnapshotRef.current = true;
+    setContent(sanitized);
+    setSavedContent(null);
+    setEditMode(false);
+    setSaving(false);
+    savingRef.current = false;
+
+    // 3. Fire Firestore write in background asynchronously without blocking the user interface!
+    const ref = doc(firestore, getCollectionName('landing_content'), 'main');
+    setDoc(ref, sanitized).catch(err => console.warn('Background Firestore write:', err));
+
+    // 4. Background cloud image upload & storage optimization
+    optimizeLandingContent(payloadToSave).then(cloudPayload => {
+      cloudPayload.updatedAt = Date.now();
+      const cloudJson = JSON.stringify(cloudPayload);
+      try { localStorage.setItem('scicomm_landing_content', cloudJson); } catch (e) {}
+      setContent(cloudPayload);
+      setDoc(ref, cloudPayload).catch(err => console.warn('Background cloud payload sync:', err));
+    }).catch(err => console.warn('Background optimize error:', err));
   };
 
   // shorthand
