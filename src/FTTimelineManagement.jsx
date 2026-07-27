@@ -21,6 +21,7 @@ export default function FTTimelineManagement() {
   // Local state for adding custom submission fields within a stage editor
   const [newSubName, setNewSubName] = useState('');
   const [newSubType, setNewSubType] = useState('url');
+  const [newSubDeadline, setNewSubDeadline] = useState('');
   const [newSubQuestion, setNewSubQuestion] = useState('');
 
   // Default Stage Configurations with custom stage criteria
