@@ -883,9 +883,22 @@ export function CanvaTransformBox({
   onTransformChange,
   style = {}
 }) {
-  const isDraggingRef = useRef(false);
-  const dragStartRef = useRef({ x: 0, y: 0, initX: 0, initY: 0 });
-  const [isHovered, setIsHovered] = useState(false);
+  const leaveTimerRef = useRef(null);
+
+  const handleMouseEnter = () => {
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current);
+      leaveTimerRef.current = null;
+    }
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
+    leaveTimerRef.current = setTimeout(() => {
+      setIsHovered(false);
+    }, 600); // 600ms grace period so mouse can easily reach controls
+  };
 
   const handleMouseDown = (e) => {
     if (!editing || !onTransformChange) return;
@@ -939,8 +952,8 @@ export function CanvaTransformBox({
 
   return (
     <div
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       onMouseDown={handleMouseDown}
       style={{
         ...transformStyle,
@@ -954,25 +967,38 @@ export function CanvaTransformBox({
       {/* Floating Canvas Transform Controls when hovered in Edit Mode */}
       {isHovered && onTransformChange && (
         <div
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
           onMouseDown={(e) => e.stopPropagation()}
           style={{
             position: 'absolute',
-            top: '-34px',
+            top: '-42px',
             left: '50%',
             transform: 'translateX(-50%)',
             background: '#0f172a',
             color: '#ffffff',
             borderRadius: '20px',
-            padding: '2px 8px',
+            padding: '3px 10px',
             display: 'flex',
             alignItems: 'center',
-            gap: '4px',
+            gap: '6px',
             zIndex: 10000,
-            boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
-            fontSize: '0.72rem',
+            boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
+            fontSize: '0.75rem',
             whiteSpace: 'nowrap'
           }}
         >
+          {/* Invisible hit-bridge element underneath toolbar to bridge mouse gap */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              height: '18px',
+              background: 'transparent'
+            }}
+          />
           <span style={{ cursor: 'grab', fontWeight: 800, padding: '0 4px' }} title="Drag box to reposition">✋ Move</span>
           
           <button
