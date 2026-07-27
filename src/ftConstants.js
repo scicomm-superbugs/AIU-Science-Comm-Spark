@@ -8,6 +8,26 @@ export const formatUnifiedDate = (dateStr) => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
+export const getCleanAcademicTitle = (account) => {
+  if (!account) return 'Teaching Assistant at Alamein International University';
+  
+  const rawTitle = (account.title || '').trim();
+  // Filter out internal system role strings
+  if (!rawTitle || rawTitle.includes('System Administrator') || rawTitle.includes('Master') || rawTitle === 'admin') {
+    const inst = account.institutionName || 'Alamein International University';
+    if (['academic_judge', 'scicomm_judge', 'judge', 'trainer_judge'].includes(account.role)) {
+      return `Academic Evaluator & Researcher at ${inst}`;
+    }
+    return `Teaching Assistant at ${inst}`;
+  }
+
+  const inst = account.institutionName || 'Alamein International University';
+  if (rawTitle && !rawTitle.toLowerCase().includes('university') && !rawTitle.toLowerCase().includes('at ') && inst) {
+    return `${rawTitle} at ${inst}`;
+  }
+  return rawTitle;
+};
+
 export const FT_DEPARTMENTS = [
   'Biotechnology & Life Sciences',
   'Physics & Chemistry',

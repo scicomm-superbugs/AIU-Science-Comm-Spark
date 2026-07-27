@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Sparkles, Video, Newspaper, Calendar, Clock, ArrowRight, Award, CheckCircle2, Play, BookOpen, Layers, GitCommit, Zap, Mic, Users, Globe, Mail, ChevronRight, FileText, Check, Radio, ExternalLink, Pencil } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { db, useLiveCollection } from './db';
-import { COMPETITION_TRACKS, DEFAULT_JUDGING_CRITERIA, normalizeTrackKey, formatUnifiedDate } from './ftConstants';
+import { COMPETITION_TRACKS, DEFAULT_JUDGING_CRITERIA, normalizeTrackKey, formatUnifiedDate, getCleanAcademicTitle } from './ftConstants';
 import { CanvaTransformBox, EditableLogo } from './Landing';
 import WorkshopManager from './WorkshopManager';
 import './scicommspark.css';
@@ -927,10 +927,7 @@ export default function FTDashboard() {
                         {trainerAcc.name || trainerAcc.username}
                       </div>
                       <div style={{ fontSize: '0.82rem', color: '#cbd5e1', fontWeight: 600 }}>
-                        {trainerAcc.title && <span>{trainerAcc.title}</span>}
-                        {trainerAcc.title && trainerAcc.institutionName && ' · '}
-                        {trainerAcc.institutionName && <span>{trainerAcc.institutionName}</span>}
-                        {!trainerAcc.title && !trainerAcc.institutionName && trainerAcc.department && <span>{trainerAcc.department}</span>}
+                        <span>{getCleanAcademicTitle(trainerAcc)}</span>
                         {(trainerAcc.username || trainerAcc.email) && (
                           <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginLeft: '0.4rem' }}>
                             (@{trainerAcc.username})
@@ -1040,9 +1037,7 @@ export default function FTDashboard() {
                                 </span>
                               </div>
                               <div style={{ fontSize: '0.8rem', color: '#cbd5e1', marginTop: '0.2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                {judge.title && <span>{judge.title}</span>}
-                                {judge.institutionName && <span style={{ color: '#38bdf8' }}>· 🏫 {judge.institutionName}</span>}
-                                {!judge.institutionName && judge.department && <span style={{ color: '#94a3b8' }}>· 🎓 {judge.department}</span>}
+                                <span>🎓 {getCleanAcademicTitle(judge)}</span>
                               </div>
                             </div>
                           </div>
