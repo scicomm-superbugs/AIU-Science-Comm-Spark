@@ -144,9 +144,8 @@ export default function FTEvaluationManagement() {
       ['judge', 'academic_judge', 'scicomm_judge', 'trainer_judge', 'faculty', 'admin', 'master'].includes(s.role)
     );
     const testJudges = [
-      { id: 'test_judge_academic', name: 'test-judge-academic', username: 'test_judge_academic', role: 'academic_judge', competitorCode: 'J-201', email: 'test-judge-academic@aiu.edu.eg' },
-      { id: 'test_judge_scicomm', name: 'test-judge-scicomm', username: 'test_judge_scicomm', role: 'scicomm_judge', competitorCode: 'J-301', email: 'test-judge-scicomm@aiu.edu.eg' },
-      { id: 'test_judge_trainer', name: 'test-judge-trainer', username: 'test_judge_trainer', role: 'trainer_judge', competitorCode: 'J-401', email: 'test-judge-trainer@aiu.edu.eg' }
+      { id: 'test_judge_1', name: 'test-judge-1', username: 'test_judge_1', role: 'judge', competitorCode: 'J-201', email: 'test-judge-1@aiu.edu.eg' },
+      { id: 'test_judge_trainer', name: 'test-judge-trainer', username: 'test_judge_trainer', role: 'trainer_judge', competitorCode: 'J-301', email: 'test-judge-trainer@aiu.edu.eg' }
     ];
     const combined = [...dbJudges];
     testJudges.forEach(tj => {
@@ -389,6 +388,20 @@ export default function FTEvaluationManagement() {
     });
 
     let result = Array.from(uniqueMap.values());
+
+    // Inject test competitor accounts if not already in list
+    const testCompetitors = [
+      { targetId: 'test_comp_pop_team', targetType: 'competitor', name: 'test-comp-pop-team', code: 'C-901', track: 'pop_science', submission: null, evals: [] },
+      { targetId: 'test_comp_pop_solo', targetType: 'competitor', name: 'test-comp-pop-solo', code: 'C-902', track: 'pop_science', submission: null, evals: [] },
+      { targetId: 'test_comp_jour_team', targetType: 'competitor', name: 'test-comp-jour-team', code: 'C-801', track: 'science_journalism', submission: null, evals: [] },
+      { targetId: 'test_comp_jour_solo', targetType: 'competitor', name: 'test-comp-jour-solo', code: 'C-802', track: 'science_journalism', submission: null, evals: [] }
+    ];
+    testCompetitors.forEach(tc => {
+      const trackMatch = selectedTrack === 'all' || tc.track === selectedTrack;
+      if (trackMatch && !result.some(r => r.targetId === tc.targetId || r.code === tc.code)) {
+        result.push(tc);
+      }
+    });
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();

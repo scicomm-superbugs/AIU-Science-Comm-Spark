@@ -440,19 +440,19 @@ export const AuthProvider = ({ children }) => {
         modePart = 'individual';
         impCode = 'C-802';
       } else if (viewAsMode === 'judge_scicomm') {
-        impId = 'test_judge_scicomm';
-        impName = 'test-judge-scicomm';
-        impUsername = 'test_judge_scicomm';
-        impEmail = 'test-judge-scicomm@aiu.edu.eg';
-        modeRole = 'scicomm_judge';
+        impId = 'test_judge_trainer';
+        impName = 'test-judge-trainer';
+        impUsername = 'test_judge_trainer';
+        impEmail = 'test-judge-trainer@aiu.edu.eg';
+        modeRole = 'trainer_judge';
         modeTrack = '';
         impCode = 'J-301';
       } else if (viewAsMode === 'judge_academic') {
-        impId = 'test_judge_academic';
-        impName = 'test-judge-academic';
-        impUsername = 'test_judge_academic';
-        impEmail = 'test-judge-academic@aiu.edu.eg';
-        modeRole = 'academic_judge';
+        impId = 'test_judge_1';
+        impName = 'test-judge-1';
+        impUsername = 'test_judge_1';
+        impEmail = 'test-judge-1@aiu.edu.eg';
+        modeRole = 'judge';
         modeTrack = '';
         impCode = 'J-201';
       }

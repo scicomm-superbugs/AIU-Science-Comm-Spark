@@ -664,8 +664,8 @@ export default function FTLayout() {
                   <option value="student_jour_ind">📰 test-comp-jour-solo (ID: C-802) — Journalism (Solo)</option>
                 </optgroup>
                 <optgroup label="⚖️ Test Judge Accounts">
-                  <option value="judge_academic">🎓 test-judge-academic (ID: J-201) — Academic Judge</option>
-                  <option value="judge_scicomm">🎙️ test-judge-scicomm (ID: J-301) — SciComm Judge</option>
+                  <option value="judge_academic">⚖️ test-judge-1 (ID: J-201) — Judge</option>
+                  <option value="judge_scicomm">🎓 test-judge-trainer (ID: J-301) — Trainer & Judge (Dual)</option>
                 </optgroup>
               </select>
             </div>
@@ -835,14 +835,14 @@ export default function FTLayout() {
                         style={{ background: user?.viewAsMode === 'judge_academic' ? '#f0f9ff' : 'transparent', fontWeight: 700 }}
                         onClick={() => { setViewAsMode('judge_academic'); setUserMenuOpen(false); navigate('/dashboard/judge'); }}
                       >
-                        🎓 test-judge-academic (J-201) — Academic Judge
+                        ⚖️ test-judge-1 (J-201) — Judge
                       </button>
                       <button
                         className="ft-user-dropdown-item"
                         style={{ background: user?.viewAsMode === 'judge_scicomm' ? '#fff1f2' : 'transparent', fontWeight: 700 }}
                         onClick={() => { setViewAsMode('judge_scicomm'); setUserMenuOpen(false); navigate('/dashboard/judge'); }}
                       >
-                        🎙️ test-judge-scicomm (J-301) — SciComm Judge
+                        🎓 test-judge-trainer (J-301) — Trainer & Judge (Dual)
                       </button>
                       {user?.isImpersonating && (
                         <button

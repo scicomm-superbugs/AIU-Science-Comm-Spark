@@ -43,9 +43,8 @@ export default function FTAdminSubmissionAssignments() {
       ['judge', 'academic_judge', 'scicomm_judge', 'trainer_judge', 'admin', 'master'].includes(s.role)
     );
     const testJudges = [
-      { id: 'test_judge_academic', name: 'test-judge-academic', username: 'test_judge_academic', role: 'academic_judge', competitorCode: 'J-201', email: 'test-judge-academic@aiu.edu.eg' },
-      { id: 'test_judge_scicomm', name: 'test-judge-scicomm', username: 'test_judge_scicomm', role: 'scicomm_judge', competitorCode: 'J-301', email: 'test-judge-scicomm@aiu.edu.eg' },
-      { id: 'test_judge_trainer', name: 'test-judge-trainer', username: 'test_judge_trainer', role: 'trainer_judge', competitorCode: 'J-401', email: 'test-judge-trainer@aiu.edu.eg' }
+      { id: 'test_judge_1', name: 'test-judge-1', username: 'test_judge_1', role: 'judge', competitorCode: 'J-201', email: 'test-judge-1@aiu.edu.eg' },
+      { id: 'test_judge_trainer', name: 'test-judge-trainer', username: 'test_judge_trainer', role: 'trainer_judge', competitorCode: 'J-301', email: 'test-judge-trainer@aiu.edu.eg' }
     ];
     const combined = [...dbJudges];
     testJudges.forEach(tj => {
