@@ -258,6 +258,18 @@ export default function FTOurTeam() {
         return;
       }
 
+      const normalizeTrack = (tr) => (tr === 'science_journalism' || tr === 'journalism') ? 'science_journalism' : 'pop_science';
+      const userTrack = normalizeTrack(meDoc?.registeredTrack || user?.registeredTrack || 'pop_science');
+      const teamTrack = normalizeTrack(targetTeam.track || 'pop_science');
+
+      if (userTrack !== teamTrack) {
+        const teamTrackLabel = teamTrack === 'science_journalism' ? 'Science Journalism' : 'Pop Science Videos';
+        const userTrackLabel = userTrack === 'science_journalism' ? 'Science Journalism' : 'Pop Science Videos';
+        setError(`Cannot join team! Team "${targetTeam.name}" is registered for the "${teamTrackLabel}" track, but your account is registered for "${userTrackLabel}". All team members must be registered for the same track.`);
+        setIsSubmitting(false);
+        return;
+      }
+
       const updatedMembers = [
         ...(targetTeam.members || []),
         {
@@ -285,6 +297,15 @@ export default function FTOurTeam() {
   const handleAddMember = async (targetUser) => {
     if ((myTeam.members || []).length >= 3) {
       alert('Team has reached maximum capacity of 3 members.');
+      return;
+    }
+
+    const normalizeTrack = (tr) => (tr === 'science_journalism' || tr === 'journalism') ? 'science_journalism' : 'pop_science';
+    const targetTrack = normalizeTrack(targetUser.registeredTrack || 'pop_science');
+    const teamTrack = normalizeTrack(myTeam.track || 'pop_science');
+
+    if (targetTrack !== teamTrack) {
+      alert('Cannot add member: Competitor track does not match the team track.');
       return;
     }
 
@@ -363,18 +384,25 @@ export default function FTOurTeam() {
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
-  // Search competitors not in any team
+  // Search competitors not in any team matching the team's track
   const availableCompetitors = useMemo(() => {
     const allAssignedIds = teams.flatMap(t => (t.members || []).map(m => m.userId));
-    return allScientists.filter(s => 
-      (s.role === 'competitor' || s.role === 'user' || !s.role) &&
-      !allAssignedIds.includes(s.id) &&
-      s.id !== user.id &&
-      (memberSearchQuery === '' ||
-       s.name?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-       s.username?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
-    );
-  }, [allScientists, teams, user.id, memberSearchQuery]);
+    const normalizeTrack = (tr) => (tr === 'science_journalism' || tr === 'journalism') ? 'science_journalism' : 'pop_science';
+    const teamTrack = myTeam ? normalizeTrack(myTeam.track) : null;
+
+    return allScientists.filter(s => {
+      const sTrack = normalizeTrack(s.registeredTrack || 'pop_science');
+      const isSameTrack = !teamTrack || sTrack === teamTrack;
+
+      return (s.role === 'competitor' || s.role === 'user' || !s.role) &&
+        !allAssignedIds.includes(s.id) &&
+        s.id !== user.id &&
+        isSameTrack &&
+        (memberSearchQuery === '' ||
+         s.name?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+         s.username?.toLowerCase().includes(memberSearchQuery.toLowerCase()));
+    });
+  }, [allScientists, teams, user.id, myTeam, memberSearchQuery]);
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', paddingBottom: '3rem' }}>
