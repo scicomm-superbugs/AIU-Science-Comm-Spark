@@ -1,163 +1,247 @@
 import React, { useState } from 'react';
-import { RefreshCw, Lock, Maximize2, Minimize2, ShieldCheck } from 'lucide-react';
+import { FileText, CheckCircle2, Send, Clock, Sparkles, AlertCircle } from 'lucide-react';
+import { useAuth } from './context/AuthContext';
+import { db } from './db';
 
 export default function FTTestSection() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [iframeKey, setIframeKey] = useState(0);
+  const { user } = useAuth();
 
-  // Embedded Google Form URL
-  const embeddedUrl = "https://docs.google.com/forms/d/e/1FAIpQLSfbgcAi8mYiNdlWsIbzj8jgxOCFIrrwl1l-6b3akaZ9Dd2XDg/viewform?embedded=true";
+  const [formData, setFormData] = useState({
+    email: user?.email || '',
+    participationType: 'Individual',
+    fullName: user?.name || '',
+    institution: 'Alamein International University',
+    track: 'pop_science',
+    submissionUrl: '',
+    notes: ''
+  });
 
-  const handleRefresh = () => {
-    setIsLoading(true);
-    setIframeKey(prev => prev + 1);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.email || !formData.email.includes('@')) {
+      alert('Please provide a valid email address.');
+      return;
+    }
+    if (!formData.submissionUrl) {
+      alert('Please provide your submission link.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Save submission record locally & sync
+      await db.submissions.add({
+        userId: user?.id || 'guest',
+        userName: formData.fullName,
+        userEmail: formData.email,
+        participationType: formData.participationType,
+        institution: formData.institution,
+        track: formData.track,
+        submissionUrl: formData.submissionUrl,
+        notes: formData.notes,
+        submittedAt: new Date().toISOString(),
+        source: 'SciComm_Spark_Test_Form'
+      });
+
+      setSubmitted(true);
+    } catch (err) {
+      alert('Failed to submit form: ' + err.message);
+    }
+    setSubmitting(false);
   };
 
   return (
-    <div 
-      style={{ 
-        width: '100%', 
-        height: isFullscreen ? '100vh' : 'calc(100vh - 120px)', 
-        minHeight: '680px', 
-        display: 'flex', 
-        flexDirection: 'column',
-        position: isFullscreen ? 'fixed' : 'relative',
-        inset: isFullscreen ? 0 : 'auto',
-        zIndex: isFullscreen ? 3000 : 1,
-        background: '#f8fafc',
-        padding: isFullscreen ? '0' : '0 0 1rem 0',
-        transition: 'all 0.25s ease'
-      }}
-    >
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '1rem 0 3rem 0' }}>
       <div 
+        className="ft-card ft-animate-in"
         style={{ 
-          flex: 1, 
-          width: '100%', 
           background: '#ffffff', 
-          borderRadius: isFullscreen ? '0' : '24px', 
-          border: isFullscreen ? 'none' : '1.5px solid #cbd5e1', 
-          boxShadow: isFullscreen ? 'none' : '0 12px 36px rgba(15,23,42,0.08)', 
-          overflow: 'hidden', 
-          display: 'flex',
-          flexDirection: 'column'
+          borderRadius: '24px', 
+          border: '1.5px solid #cbd5e1', 
+          boxShadow: '0 10px 30px rgba(15,23,42,0.06)', 
+          overflow: 'hidden' 
         }}
       >
-        {/* Virtual Browser Top Navigation Bar */}
-        <div 
-          style={{ 
-            height: '48px', 
-            background: '#f1f5f9', 
-            borderBottom: '1px solid #e2e8f0', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justify: 'space-between', 
-            padding: '0 1rem', 
-            gap: '1rem',
-            userSelect: 'none'
-          }}
-        >
-          {/* Virtual Browser Window Controls & Address Bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, maxWidth: '650px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }} />
-              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#eab308' }} />
-              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e' }} />
-            </div>
-
-            {/* Virtual Address Bar */}
-            <div 
-              style={{ 
-                flex: 1, 
-                background: '#ffffff', 
-                border: '1px solid #cbd5e1', 
-                borderRadius: '8px', 
-                padding: '0.25rem 0.75rem', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.4rem', 
-                fontSize: '0.78rem', 
-                color: '#475569',
-                fontFamily: 'monospace',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              <Lock size={13} style={{ color: '#16a34a', flexShrink: 0 }} />
-              <span style={{ fontWeight: 700, color: '#0f172a' }}>https://</span>
-              <span style={{ color: '#64748b' }}>forms.gle/tzgEf9QxBj3nG43S9</span>
-            </div>
+        {/* Header Section */}
+        <div style={{ background: 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)', padding: '2.25rem 2rem', color: '#ffffff' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.18)', padding: '0.35rem 0.85rem', borderRadius: '100px', fontSize: '0.8rem', fontWeight: 800, marginBottom: '1rem' }}>
+            <Sparkles size={14} /> SciComm Spark Competition Form
           </div>
-
-          {/* Virtual Browser Toolbar Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#e0f2fe', color: '#0369a1', padding: '0.3rem 0.65rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800 }}>
-              <ShieldCheck size={13} />
-              In-Page Navigation Enforced
-            </div>
-
-            <button 
-              onClick={handleRefresh}
-              className="ft-btn"
-              title="Refresh Webview"
-              style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '0.35rem 0.65rem', borderRadius: '8px', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', fontWeight: 800 }}
-            >
-              <RefreshCw size={13} className={isLoading ? 'spin' : ''} />
-              Reload
-            </button>
-
-            <button 
-              onClick={() => setIsFullscreen(!isFullscreen)}
-              className="ft-btn"
-              title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Viewport"}
-              style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '0.35rem 0.65rem', borderRadius: '8px', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', fontWeight: 800 }}
-            >
-              {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-              {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-            </button>
-          </div>
+          <h1 style={{ fontSize: '1.8rem', fontWeight: 900, margin: '0 0 0.5rem 0', fontFamily: "'Outfit', sans-serif" }}>
+            SciComm Spark Official Registration & Submission
+          </h1>
+          <p style={{ margin: 0, opacity: 0.9, fontSize: '0.92rem', lineHeight: 1.5 }}>
+            Submit your Scientific Communication entries directly on this page. All questions and details are rendered below.
+          </p>
         </div>
 
-        {/* Viewport Area */}
-        <div style={{ flex: 1, width: '100%', position: 'relative', background: '#ffffff' }}>
-          {isLoading && (
-            <div 
-              style={{ 
-                position: 'absolute', 
-                inset: 0, 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center', 
-                justify: 'center', 
-                background: '#ffffff', 
-                zIndex: 10 
-              }}
-            >
-              <div className="ft-spinner" style={{ width: '38px', height: '38px', borderWidth: '3px', marginBottom: '0.85rem' }} />
-              <div style={{ fontWeight: 800, color: '#334155', fontSize: '0.9rem' }}>
-                Loading Virtual Browser Viewport...
-              </div>
-            </div>
-          )}
+        {/* Competition Track Info Card */}
+        <div style={{ padding: '1.5rem 2rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#be123c', fontWeight: 900, fontSize: '0.95rem', marginBottom: '0.5rem' }}>
+            <Clock size={16} /> Submission deadline: July 31, 2026
+          </div>
+          <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569', lineHeight: 1.6 }}>
+            We can't wait to see your creativity, passion, and scientific storytelling skills. Good luck to all participants!
+          </p>
+        </div>
 
-          {/* Virtual Browser Viewport with Tab Trapping Restrictions */}
-          <iframe
-            key={iframeKey}
-            name="spark_virtual_browser"
-            src={embeddedUrl}
-            title="SciComm Spark Virtual Webview"
-            onLoad={() => setIsLoading(false)}
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              display: 'block'
-            }}
-            allow="autoplay; camera; microphone; geolocation"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-modals"
-            allowFullScreen
-          />
+        {/* Form Body */}
+        <div style={{ padding: '2rem' }}>
+          {submitted ? (
+            <div style={{ textAlign: 'center', padding: '3rem 1.5rem', background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: '20px' }}>
+              <CheckCircle2 size={54} style={{ color: '#16a34a', margin: '0 auto 1.25rem auto' }} />
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#14532d', margin: 0 }}>
+                Response Recorded Successfully!
+              </h3>
+              <p style={{ color: '#166534', marginTop: '0.6rem', fontSize: '0.92rem', lineHeight: 1.5 }}>
+                Your submission has been received and saved directly in SciComm Spark.
+              </p>
+              <button 
+                onClick={() => { setSubmitted(false); setFormData({ email: user?.email || '', participationType: 'Individual', fullName: user?.name || '', institution: 'Alamein International University', track: 'pop_science', submissionUrl: '', notes: '' }); }}
+                className="ft-btn ft-btn-primary" 
+                style={{ marginTop: '1.75rem', background: '#be123c', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '12px', fontWeight: 800 }}
+              >
+                Submit Another Response
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              
+              {/* Question 1: Email */}
+              <div className="ft-card" style={{ padding: '1.25rem', background: '#ffffff', borderRadius: '16px', border: '1.5px solid #cbd5e1' }}>
+                <label className="ft-label" style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.6rem' }}>
+                  Email Address / البريد الإلكتروني <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <input
+                  type="email"
+                  className="ft-input"
+                  required
+                  value={formData.email}
+                  onChange={e => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="Enter your email address..."
+                />
+              </div>
+
+              {/* Question 2: Participation Type */}
+              <div className="ft-card" style={{ padding: '1.25rem', background: '#ffffff', borderRadius: '16px', border: '1.5px solid #cbd5e1' }}>
+                <label className="ft-label" style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>
+                  How would you like to participate in the competition? <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontSize: '0.9rem', color: '#334155', fontWeight: 700 }}>
+                    <input
+                      type="radio"
+                      name="participationType"
+                      value="Individual"
+                      checked={formData.participationType === 'Individual'}
+                      onChange={e => setFormData({ ...formData, participationType: e.target.value })}
+                      style={{ width: '18px', height: '18px', accentColor: '#be123c' }}
+                    />
+                    Individual (Solo Competitor)
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontSize: '0.9rem', color: '#334155', fontWeight: 700 }}>
+                    <input
+                      type="radio"
+                      name="participationType"
+                      value="Team"
+                      checked={formData.participationType === 'Team'}
+                      onChange={e => setFormData({ ...formData, participationType: e.target.value })}
+                      style={{ width: '18px', height: '18px', accentColor: '#be123c' }}
+                    />
+                    Team (Up to 3 members)
+                  </label>
+                </div>
+              </div>
+
+              {/* Question 3: Full Name */}
+              <div className="ft-card" style={{ padding: '1.25rem', background: '#ffffff', borderRadius: '16px', border: '1.5px solid #cbd5e1' }}>
+                <label className="ft-label" style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.6rem' }}>
+                  Full Name / الاسم الكامل <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  className="ft-input"
+                  required
+                  value={formData.fullName}
+                  onChange={e => setFormData({ ...formData, fullName: e.target.value })}
+                  placeholder="Enter your full name..."
+                />
+              </div>
+
+              {/* Question 4: Track */}
+              <div className="ft-card" style={{ padding: '1.25rem', background: '#ffffff', borderRadius: '16px', border: '1.5px solid #cbd5e1' }}>
+                <label className="ft-label" style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.6rem' }}>
+                  Select Competition Track / المسار <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <select
+                  className="ft-select"
+                  value={formData.track}
+                  onChange={e => setFormData({ ...formData, track: e.target.value })}
+                >
+                  <option value="pop_science">🎥 Track 1: Pop Science Videos (Short & Long form storytelling)</option>
+                  <option value="science_journalism">📰 Track 2: Science Journalism (Articles, Publishing & Fieldwork)</option>
+                </select>
+              </div>
+
+              {/* Question 5: Submission Link */}
+              <div className="ft-card" style={{ padding: '1.25rem', background: '#ffffff', borderRadius: '16px', border: '1.5px solid #cbd5e1' }}>
+                <label className="ft-label" style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.6rem' }}>
+                  Submission Link / Google Drive / Video URL <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <input
+                  type="url"
+                  className="ft-input"
+                  required
+                  value={formData.submissionUrl}
+                  onChange={e => setFormData({ ...formData, submissionUrl: e.target.value })}
+                  placeholder="https://drive.google.com/... or https://youtube.com/..."
+                />
+                <span style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.4rem', display: 'block' }}>
+                  Paste a publicly accessible Google Drive link, YouTube video link, or article link.
+                </span>
+              </div>
+
+              {/* Question 6: Notes */}
+              <div className="ft-card" style={{ padding: '1.25rem', background: '#ffffff', borderRadius: '16px', border: '1.5px solid #cbd5e1' }}>
+                <label className="ft-label" style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.6rem' }}>
+                  Additional Notes & Description / ملاحظات ووصف
+                </label>
+                <textarea
+                  className="ft-textarea"
+                  rows={4}
+                  value={formData.notes}
+                  onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="Provide a short description or context for your entry..."
+                />
+              </div>
+
+              {/* Submit Button */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="ft-btn"
+                  style={{
+                    background: 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)',
+                    color: '#ffffff',
+                    padding: '0.85rem 2.25rem',
+                    fontSize: '1rem',
+                    fontWeight: 900,
+                    borderRadius: '14px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(190, 18, 60, 0.25)'
+                  }}
+                >
+                  {submitting ? 'Submitting...' : '🚀 Submit Response In-Page'}
+                </button>
+              </div>
+
+            </form>
+          )}
         </div>
       </div>
     </div>
