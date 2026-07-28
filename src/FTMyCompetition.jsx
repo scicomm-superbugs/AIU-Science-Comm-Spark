@@ -415,6 +415,7 @@ export default function FTMyCompetition() {
                         e.stopPropagation();
                         if (isDisabled) return;
                         const targetUrl = sf.googleFormUrl || st.googleFormUrl || 'https://forms.gle/tzgEf9QxBj3nG43S9';
+                        handleMarkGoogleFormSubmitted(st, sf);
                         setVirtualBrowserForm({
                           stage: st,
                           field: sf,
@@ -857,43 +858,24 @@ export default function FTMyCompetition() {
 
       {/* VIRTUAL BROWSER GOOGLE FORM EMBEDDED MODAL */}
       {virtualBrowserForm && createPortal(
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '1rem' }}>
-          <div className="ft-card ft-animate-in" style={{ width: '95vw', maxWidth: '1100px', height: '92vh', background: '#ffffff', borderRadius: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)', border: '1px solid #cbd5e1' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '1rem' }} onClick={() => setVirtualBrowserForm(null)}>
+          <div className="ft-card ft-animate-in" style={{ width: '95vw', maxWidth: '1100px', height: '92vh', background: '#ffffff', borderRadius: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)', border: '1px solid #cbd5e1', position: 'relative' }} onClick={e => e.stopPropagation()}>
             
-            {/* Top Virtual Browser Header Bar */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 1.5rem', background: '#0f172a', color: '#ffffff', zIndex: 10, flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ background: '#2563eb', color: '#ffffff', padding: '0.4rem 0.8rem', borderRadius: '10px', fontWeight: 900, fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  🌐 Virtual Browser
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#ffffff', margin: 0 }}>
-                    {virtualBrowserForm.field?.name || virtualBrowserForm.stage?.title}
-                  </h3>
-                  <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.1rem 0 0 0' }}>
-                    Official Google Form Submission View
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <button
-                  type="button"
-                  className="ft-btn"
-                  onClick={() => handleMarkGoogleFormSubmitted(virtualBrowserForm.stage, virtualBrowserForm.field)}
-                  style={{ background: '#10b981', color: '#ffffff', border: 'none', padding: '0.55rem 1.1rem', borderRadius: '10px', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                >
-                  ✅ Mark Submission as Completed
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVirtualBrowserForm(null)}
-                  style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#ffffff', width: '32px', height: '32px', borderRadius: '50%', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
+            {/* Floating Close Button */}
+            <button
+              type="button"
+              onClick={() => setVirtualBrowserForm(null)}
+              style={{
+                position: 'absolute', top: '14px', right: '18px', zIndex: 20,
+                background: '#ffffff', border: '1.5px solid #cbd5e1', color: '#0f172a',
+                width: '36px', height: '36px', borderRadius: '50%', fontWeight: 900,
+                fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+              }}
+              title="Close Form"
+            >
+              ✕
+            </button>
 
             {/* Embedded Iframe Container */}
             <div style={{ flex: 1, position: 'relative', width: '100%', height: '100%', background: '#ffffff', overflow: 'hidden' }}>
