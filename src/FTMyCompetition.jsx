@@ -138,6 +138,13 @@ export default function FTMyCompetition() {
   const [subItems, setSubItems] = useState({});
   const [submitFieldId, setSubmitFieldId] = useState(null);
   const [virtualBrowserForm, setVirtualBrowserForm] = useState(null);
+  const [iframeLoadCount, setIframeLoadCount] = useState(0);
+
+  useEffect(() => {
+    if (virtualBrowserForm) {
+      setIframeLoadCount(0);
+    }
+  }, [virtualBrowserForm]);
 
   const getEmbedUrl = (rawUrl) => {
     if (!rawUrl) return 'https://docs.google.com/forms/d/e/1FAIpQLSfbgcAi8mYiNdlWsIbzj8jgxOCFIrrwl1l-6b3akaZ9Dd2XDg/viewform?embedded=true';
@@ -184,10 +191,8 @@ export default function FTMyCompetition() {
       } else {
         await db.submissions.add(data);
       }
-
-      setVirtualBrowserForm(null);
     } catch (err) {
-      alert('Failed to log submission: ' + err.message);
+      console.error('Failed to log submission:', err);
     }
   };
 
@@ -881,6 +886,15 @@ export default function FTMyCompetition() {
               <iframe
                 src={getEmbedUrl(virtualBrowserForm.rawUrl)}
                 title="Google Form View"
+                onLoad={() => {
+                  setIframeLoadCount(prev => {
+                    const nextCount = prev + 1;
+                    if (nextCount >= 2 && virtualBrowserForm) {
+                      handleMarkGoogleFormSubmitted(virtualBrowserForm.stage, virtualBrowserForm.field);
+                    }
+                    return nextCount;
+                  });
+                }}
                 style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
