@@ -195,20 +195,37 @@ export default function FTTimelineManagement() {
     setMsg('');
     try {
       const dataToSave = {
-        id: stage.id,
-        track: activeTrack,
-        stageId: stage.stageId,
-        title: stage.title,
-        sub: stage.sub,
-        deadline: stage.deadline || 'TBD',
-        isTbd: stage.deadline === 'TBD' || stage.isTbd,
-        status: stage.status,
-        details: stage.details,
-        criteria: stage.criteria || [],
-        submissions: stage.submissions || [],
-        assignedJudgeIds: stage.assignedJudgeIds || [],
-        acceptSubmissions: stage.acceptSubmissions !== false,
-        googleFormUrl: stage.googleFormUrl || '',
+        id: String(stage.id),
+        track: String(activeTrack),
+        stageId: Number(stage.stageId),
+        title: String(stage.title || ''),
+        sub: String(stage.sub || ''),
+        deadline: String(stage.deadline || 'TBD'),
+        isTbd: Boolean(stage.deadline === 'TBD' || stage.isTbd),
+        status: String(stage.status || 'Active Stage'),
+        details: String(stage.details || ''),
+        criteria: (stage.criteria || []).map(c => ({
+          id: String(c.id || ''),
+          name: String(c.name || ''),
+          category: String(c.category || 'academic'),
+          points: Number(c.points || 0)
+        })),
+        submissions: (stage.submissions || []).map(s => {
+          const cleaned = {
+            id: String(s.id || ''),
+            name: String(s.name || ''),
+            type: String(s.type || 'url'),
+            openDate: String(s.openDate || ''),
+            deadline: String(s.deadline || ''),
+            isOpen: Boolean(s.isOpen !== false)
+          };
+          if (s.googleFormUrl) cleaned.googleFormUrl = String(s.googleFormUrl);
+          if (s.evalGoogleFormUrl) cleaned.evalGoogleFormUrl = String(s.evalGoogleFormUrl);
+          return cleaned;
+        }),
+        assignedJudgeIds: (stage.assignedJudgeIds || []).map(id => String(id)),
+        acceptSubmissions: Boolean(stage.acceptSubmissions !== false),
+        googleFormUrl: String(stage.googleFormUrl || ''),
         updatedAt: new Date().toISOString()
       };
 
