@@ -578,7 +578,6 @@ export default function FTLayout() {
       { path: '/dashboard/timeline-manage', icon: <Calendar size={20} />, label: 'Timeline Management', roles: ['master', 'admin'] },
       { path: '/dashboard/settings', icon: <Settings size={20} />, label: 'Settings', roles: ['master', 'admin'] },
       { path: '/landing', icon: <Globe size={20} />, label: 'Public Landing Page', roles: ['master', 'admin'] },
-      { path: '/dashboard/test', icon: <TestTube size={20} />, label: 'Test', roles: ['master', 'admin'] },
     ];
     return items.filter(item => {
       if (item.roles === 'all') return true;
