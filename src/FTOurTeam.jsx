@@ -16,7 +16,6 @@ export default function FTOurTeam() {
   const [createTeamName, setCreateTeamName] = useState('');
   const [createTrack, setCreateTrack] = useState('pop_science');
   const [joinCodeInput, setJoinCodeInput] = useState('');
-  const [customInviteCodeInput, setCustomInviteCodeInput] = useState('');
   
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showTeamSetupSection, setShowTeamSetupSection] = useState(false);
@@ -166,8 +165,7 @@ export default function FTOurTeam() {
     try {
       const userTrack = user?.registeredTrack || meDoc?.registeredTrack || 'pop_science';
       const teamCode = generateTeamCode();
-      const rawCustomInvite = customInviteCodeInput.trim().toUpperCase();
-      const inviteCode = rawCustomInvite ? (rawCustomInvite.startsWith('SPARK-') ? rawCustomInvite : `SPARK-${rawCustomInvite}`) : generateInviteCode();
+      const inviteCode = generateInviteCode();
 
       const newTeam = {
         name: createTeamName.trim(),
@@ -193,7 +191,6 @@ export default function FTOurTeam() {
       await db.scientists.update(user.id, { participationMode: 'team' });
       setSuccess(`Team "${createTeamName.trim()}" created successfully! Invite code: ${inviteCode}`);
       setCreateTeamName('');
-      setCustomInviteCodeInput('');
     } catch (err) {
       setError('Failed to create team: ' + err.message);
     } finally {
@@ -461,7 +458,7 @@ export default function FTOurTeam() {
             </div>
 
             <form onSubmit={handleCreateTeam}>
-              <div className="ft-input-group" style={{ marginBottom: '1rem' }}>
+              <div className="ft-input-group" style={{ marginBottom: '1.5rem' }}>
                 <label className="ft-label">Team Name / اسم الفريق *</label>
                 <input
                   type="text"
@@ -470,18 +467,6 @@ export default function FTOurTeam() {
                   value={createTeamName}
                   onChange={(e) => setCreateTeamName(e.target.value)}
                   placeholder="e.g. Quantum Communicators"
-                />
-              </div>
-
-              <div className="ft-input-group" style={{ marginBottom: '1.5rem' }}>
-                <label className="ft-label">Custom Invite Code / كود الدعوة المخصص (Optional)</label>
-                <input
-                  type="text"
-                  className="ft-input"
-                  value={customInviteCodeInput}
-                  onChange={(e) => setCustomInviteCodeInput(e.target.value)}
-                  placeholder="e.g. SPARK-789X (Leave blank for auto)"
-                  style={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800 }}
                 />
               </div>
 
