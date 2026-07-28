@@ -277,13 +277,13 @@ export default function FTAdminSettings() {
         </div>
       )}
 
-      {/* Role Management (Trainer / Judge / Dual Role) */}
+      {/* Role Management (Trainer & Judge / Admin / Competitor) */}
       <div className="ft-card" style={{ padding: '2rem', marginBottom: '2rem', background: '#ffffff' }}>
         <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.3rem', fontWeight: 800, marginBottom: '0.5rem', color: '#0f172a' }}>
-          🧑‍⚖️ Account Levels & Roles (Trainer / Judge / Dual Role)
+          🧑‍⚖️ Account Levels & Roles (Competitor / Trainer & Judge / Admin)
         </h2>
         <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.25rem', fontWeight: 500 }}>
-          Change any user account role between Competitor, Workshop Trainer, Academic Judge, SciComm Judge, or Dual Role (Trainer & Judge).
+          Change any user account role between Competitor, Trainer & Judge (Dual Role), Administrator, or System Administrator (Master).
         </p>
 
         <div style={{ position: 'relative', marginBottom: '1rem' }}>
@@ -325,14 +325,10 @@ export default function FTAdminSettings() {
               <select
                 className="ft-select"
                 style={{ width: 'auto', padding: '0.45rem 0.85rem', fontSize: '0.85rem', fontWeight: 700, background: '#ffffff', border: '2px solid #cbd5e1', color: '#0f172a', borderRadius: '10px' }}
-                value={u.role || 'competitor'}
+                value={['judge', 'academic_judge', 'scicomm_judge', 'trainer', 'trainer_judge'].includes(u.role) ? 'trainer_judge' : (u.role || 'competitor')}
                 onChange={e => handleUpdateUserRole(u.id, e.target.value)}
               >
                 <option value="competitor">Competitor</option>
-                <option value="judge">General Competition Judge ⚖️</option>
-                <option value="academic_judge">Academic Judge 🎓</option>
-                <option value="scicomm_judge">Science Communicator Judge 🎙️</option>
-                <option value="trainer">Workshop Trainer 👨‍🏫</option>
                 <option value="trainer_judge">Trainer & Judge (Dual Role) 🌟</option>
                 <option value="admin">Administrator 🛡️</option>
                 <option value="master">System Administrator (Master) 👑</option>

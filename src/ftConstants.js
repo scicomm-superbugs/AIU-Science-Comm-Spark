@@ -50,15 +50,15 @@ export const FT_ROLES = {
 };
 
 export const FT_ROLE_LABELS = {
-  master: 'System Administrator (Master)',
-  admin: 'Administrator',
-  trainer: 'Workshop Trainer',
-  judge: 'General Competition Judge',
-  academic_judge: 'Academic Judge 🎓',
-  scicomm_judge: 'Science Communicator Judge 🎙️',
-  trainer_judge: 'Trainer & Judge',
-  competitor: 'SciComm Competitor',
-  user: 'SciComm Competitor'
+  master: 'System Administrator (Master) 👑',
+  admin: 'Administrator 🛡️',
+  trainer_judge: 'Trainer & Judge (Dual Role) 🌟',
+  trainer: 'Trainer & Judge (Dual Role) 🌟',
+  judge: 'Trainer & Judge (Dual Role) 🌟',
+  academic_judge: 'Trainer & Judge (Dual Role) 🌟',
+  scicomm_judge: 'Trainer & Judge (Dual Role) 🌟',
+  competitor: 'Competitor',
+  user: 'Competitor'
 };
 
 export const FT_ROLE_COLORS = {
