@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RefreshCw, Lock, Maximize2, Minimize2, Info, Sparkles } from 'lucide-react';
+import { RefreshCw, Lock, Maximize2, Minimize2, ShieldCheck } from 'lucide-react';
 
 export default function FTTestSection() {
   const [isLoading, setIsLoading] = useState(true);
@@ -92,6 +92,11 @@ export default function FTTestSection() {
 
           {/* Virtual Browser Toolbar Buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#e0f2fe', color: '#0369a1', padding: '0.3rem 0.65rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800 }}>
+              <ShieldCheck size={13} />
+              In-Page Navigation Enforced
+            </div>
+
             <button 
               onClick={handleRefresh}
               className="ft-btn"
@@ -114,14 +119,6 @@ export default function FTTestSection() {
           </div>
         </div>
 
-        {/* Informational Tip Banner */}
-        <div style={{ background: '#eff6ff', borderBottom: '1px solid #bfdbfe', padding: '0.45rem 1rem', fontSize: '0.78rem', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Info size={15} style={{ flexShrink: 0, color: '#2563eb' }} />
-          <span>
-            <strong>Note on Google Form Questions:</strong> If Google displays a "Fill out form" button instead of form questions, turn off <em>"Limit to 1 response"</em> and <em>"Collect email addresses"</em> in your Google Form settings to render all questions directly on this page.
-          </span>
-        </div>
-
         {/* Viewport Area */}
         <div style={{ flex: 1, width: '100%', position: 'relative', background: '#ffffff' }}>
           {isLoading && (
@@ -139,13 +136,15 @@ export default function FTTestSection() {
             >
               <div className="ft-spinner" style={{ width: '38px', height: '38px', borderWidth: '3px', marginBottom: '0.85rem' }} />
               <div style={{ fontWeight: 800, color: '#334155', fontSize: '0.9rem' }}>
-                Loading Embedded Google Form Viewport...
+                Loading Virtual Browser Viewport...
               </div>
             </div>
           )}
 
+          {/* Virtual Browser Viewport with Tab Trapping Restrictions */}
           <iframe
             key={iframeKey}
+            name="spark_virtual_browser"
             src={embeddedUrl}
             title="SciComm Spark Virtual Webview"
             onLoad={() => setIsLoading(false)}
@@ -156,6 +155,7 @@ export default function FTTestSection() {
               display: 'block'
             }}
             allow="autoplay; camera; microphone; geolocation"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-modals"
             allowFullScreen
           />
         </div>
