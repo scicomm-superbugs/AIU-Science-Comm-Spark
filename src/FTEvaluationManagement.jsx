@@ -43,6 +43,10 @@ export default function FTEvaluationManagement() {
   // Controlled evaluation form URLs state per submission deliverable
   const [evalUrls, setEvalUrls] = useState({}); // { [subFieldId]: url }
 
+  // Per-submission judge search input & dropdown states
+  const [subJudgeSearchText, setSubJudgeSearchText] = useState({});
+  const [subJudgeDropdownOpen, setSubJudgeDropdownOpen] = useState({});
+
   // Per-competitor evaluation draft state
   const [evalForm, setEvalForm] = useState({}); // { [targetId]: { judgeName: '', judgeId: '', score: '', comment: '' } }
 
@@ -697,38 +701,126 @@ export default function FTEvaluationManagement() {
                   </button>
                 </div>
 
-                {/* Per-Submission Specific Judge Assignments */}
-                <div style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginTop: '0.25rem' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 900, color: '#0f172a', display: 'block', marginBottom: '0.45rem' }}>
-                    👨‍⚖️ Assign Judges specifically to evaluate "{subField.name}" ({subAssignedIds.length} Assigned):
-                  </label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {allJudges.length === 0 ? (
+                {/* Per-Submission Specific Judge Assignments with Search & Suggestions Autocomplete */}
+                <div style={{ background: '#f8fafc', padding: '1rem 1.15rem', borderRadius: '14px', border: '1px solid #e2e8f0', marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0f172a' }}>
+                      👨‍⚖️ Assigned Judges for "{subField.name}" ({subAssignedIds.length} Assigned):
+                    </label>
+                  </div>
+
+                  {/* Assigned Judge Badges with Remove (X) Button */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                    {subAssignedIds.length === 0 ? (
                       <span style={{ fontSize: '0.78rem', color: '#64748b', fontStyle: 'italic' }}>
-                        No registered judges found.
+                        No specific judges assigned yet. Search below to assign judges to this deliverable.
                       </span>
                     ) : (
-                      allJudges.map(j => {
-                        const isSubAssigned = subAssignedIds.includes(j.id) || subAssignedIds.includes(j.username) || subAssignedIds.includes(j.email);
+                      subAssignedIds.map(jId => {
+                        const jObj = allJudges.find(j => j.id === jId || j.username === jId || j.email === jId);
+                        const jName = jObj ? (jObj.name || jObj.username) : jId;
+                        const jRole = jObj?.role || 'judge';
+
                         return (
-                          <button
-                            key={j.id}
-                            type="button"
-                            onClick={() => handleToggleSubmissionJudgeAssignment(subField.id, j.id)}
+                          <span
+                            key={jId}
                             style={{
-                              padding: '0.35rem 0.75rem', borderRadius: '8px', fontWeight: 800, fontSize: '0.78rem',
-                              background: isSubAssigned ? '#f0fdf4' : '#ffffff',
-                              color: isSubAssigned ? '#16a34a' : '#475569',
-                              border: isSubAssigned ? '1.5px solid #86efac' : '1px solid #cbd5e1',
-                              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', transition: 'all 0.15s ease'
+                              padding: '0.35rem 0.65rem 0.35rem 0.8rem', borderRadius: '20px', fontWeight: 800, fontSize: '0.78rem',
+                              background: '#ecfdf5', color: '#047857', border: '1.5px solid #a7f3d0',
+                              display: 'inline-flex', alignItems: 'center', gap: '0.4rem', boxShadow: '0 2px 6px rgba(5,150,105,0.08)'
                             }}
                           >
-                            <span>{isSubAssigned ? '✅' : '➕'}</span>
-                            <span>{j.name || j.username}</span>
-                            <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>({j.role})</span>
-                          </button>
+                            <span>✅ {jName} <small style={{ color: '#059669', opacity: 0.8 }}>({jRole})</small></span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleSubmissionJudgeAssignment(subField.id, jId)}
+                              title="Remove judge assignment"
+                              style={{
+                                background: '#be123c', color: '#ffffff', border: 'none', borderRadius: '50%',
+                                width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', fontSize: '0.65rem', padding: 0, fontWeight: 900, marginLeft: '0.2rem'
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </span>
                         );
                       })
+                    )}
+                  </div>
+
+                  {/* Search Input with Live Suggestions Dropdown */}
+                  <div style={{ position: 'relative', marginTop: '0.25rem' }}>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="text"
+                        className="ft-input"
+                        style={{ fontSize: '0.82rem', paddingRight: '2rem', background: '#ffffff' }}
+                        placeholder={`🔍 Type judge name or role to assign to "${subField.name}"...`}
+                        value={subJudgeSearchText[subField.id] || ''}
+                        onFocus={() => setSubJudgeDropdownOpen(prev => ({ ...prev, [subField.id]: true }))}
+                        onBlur={() => setTimeout(() => setSubJudgeDropdownOpen(prev => ({ ...prev, [subField.id]: false })), 200)}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setSubJudgeSearchText(prev => ({ ...prev, [subField.id]: val }));
+                          setSubJudgeDropdownOpen(prev => ({ ...prev, [subField.id]: true }));
+                        }}
+                      />
+                      <Search size={15} style={{ position: 'absolute', right: 10, top: 11, color: '#94a3b8', pointerEvents: 'none' }} />
+                    </div>
+
+                    {subJudgeDropdownOpen[subField.id] && (
+                      <div
+                        style={{
+                          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                          background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: '12px',
+                          maxHeight: '200px', overflowY: 'auto', boxShadow: '0 10px 25px rgba(0,0,0,0.12)',
+                          marginTop: '0.25rem', padding: '0.35rem 0'
+                        }}
+                      >
+                        {(() => {
+                          const q = (subJudgeSearchText[subField.id] || '').toLowerCase().trim();
+                          const candidateJudges = allJudges.filter(j => {
+                            return (j.name || '').toLowerCase().includes(q) ||
+                                   (j.username || '').toLowerCase().includes(q) ||
+                                   (j.role || '').toLowerCase().includes(q);
+                          });
+
+                          if (candidateJudges.length === 0) {
+                            return (
+                              <div style={{ padding: '0.6rem 0.85rem', fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                                No matching judges found
+                              </div>
+                            );
+                          }
+
+                          return candidateJudges.map(j => {
+                            const isAssigned = subAssignedIds.includes(j.id) || subAssignedIds.includes(j.username) || subAssignedIds.includes(j.email);
+
+                            return (
+                              <div
+                                key={j.id}
+                                onClick={() => {
+                                  handleToggleSubmissionJudgeAssignment(subField.id, j.id);
+                                  setSubJudgeSearchText(prev => ({ ...prev, [subField.id]: '' }));
+                                  setSubJudgeDropdownOpen(prev => ({ ...prev, [subField.id]: false }));
+                                }}
+                                style={{
+                                  padding: '0.5rem 0.85rem', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a',
+                                  cursor: 'pointer', background: isAssigned ? '#f0fdf4' : 'transparent',
+                                  borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                                }}
+                                onMouseDown={e => e.preventDefault()}
+                              >
+                                <span>👨‍⚖️ {j.name || j.username} <span style={{ fontSize: '0.72rem', color: '#64748b' }}>({j.role})</span></span>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: isAssigned ? '#16a34a' : '#2563eb' }}>
+                                  {isAssigned ? '✅ Assigned (Click to unassign)' : '➕ Add Judge'}
+                                </span>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
                     )}
                   </div>
                 </div>
