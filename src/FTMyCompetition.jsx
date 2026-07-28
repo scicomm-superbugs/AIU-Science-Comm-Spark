@@ -99,19 +99,25 @@ export default function FTMyCompetition() {
     )
   );
 
-  const [adminSelectedTrack, setAdminSelectedTrack] = useState('pop_science');
+  const [adminSelectedTrack, setAdminSelectedTrack] = useState('all');
 
   const actualCompetitorTrack = normalizeTrackKey(user?.registeredTrack || meDoc?.registeredTrack || myTeam?.track || user?.track) || 'pop_science';
   const competitorTrack = isAdminOrStaff ? adminSelectedTrack : actualCompetitorTrack;
 
-  const rawStages = DEFAULT_STAGES[competitorTrack] || DEFAULT_STAGES.pop_science;
+  const rawStages = competitorTrack === 'all'
+    ? [
+        ...DEFAULT_STAGES.pop_science.map(st => ({ ...st, trackKey: 'pop_science', trackLabel: 'Pop Science Videos 🎥' })),
+        ...DEFAULT_STAGES.science_journalism.map(st => ({ ...st, trackKey: 'science_journalism', trackLabel: 'Science Journalism 📰' }))
+      ]
+    : (DEFAULT_STAGES[competitorTrack] || DEFAULT_STAGES.pop_science).map(st => ({ ...st, trackKey: competitorTrack }));
 
-  const getStageData = (trackId, stageObj) => {
-    const found = timelineConfig.find(c => c.track === trackId && Number(c.stageId) === Number(stageObj.stageId));
-    return found ? { assignedJudgeIds: [], ...stageObj, ...found } : { assignedJudgeIds: [], ...stageObj };
+  const getStageData = (stObj) => {
+    const tKey = stObj.trackKey || competitorTrack;
+    const found = timelineConfig.find(c => c.track === tKey && Number(c.stageId) === Number(stObj.stageId));
+    return found ? { assignedJudgeIds: [], ...stObj, ...found } : { assignedJudgeIds: [], ...stObj };
   };
 
-  const stages = rawStages.map(st => getStageData(competitorTrack, st));
+  const stages = rawStages.map(st => getStageData(st));
   const mySubmissions = submissions.filter(s => s.competitorId === user?.id || s.competitorEmail === user?.email || (myTeam && s.teamId === myTeam.id));
 
   const [collapsedStages, setCollapsedStages] = useState({});
@@ -317,36 +323,48 @@ export default function FTMyCompetition() {
 
         {isAdminOrStaff && (
           <div style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            background: '#ffffff', padding: '0.45rem 0.75rem', borderRadius: '14px',
-            border: '1.5px solid #cbd5e1', boxShadow: '0 4px 14px rgba(0,0,0,0.04)'
+            display: 'flex', alignItems: 'center', gap: '0.4rem',
+            background: '#ffffff', padding: '0.45rem 0.75rem', borderRadius: '16px',
+            border: '1.5px solid #cbd5e1', boxShadow: '0 4px 14px rgba(0,0,0,0.05)', flexWrap: 'wrap'
           }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#334155', padding: '0 0.3rem' }}>
-              👀 Admin Track Preview:
+            <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0f172a', padding: '0 0.25rem' }}>
+              🎯 Track Filter:
             </span>
+            <button
+              type="button"
+              onClick={() => setAdminSelectedTrack('all')}
+              style={{
+                padding: '0.45rem 0.85rem', fontSize: '0.82rem', fontWeight: 800, borderRadius: '10px', border: 'none',
+                background: adminSelectedTrack === 'all' ? '#0f172a' : '#f1f5f9',
+                color: adminSelectedTrack === 'all' ? '#ffffff' : '#64748b',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', transition: 'all 0.2s ease'
+              }}
+            >
+              🌐 All Tracks
+            </button>
             <button
               type="button"
               onClick={() => setAdminSelectedTrack('pop_science')}
               style={{
-                padding: '0.45rem 0.9rem', fontSize: '0.82rem', fontWeight: 800, borderRadius: '10px', border: 'none',
-                background: competitorTrack === 'pop_science' ? '#be123c' : '#f1f5f9',
-                color: competitorTrack === 'pop_science' ? '#ffffff' : '#64748b',
+                padding: '0.45rem 0.85rem', fontSize: '0.82rem', fontWeight: 800, borderRadius: '10px', border: 'none',
+                background: adminSelectedTrack === 'pop_science' ? '#be123c' : '#f1f5f9',
+                color: adminSelectedTrack === 'pop_science' ? '#ffffff' : '#64748b',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', transition: 'all 0.2s ease'
               }}
             >
-              🎙️ Pop Science Videos
+              🎙️ Pop Science
             </button>
             <button
               type="button"
               onClick={() => setAdminSelectedTrack('science_journalism')}
               style={{
-                padding: '0.45rem 0.9rem', fontSize: '0.82rem', fontWeight: 800, borderRadius: '10px', border: 'none',
-                background: competitorTrack === 'science_journalism' ? '#2563eb' : '#f1f5f9',
-                color: competitorTrack === 'science_journalism' ? '#ffffff' : '#64748b',
+                padding: '0.45rem 0.85rem', fontSize: '0.82rem', fontWeight: 800, borderRadius: '10px', border: 'none',
+                background: adminSelectedTrack === 'science_journalism' ? '#2563eb' : '#f1f5f9',
+                color: adminSelectedTrack === 'science_journalism' ? '#ffffff' : '#64748b',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', transition: 'all 0.2s ease'
               }}
             >
-              📰 Science Journalism
+              📰 Journalism
             </button>
           </div>
         )}
