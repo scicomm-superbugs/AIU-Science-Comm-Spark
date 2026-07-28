@@ -572,23 +572,110 @@ export default function FTLayout() {
   const judgeOverviewItems = useMemo(() => navItems.filter(item => item.path === '/dashboard/judge' || item.path === '/judge'), [navItems]);
   const otherItems = useMemo(() => navItems.filter(item => !['/dashboard', '/dashboard/my-competition', '/dashboard/our-team', '/dashboard/judge', '/', '/my-competition', '/our-team', '/judge'].includes(item.path)), [navItems]);
 
+  // Get unread notification / action count for a specific sidebar section
+  const getSectionUnreadCount = (itemPath) => {
+    if (!itemPath) return 0;
+    const cleanPath = String(itemPath).replace(/\/$/, '');
+
+    // 1. Filter unread notifications for this section
+    const unreadNotifs = (myNotifications || []).filter(n => {
+      if (n.status !== 'unread') return false;
+      const cleanLink = n.link ? String(n.link).split('?')[0].split('#')[0].replace(/\/$/, '') : '';
+
+      // Direct link match
+      if (cleanLink && (cleanLink === cleanPath || (cleanPath !== '/dashboard' && cleanLink.startsWith(cleanPath)))) {
+        return true;
+      }
+
+      // Type-based section mapping
+      if (cleanPath === '/dashboard/my-competition') {
+        return ['evaluation', 'grade', 'submission_feedback', 'registration_approved'].includes(n.type);
+      }
+      if (cleanPath === '/dashboard/judge') {
+        return ['assignment', 'judge', 'judge_eval'].includes(n.type);
+      }
+      if (cleanPath === '/dashboard/competitors') {
+        return ['registration', 'user', 'role'].includes(n.type);
+      }
+      if (cleanPath === '/dashboard/evaluation-management') {
+        return ['submission'].includes(n.type);
+      }
+      if (cleanPath === '/dashboard/our-team') {
+        return ['team', 'leaderboard'].includes(n.type);
+      }
+      if (cleanPath === '/dashboard') {
+        return ['workshop', 'announcement', 'general', 'date_conflict'].includes(n.type);
+      }
+      return false;
+    });
+
+    let extraCount = 0;
+
+    // 2. Extra section-specific pending action counters (for admins/judges)
+    if (cleanPath === '/dashboard/competitors' && (userRole === 'admin' || userRole === 'master')) {
+      const pendingResets = (resetRequests || []).filter(r => r.status === 'pending').length;
+      extraCount += pendingResets;
+    }
+
+    return unreadNotifs.length + extraCount;
+  };
+
+  const handleSectionClick = async (itemPath) => {
+    setSidebarOpen(false);
+    if (!itemPath) return;
+    const cleanPath = String(itemPath).replace(/\/$/, '');
+    const unreadSectionNotifs = (myNotifications || []).filter(n => {
+      if (n.status !== 'unread') return false;
+      const cleanLink = n.link ? String(n.link).split('?')[0].split('#')[0].replace(/\/$/, '') : '';
+      return cleanLink === cleanPath || (cleanPath !== '/dashboard' && cleanLink.startsWith(cleanPath));
+    });
+    for (const notif of unreadSectionNotifs) {
+      try {
+        await db.ft_notifications.update(notif.id, { status: 'read' });
+      } catch (e) {
+        console.error('Failed to mark section notification read:', e);
+      }
+    }
+  };
+
   const renderNavLink = (item) => {
     if (item.section) {
       return <div key={item.section} className="ft-sidebar-section-label">{item.section}</div>;
     }
+    const count = getSectionUnreadCount(item.path);
     return (
       <Link
         key={item.path}
         to={item.path}
         className={`ft-sidebar-link ${isActive(item.path) ? 'active' : ''}`}
-        onClick={() => setSidebarOpen(false)}
+        onClick={() => handleSectionClick(item.path)}
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           {item.icon}
           <span>{item.label}</span>
         </div>
-
+        {count > 0 && (
+          <span style={{
+            background: 'linear-gradient(135deg, #ef4444 0%, #be123c 100%)',
+            color: '#ffffff',
+            fontSize: '0.72rem',
+            fontWeight: 900,
+            borderRadius: '9999px',
+            padding: '0.12rem 0.45rem',
+            minWidth: '20px',
+            height: '20px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(225, 29, 72, 0.45)',
+            lineHeight: 1,
+            marginLeft: '0.5rem',
+            flexShrink: 0
+          }}>
+            {count}
+          </span>
+        )}
       </Link>
     );
   };
