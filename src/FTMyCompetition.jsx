@@ -77,8 +77,7 @@ export const DEFAULT_STAGES = {
 
 export default function FTMyCompetition() {
   const { user } = useAuth();
-  const [evaluations, setEvaluations] = useState([]);
-
+  const liveEvaluations = useLiveCollection('ft_evaluations') || [];
   const timelineConfig = useLiveCollection('timeline_config') || [];
   const scientists = useLiveCollection('scientists') || [];
   const teams = useLiveCollection('ft_teams') || [];
@@ -86,6 +85,33 @@ export default function FTMyCompetition() {
 
   const meDoc = scientists.find(s => s.id === user?.id || s.email === user?.email || s.username === user?.username) || user;
   const myTeam = teams.find(t => (t.members || []).some(m => m.userId === user?.id || m.userId === meDoc?.id));
+
+  const myIdentifiers = useMemo(() => {
+    return [
+      user?.id,
+      user?.email,
+      user?.username,
+      meDoc?.id,
+      meDoc?.code,
+      meDoc?.competitorCode,
+      myTeam?.id,
+      myTeam?.code
+    ].filter(Boolean);
+  }, [user, meDoc, myTeam]);
+
+  const myEvaluations = useMemo(() => {
+    return liveEvaluations.filter(e => {
+      if (!e) return false;
+      return myIdentifiers.some(id =>
+        id === e.targetId ||
+        id === e.competitorId ||
+        id === e.teamId ||
+        id === e.competitorCode
+      );
+    });
+  }, [liveEvaluations, myIdentifiers]);
+
+  const [overviewModalData, setOverviewModalData] = useState(null);
 
   const isAdminOrStaff = Boolean(
     !user?.isImpersonating && (
@@ -428,6 +454,15 @@ export default function FTMyCompetition() {
                     Boolean(stageSub.fileUrl)
                   );
 
+                  const fieldEvals = myEvaluations.filter(e => {
+                    const stageMatch = Number(e.stageId) === Number(st.stageId);
+                    const subMatch = !e.submissionId || e.submissionId === sf.id || String(e.submissionId) === String(sf.id) || !e.fieldId || String(e.fieldId) === String(sf.id);
+                    return stageMatch && subMatch;
+                  });
+
+                  const isEvaluated = fieldEvals.length > 0;
+                  const totalScore = fieldEvals.reduce((sum, e) => sum + Number(e.score || 0), 0);
+
                   // Submission window check
                   const now = new Date();
                   const todayStr = now.toISOString().slice(0, 10);
@@ -437,7 +472,7 @@ export default function FTMyCompetition() {
                   const isAfterClose = hasCloseDate && todayStr > effDeadline;
                   const isWindowBlocked = (isBeforeOpen || isAfterClose) && !isAdminOrStaff;
                   const isManuallyClosed = sf.isOpen === false;
-                  const isDisabled = isManuallyClosed || isWindowBlocked || isFieldSubmitted;
+                  const isDisabled = (isManuallyClosed || isWindowBlocked) && !isFieldSubmitted && !isEvaluated;
 
                   // Days until open
                   const daysUntilOpen = isBeforeOpen ? Math.ceil((new Date(sf.openDate) - now) / 86400000) : 0;
@@ -447,6 +482,16 @@ export default function FTMyCompetition() {
                       key={sf.id || idx}
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (isFieldSubmitted || isEvaluated) {
+                          setOverviewModalData({
+                            stage: st,
+                            field: sf,
+                            fieldEvals,
+                            totalScore,
+                            stageSub
+                          });
+                          return;
+                        }
                         if (isDisabled) return;
                         const targetUrl = sf.googleFormUrl || st.googleFormUrl || 'https://forms.gle/tzgEf9QxBj3nG43S9';
                         setVirtualBrowserForm({
@@ -458,22 +503,24 @@ export default function FTMyCompetition() {
                       className="ft-btn"
                       disabled={isDisabled}
                       style={{
-                        background: isFieldSubmitted
-                          ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
-                          : isDisabled
-                            ? isBeforeOpen ? '#fffbeb' : '#fff1f2'
-                            : '#f1f5f9',
-                        color: isFieldSubmitted ? '#ffffff' : (isDisabled ? (isBeforeOpen ? '#92400e' : '#be123c') : '#334155'),
+                        background: isEvaluated
+                          ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                          : isFieldSubmitted
+                            ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
+                            : isDisabled
+                              ? isBeforeOpen ? '#fffbeb' : '#fff1f2'
+                              : '#f1f5f9',
+                        color: (isEvaluated || isFieldSubmitted) ? '#ffffff' : (isDisabled ? (isBeforeOpen ? '#92400e' : '#be123c') : '#334155'),
                         fontWeight: 800,
                         padding: '0.55rem 1.15rem',
                         borderRadius: '12px',
                         fontSize: '0.85rem',
-                        border: isFieldSubmitted
+                        border: (isEvaluated || isFieldSubmitted)
                           ? 'none'
                           : isDisabled
                             ? isBeforeOpen ? '1.5px solid #fde68a' : '1.5px solid #fecdd3'
                             : '1.5px solid #cbd5e1',
-                        boxShadow: isFieldSubmitted ? '0 4px 14px rgba(2, 132, 199, 0.3)' : 'none',
+                        boxShadow: isEvaluated ? '0 4px 14px rgba(5, 150, 105, 0.3)' : (isFieldSubmitted ? '0 4px 14px rgba(2, 132, 199, 0.3)' : 'none'),
                         cursor: isDisabled ? 'not-allowed' : 'pointer',
                         opacity: isDisabled ? 0.9 : 1,
                         display: 'inline-flex',
@@ -494,9 +541,13 @@ export default function FTMyCompetition() {
                         <>
                           <span>🛑 Window Closed:</span> {sf.name || `Stage ${st.stageId}`}
                         </>
+                      ) : isEvaluated ? (
+                        <>
+                          <span>⭐ Evaluated ({totalScore} pts):</span> {sf.name || `Stage ${st.stageId}`} ↗
+                        </>
                       ) : isFieldSubmitted ? (
                         <>
-                          <span>⏳ Under Evaluation:</span> {sf.name || `Stage ${st.stageId}`}
+                          <span>⏳ Under Evaluation:</span> {sf.name || `Stage ${st.stageId}`} ↗
                         </>
                       ) : (
                         <>
@@ -972,6 +1023,110 @@ export default function FTMyCompetition() {
                 style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', color: '#ffffff', border: 'none', fontWeight: 900, padding: '0.65rem 1.1rem', borderRadius: '12px', boxShadow: '0 4px 14px rgba(5,150,105,0.3)' }}
               >
                 ✅ Yes, Mark Submitted
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* COMPETITOR EVALUATION OVERVIEW MODAL */}
+      {overviewModalData && createPortal(
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100000, padding: '1.25rem' }}
+          onClick={() => setOverviewModalData(null)}
+        >
+          <div
+            className="ft-card ft-animate-in"
+            style={{ background: '#ffffff', padding: '1.85rem 2rem', borderRadius: '24px', maxWidth: '560px', width: '100%', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 25px 50px rgba(0,0,0,0.3)', border: '1.5px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #f1f5f9', paddingBottom: '1rem' }}>
+              <div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 900, color: '#be123c', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  🏆 Stage {overviewModalData.stage.stageId} Evaluation Overview
+                </div>
+                <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', margin: '0.2rem 0 0 0', fontFamily: "'Outfit', sans-serif" }}>
+                  {overviewModalData.field.name}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOverviewModalData(null)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontSize: '1rem', fontWeight: 900, color: '#64748b' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Grade Summary Box */}
+            <div style={{ background: overviewModalData.fieldEvals.length > 0 ? '#f0fdf4' : '#fffbeb', padding: '1.25rem', borderRadius: '16px', border: overviewModalData.fieldEvals.length > 0 ? '1.5px solid #86efac' : '1.5px solid #fde68a', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+              <div>
+                <div style={{ fontSize: '0.78rem', fontWeight: 900, color: overviewModalData.fieldEvals.length > 0 ? '#166534' : '#92400e', textTransform: 'uppercase' }}>
+                  {overviewModalData.fieldEvals.length > 0 ? '✅ Final Grade Awarded' : '⏳ Status'}
+                </div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: overviewModalData.fieldEvals.length > 0 ? '#15803d' : '#b45309', margin: '0.1rem 0 0 0' }}>
+                  {overviewModalData.fieldEvals.length > 0 ? `${overviewModalData.totalScore} pts` : 'Under Evaluation'}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, padding: '0.35rem 0.85rem', borderRadius: '20px', background: overviewModalData.fieldEvals.length > 0 ? '#dcfce7' : '#fef3c7', color: overviewModalData.fieldEvals.length > 0 ? '#15803d' : '#92400e', border: overviewModalData.fieldEvals.length > 0 ? '1px solid #86efac' : '1px solid #fde68a' }}>
+                  {overviewModalData.fieldEvals.length > 0 ? 'Graded & Verified' : 'In Review by Judges'}
+                </span>
+              </div>
+            </div>
+
+            {/* Judge Feedback Comments Section */}
+            <div>
+              <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.65rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span>💬</span> Judge Comments & Evaluation Feedback:
+              </div>
+
+              {overviewModalData.fieldEvals.length === 0 ? (
+                <div style={{ padding: '1rem 1.25rem', background: '#f8fafc', borderRadius: '14px', border: '1px dashed #cbd5e1', color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic', textAlign: 'center' }}>
+                  There are no comments or evaluation scores recorded yet. Your submission is currently under review.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {overviewModalData.fieldEvals.map((ev, idx) => {
+                    const hasComment = Boolean(ev.comments && ev.comments.trim());
+                    return (
+                      <div key={ev.id || idx} style={{ background: '#f8fafc', padding: '1rem 1.15rem', borderRadius: '14px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#0f172a' }}>
+                            👨‍⚖️ {ev.judgeName || 'Official Panel Judge'}
+                          </span>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#be123c', background: '#fff1f2', padding: '0.2rem 0.6rem', borderRadius: '8px', border: '1px solid #fecdd3' }}>
+                            {ev.score !== undefined ? `${ev.score} pts` : 'No score'}
+                          </span>
+                        </div>
+
+                        <div style={{ fontSize: '0.85rem', color: hasComment ? '#334155' : '#94a3b8', fontStyle: hasComment ? 'normal' : 'italic', background: '#ffffff', padding: '0.65rem 0.85rem', borderRadius: '10px', border: '1px solid #cbd5e1', lineHeight: 1.45 }}>
+                          {hasComment ? `"${ev.comments.trim()}"` : 'There are no comments provided for this evaluation entry.'}
+                        </div>
+
+                        {ev.evaluatedAt && (
+                          <div style={{ fontSize: '0.72rem', color: '#94a3b8', textAlign: 'right' }}>
+                            🕒 {new Date(ev.evaluatedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
+              <button
+                type="button"
+                className="ft-btn ft-btn-primary"
+                onClick={() => setOverviewModalData(null)}
+                style={{ padding: '0.6rem 1.4rem', borderRadius: '12px', fontWeight: 800 }}
+              >
+                Close Overview
               </button>
             </div>
           </div>
