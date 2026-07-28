@@ -53,8 +53,8 @@ export default function FTOurTeam() {
   }, [isCompetitorUser, partMode, myTeam]);
 
   const showTeamSetup = useMemo(() => {
-    return isCompetitorUser && !myTeam && partMode === 'team';
-  }, [isCompetitorUser, myTeam, partMode]);
+    return isCompetitorUser && !myTeam;
+  }, [isCompetitorUser, myTeam]);
 
   const formatSimpleCode = (rawCode, isTeam = false) => {
     if (!rawCode) return isTeam ? 'T-101' : 'C-101';
@@ -342,7 +342,7 @@ export default function FTOurTeam() {
     try {
       const updatedMembers = (myTeam.members || []).filter(m => m.userId !== memberUserId);
       await db.ft_teams.update(myTeam.id, { members: updatedMembers });
-      await db.scientists.update(memberUserId, { participationMode: 'individual' });
+      await db.scientists.update(memberUserId, { participationMode: 'team' });
       setSuccess('Member removed from team.');
     } catch (err) {
       alert('Failed to remove member: ' + err.message);
@@ -370,7 +370,7 @@ export default function FTOurTeam() {
           leaderUsername: newLeaderUsername
         });
       }
-      await db.scientists.update(user.id, { participationMode: 'individual' });
+      await db.scientists.update(user.id, { participationMode: 'team' });
       setSuccess('You have left the team.');
     } catch (err) {
       alert('Failed to leave team: ' + err.message);
