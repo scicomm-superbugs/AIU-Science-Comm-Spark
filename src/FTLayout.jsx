@@ -575,7 +575,6 @@ export default function FTLayout() {
       { path: '/dashboard/judge', icon: <ClipboardCheck size={20} />, label: 'Judge & Trainer Portal', roles: ['judge', 'trainer_judge', 'academic_judge', 'scicomm_judge'] },
       { section: 'Management', roles: ['master', 'admin'] },
       { path: '/dashboard/competitors', icon: <Users size={20} />, label: 'Users & Roles', roles: ['master', 'admin'] },
-      { path: '/dashboard/admin/submission-assignments', icon: <FileText size={20} />, label: 'Submission Assignments', roles: ['master', 'admin'] },
       { path: '/dashboard/timeline-manage', icon: <Calendar size={20} />, label: 'Timeline Management', roles: ['master', 'admin'] },
       { path: '/dashboard/settings', icon: <Settings size={20} />, label: 'Settings', roles: ['master', 'admin'] },
       { path: '/landing', icon: <Globe size={20} />, label: 'Public Landing Page', roles: ['master', 'admin'] },
