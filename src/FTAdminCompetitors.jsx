@@ -458,6 +458,16 @@ export default function FTAdminCompetitors() {
 
   const openEditModal = (competitor) => {
     setEditingCompetitor(competitor);
+    const myTeamDoc = teams.find(t => (t.members || []).some(m => m.userId === competitor.id || m.username === competitor.username));
+    
+    let formattedId = '';
+    if (myTeamDoc) {
+      formattedId = formatSimpleCode(myTeamDoc.code, true);
+    } else {
+      const raw = competitor.competitorCode || competitor.competitorIdNumber || competitor.universityId || competitor.id;
+      formattedId = formatSimpleCode(raw, false);
+    }
+
     setEditForm({
       name: competitor.name || '',
       username: competitor.username || '',
@@ -465,14 +475,14 @@ export default function FTAdminCompetitors() {
       universityId: competitor.universityId || '',
       title: competitor.title || '',
       role: competitor.role || 'competitor',
-      participationMode: competitor.participationMode || 'team',
+      participationMode: competitor.participationMode || (myTeamDoc ? 'team' : 'individual'),
       registeredTrack: competitor.registeredTrack || 'pop_science',
       department: competitor.department || '',
       avatarUrl: competitor.avatarUrl || competitor.avatar || '',
       nationalId: competitor.nationalId || '',
       institutionName: competitor.institutionName || '',
       isAlameinStudent: competitor.isAlameinStudent !== false,
-      competitorIdNumber: competitor.competitorIdNumber || ''
+      competitorIdNumber: formattedId
     });
   };
 
@@ -483,6 +493,11 @@ export default function FTAdminCompetitors() {
       return;
     }
     try {
+      let updatedId = editForm.competitorIdNumber.trim();
+      if (editForm.participationMode === 'individual' && !updatedId.startsWith('C-')) {
+        updatedId = formatSimpleCode(updatedId || editingCompetitor.id, false);
+      }
+
       const updates = {
         name: editForm.name.trim(),
         username: editForm.username.trim(),
@@ -497,7 +512,7 @@ export default function FTAdminCompetitors() {
         nationalId: editForm.nationalId.trim(),
         institutionName: editForm.institutionName.trim(),
         isAlameinStudent: editForm.isAlameinStudent,
-        competitorIdNumber: editForm.competitorIdNumber.trim()
+        competitorIdNumber: updatedId
       };
 
       await db.scientists.update(editingCompetitor.id, updates);
@@ -1132,7 +1147,7 @@ export default function FTAdminCompetitors() {
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
                                   {(item.members || []).map((m, mIdx) => {
                                     const mDoc = item.memberDocs?.find(d => d.id === m.userId || d.username === m.username) || {};
-                                    const mCode = formatSimpleCode(mDoc.competitorCode || mDoc.competitorIdNumber || mDoc.universityId || mDoc.id, false);
+                                    const mCode = formatSimpleCode(item.code || item.displayId, true);
 
                                     return (
                                       <div key={mIdx} style={{ padding: '1.25rem', background: '#ffffff', borderRadius: '16px', border: '1.5px solid #e2e8f0', boxShadow: '0 4px 14px rgba(0,0,0,0.03)' }}>
