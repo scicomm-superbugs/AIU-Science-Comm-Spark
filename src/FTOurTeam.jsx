@@ -151,11 +151,6 @@ export default function FTOurTeam() {
     };
   }, [user, myTeam, unifiedLeaderboard]);
 
-  // Generate simple 3-digit team code (e.g. T-101)
-  const generateTeamCode = () => {
-    return 'T-' + Math.floor(100 + Math.random() * 900);
-  };
-
   // Create Team Handler
   const handleCreateTeam = async (e) => {
     e.preventDefault();
@@ -169,10 +164,15 @@ export default function FTOurTeam() {
 
     try {
       const userTrack = user?.registeredTrack || meDoc?.registeredTrack || 'pop_science';
+      const teamCode = generateTeamCode();
+      const rawCustomInvite = customInviteCodeInput.trim().toUpperCase();
+      const inviteCode = rawCustomInvite ? (rawCustomInvite.startsWith('SPARK-') ? rawCustomInvite : `SPARK-${rawCustomInvite}`) : generateInviteCode();
+
       const newTeam = {
         name: createTeamName.trim(),
         track: userTrack,
-        code: generateTeamCode(),
+        code: teamCode,
+        inviteCode: inviteCode,
         leaderId: user.id,
         leaderUsername: user.username,
         members: [
@@ -190,8 +190,9 @@ export default function FTOurTeam() {
 
       await db.ft_teams.add(newTeam);
       await db.scientists.update(user.id, { participationMode: 'team' });
-      setSuccess(`Team "${createTeamName.trim()}" created successfully! Invite code: ${newTeam.code}`);
+      setSuccess(`Team "${createTeamName.trim()}" created successfully! Invite code: ${inviteCode}`);
       setCreateTeamName('');
+      setCustomInviteCodeInput('');
     } catch (err) {
       setError('Failed to create team: ' + err.message);
     } finally {
@@ -212,7 +213,12 @@ export default function FTOurTeam() {
     setIsSubmitting(true);
 
     try {
-      const targetTeam = teams.find(t => t.code?.toUpperCase() === cleanCode);
+      const targetTeam = teams.find(t => 
+        (t.inviteCode && t.inviteCode.toUpperCase() === cleanCode) || 
+        (t.code && t.code.toUpperCase() === cleanCode) ||
+        (getTeamInviteCode(t).toUpperCase() === cleanCode)
+      );
+
       if (!targetTeam) {
         setError('Invalid team invite code. Please check and try again.');
         setIsSubmitting(false);
@@ -454,7 +460,7 @@ export default function FTOurTeam() {
             </div>
 
             <form onSubmit={handleCreateTeam}>
-              <div className="ft-input-group" style={{ marginBottom: '1.5rem' }}>
+              <div className="ft-input-group" style={{ marginBottom: '1rem' }}>
                 <label className="ft-label">Team Name / اسم الفريق *</label>
                 <input
                   type="text"
@@ -463,6 +469,18 @@ export default function FTOurTeam() {
                   value={createTeamName}
                   onChange={(e) => setCreateTeamName(e.target.value)}
                   placeholder="e.g. Quantum Communicators"
+                />
+              </div>
+
+              <div className="ft-input-group" style={{ marginBottom: '1.5rem' }}>
+                <label className="ft-label">Custom Invite Code / كود الدعوة المخصص (Optional)</label>
+                <input
+                  type="text"
+                  className="ft-input"
+                  value={customInviteCodeInput}
+                  onChange={(e) => setCustomInviteCodeInput(e.target.value)}
+                  placeholder="e.g. SPARK-789X (Leave blank for auto)"
+                  style={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800 }}
                 />
               </div>
 
@@ -554,9 +572,9 @@ export default function FTOurTeam() {
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', background: 'rgba(255,255,255,0.1)', padding: '0.4rem 0.9rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)' }}>
                     <span style={{ fontSize: '0.82rem', color: '#cbd5e1' }}>Team Invite Code:</span>
-                    <span style={{ fontWeight: 900, letterSpacing: '0.05em', color: '#fbbf24' }}>{myTeam.code}</span>
+                    <span style={{ fontWeight: 900, letterSpacing: '0.05em', color: '#fbbf24' }}>{getTeamInviteCode(myTeam)}</span>
                     <button
-                      onClick={() => copyCode(myTeam.code)}
+                      onClick={() => copyCode(getTeamInviteCode(myTeam))}
                       style={{ background: 'none', border: 'none', color: copiedCode ? '#4ade80' : '#ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.78rem', fontWeight: 800 }}
                     >
                       {copiedCode ? <Check size={14} /> : <Copy size={14} />}
@@ -803,16 +821,16 @@ export default function FTOurTeam() {
 
             {/* Invite Code Share Card */}
             <div style={{ padding: '1rem', background: '#fff1f2', border: '1.5px solid #fecdd3', borderRadius: '16px', marginBottom: '1.25rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '0.82rem', color: '#be123c', fontWeight: 700 }}>Or share your Team Code directly:</div>
+              <div style={{ fontSize: '0.82rem', color: '#be123c', fontWeight: 700 }}>Or share your Team Invite Code directly:</div>
               <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#be123c', letterSpacing: '0.06em', margin: '0.3rem 0' }}>
-                {myTeam?.code}
+                {getTeamInviteCode(myTeam)}
               </div>
               <button
-                onClick={() => copyCode(myTeam?.code)}
+                onClick={() => copyCode(getTeamInviteCode(myTeam))}
                 className="ft-btn"
                 style={{ background: '#ffffff', color: '#be123c', border: '1px solid #fecdd3', fontSize: '0.78rem', fontWeight: 800, padding: '0.35rem 0.8rem', borderRadius: '8px' }}
               >
-                {copiedCode ? '✅ Copied Code!' : '📋 Copy Code'}
+                {copiedCode ? '✅ Copied Invite Code!' : '📋 Copy Invite Code'}
               </button>
             </div>
 

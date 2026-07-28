@@ -325,6 +325,13 @@ export default function FTAdminCompetitors() {
     return (isTeam ? 'T-' : 'C-') + (100 + hash);
   };
 
+  const getTeamInviteCode = (t) => {
+    if (!t) return '';
+    if (t.inviteCode) return t.inviteCode;
+    const numStr = String(t.code || t.id || '101').replace(/\D/g, '') || '101';
+    return `SPARK-${numStr}X`;
+  };
+
   // Unified List: Group Teams as single rows & Solo Competitors as single rows
   const unifiedList = useMemo(() => {
     // 1. Teams Entries
@@ -344,7 +351,7 @@ export default function FTAdminCompetitors() {
         id: t.id,
         type: 'team',
         displayId: formatSimpleCode(t.code, true),
-        teamInviteCode: t.code,
+        teamInviteCode: t.inviteCode || getTeamInviteCode(t),
         name: t.name,
         track: t.track || 'pop_science',
         members: t.members || [],
