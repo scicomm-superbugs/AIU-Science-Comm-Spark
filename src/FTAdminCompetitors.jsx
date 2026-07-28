@@ -22,6 +22,9 @@ export default function FTAdminCompetitors() {
   const [editingCompetitor, setEditingCompetitor] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [allScientists, setAllScientists] = useState([]);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [addingToTeamModal, setAddingToTeamModal] = useState(null);
   const [adminAddSearch, setAdminAddSearch] = useState('');
 
