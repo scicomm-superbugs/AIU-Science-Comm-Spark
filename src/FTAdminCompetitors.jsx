@@ -173,13 +173,11 @@ export default function FTAdminCompetitors() {
       const evals = evaluations.filter(e => jIds.includes(String(e.judgeId).toLowerCase()));
       const totalPoints = evals.reduce((sum, e) => sum + (Number(e.totalScore) || 0), 0);
 
-      const roleLabel = j.role === 'academic_judge' 
-        ? 'Academic Judge 🎓' 
-        : j.role === 'scicomm_judge' 
-        ? 'Science Communicator Judge 🎙️' 
-        : j.role === 'trainer_judge' 
-        ? 'Trainer & Judge 🌟' 
-        : 'Master Evaluation Administrator 🛡️';
+      const roleLabel = (j.role === 'trainer_judge' || j.role === 'trainer')
+        ? 'Trainer & Judge 🎓' 
+        : (j.role === 'admin' || j.role === 'master')
+        ? 'Master Evaluation Administrator 🛡️'
+        : 'Judge ⚖️';
 
       return [
         j.id || '',

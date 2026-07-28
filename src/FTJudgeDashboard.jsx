@@ -100,11 +100,9 @@ export default function FTJudgeDashboard() {
 
   // Judge Role Label
   const judgeRoleTitle = useMemo(() => {
-    if (userRole === 'academic_judge') return 'Academic Judge 🎓';
-    if (userRole === 'scicomm_judge') return 'Science Communicator Judge 🎙️';
-    if (userRole === 'trainer_judge') return 'Trainer & Judge (Dual Role) 🌟';
+    if (userRole === 'trainer_judge' || userRole === 'trainer') return 'Trainer & Judge (Dual) 🎓';
     if (userRole === 'admin' || userRole === 'master') return 'Master Evaluation Administrator 🛡️';
-    return 'General Competition Judge ⚖️';
+    return 'Judge ⚖️';
   }, [userRole]);
 
   // Compute Real Assigned Stages for this judge (configured by admin in Timeline Management / Evaluation Management)
