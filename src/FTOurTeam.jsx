@@ -234,14 +234,20 @@ export default function FTOurTeam() {
     setIsSubmitting(true);
 
     try {
-      const targetTeam = teams.find(t => 
-        (t.inviteCode && t.inviteCode.toUpperCase() === cleanCode) || 
-        (t.code && t.code.toUpperCase() === cleanCode) ||
-        (getTeamInviteCode(t).toUpperCase() === cleanCode)
-      );
+      // ONLY allow joining via Invitation Code (e.g. SPARK-836X). Team ID (T-XXX) or Competitor ID (C-XXX) are disallowed.
+      const targetTeam = teams.find(t => {
+        const teamInviteCode = (t.inviteCode || getTeamInviteCode(t)).toUpperCase();
+        return teamInviteCode === cleanCode;
+      });
 
       if (!targetTeam) {
-        setError('Invalid team invite code. Please check and try again.');
+        if (/^T-\d+$/i.test(cleanCode)) {
+          setError('Team IDs (T-XXX) cannot be used to join. Please use the official Team Invite Code (e.g. SPARK-836X).');
+        } else if (/^C-\d+$/i.test(cleanCode)) {
+          setError('Competitor IDs (C-XXX) cannot be used to join a team. Please enter the Team Invite Code (e.g. SPARK-836X).');
+        } else {
+          setError('Invalid team invite code. Please enter a valid invitation code (e.g. SPARK-836X).');
+        }
         setIsSubmitting(false);
         return;
       }
