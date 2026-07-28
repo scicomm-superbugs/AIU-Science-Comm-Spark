@@ -815,7 +815,7 @@ export default function FTOurTeam() {
                 <Trophy size={20} style={{ color: '#f59e0b' }} /> 🎥 Track 1: Pop Science Videos
               </h3>
               <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>
-                Live rankings for short video content creators.
+                Live rankings for visual, video & multimedia science communication competitors.
               </p>
             </div>
             <span style={{ fontSize: '0.78rem', fontWeight: 900, background: '#fff1f2', color: '#be123c', padding: '0.25rem 0.75rem', borderRadius: '20px', border: '1px solid #fecdd3' }}>
@@ -894,7 +894,7 @@ export default function FTOurTeam() {
                 <Trophy size={20} style={{ color: '#f59e0b' }} /> 📰 Track 2: Science Journalism
               </h3>
               <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>
-                Live rankings for articles & written journalism.
+                Live rankings for science journalism, investigation & written media competitors.
               </p>
             </div>
             <span style={{ fontSize: '0.78rem', fontWeight: 900, background: '#eff6ff', color: '#2563eb', padding: '0.25rem 0.75rem', borderRadius: '20px', border: '1px solid #bfdbfe' }}>

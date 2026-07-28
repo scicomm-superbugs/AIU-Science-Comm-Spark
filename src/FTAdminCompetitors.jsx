@@ -3,7 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import { db, firestore, getCollectionName } from './db';
 import { useLiveCollection } from './db';
 import { collection, getDocs } from 'firebase/firestore';
-import { Search, Download, X, Users, User, Video, BookOpen, Layers, Shield, Trash2, Edit3, Sparkles } from 'lucide-react';
+import { Search, Download, X, Users, User, Video, BookOpen, Layers, Shield, Trash2, Edit3, Sparkles, Eye } from 'lucide-react';
 import { FT_DEPARTMENTS, FT_REG_STATUS_ICONS, FT_REG_STATUS_LABELS, FT_DEFAULT_REQUIRED_HOURS, normalizeTrackKey } from './ftConstants';
 import './scicommspark.css';
 
@@ -334,14 +334,18 @@ export default function FTAdminCompetitors() {
     return `SPARK-${numStr}X`;
   };
 
-  // Unified List: Group Teams as single rows & Solo Competitors as single rows
+  // Role Filter State
+  const [roleFilter, setRoleFilter] = useState('All'); // All, competitor, judge, admin, teams, individuals
+  const [overviewModalDoc, setOverviewModalDoc] = useState(null);
+
+  // Unified List: Group Teams + Competitors + Judges + Admins + Staff
   const unifiedList = useMemo(() => {
     // 1. Teams Entries
     const teamEntries = teams.map(t => {
       const memberUserIds = (t.members || []).map(m => m.userId).filter(Boolean);
       const memberUsernames = (t.members || []).map(m => m.username).filter(Boolean);
 
-      const memberDocs = competitors.filter(c => 
+      const memberDocs = allScientists.filter(c => 
         memberUserIds.includes(c.id) || 
         memberUsernames.includes(c.username)
       );
@@ -352,6 +356,8 @@ export default function FTAdminCompetitors() {
       return {
         id: t.id,
         type: 'team',
+        category: 'team',
+        roleLabel: '👥 Competition Team',
         displayId: formatSimpleCode(t.code, true),
         teamInviteCode: t.inviteCode || getTeamInviteCode(t),
         name: t.name,
@@ -364,37 +370,57 @@ export default function FTAdminCompetitors() {
       };
     });
 
-    // 2. Solo Individual Entries (Not in any team)
-    const teamUserIds = teams.flatMap(t => (t.members || []).map(m => m.userId).filter(Boolean));
-    const teamUsernames = teams.flatMap(t => (t.members || []).map(m => m.username).filter(Boolean));
+    // 2. All Individual Users (Competitors, Judges, Admins, Staff)
+    const userEntries = allScientists.map(c => {
+      const myTeam = teams.find(t => (t.members || []).some(m => m.userId === c.id || m.username === c.username));
+      const isTeamMember = Boolean(myTeam);
 
-    const soloCompetitors = competitors.filter(c => 
-      !teamUserIds.includes(c.id) && 
-      !teamUsernames.includes(c.username)
-    );
+      let cat = 'competitor';
+      let roleLabel = '👤 Competitor';
+      if (c.role === 'academic_judge') {
+        cat = 'judge';
+        roleLabel = '🎓 Academic Judge';
+      } else if (c.role === 'scicomm_judge') {
+        cat = 'judge';
+        roleLabel = '🎙️ SciComm Judge';
+      } else if (c.role === 'judge' || c.role === 'trainer_judge') {
+        cat = 'judge';
+        roleLabel = '⚖️ Competition Judge';
+      } else if (c.role === 'admin' || c.role === 'master' || c.role === 'system_administrator') {
+        cat = 'admin';
+        roleLabel = '👑 Master Admin';
+      } else if (c.role === 'trainer') {
+        cat = 'admin';
+        roleLabel = '🎓 Academic Trainer';
+      }
 
-    const soloEntries = soloCompetitors.map(c => {
       const rawCode = c.competitorCode || c.competitorIdNumber || c.employeeId || c.universityId || c.id;
+      const displayId = c.competitorCode || formatSimpleCode(rawCode, isTeamMember);
+
       return {
         id: c.id,
-        type: 'individual',
-        displayId: formatSimpleCode(rawCode, false),
-        name: c.name || c.username,
+        type: isTeamMember ? 'team_member' : 'individual',
+        category: cat,
+        roleLabel,
+        displayId,
+        name: c.name || c.username || 'User',
         email: c.email || '',
         phone: c.phone || c.whatsapp || '—',
         username: c.username,
+        role: c.role || 'competitor',
         avatar: c.avatarUrl || c.avatar,
         track: c.registeredTrack || 'pop_science',
         department: c.department || 'Computer Science & AI',
         institutionName: c.institutionName || (c.isAlameinStudent !== false ? 'Alamein International University' : '—'),
         nationalId: c.nationalId || '—',
         isAlameinStudent: c.isAlameinStudent !== false,
+        myTeam,
         rawDoc: c
       };
     });
 
-    return [...teamEntries, ...soloEntries];
-  }, [teams, competitors]);
+    return [...teamEntries, ...userEntries];
+  }, [teams, allScientists]);
 
   // Filter unified list
   const filteredList = useMemo(() => {
@@ -403,22 +429,32 @@ export default function FTAdminCompetitors() {
         item.name?.toLowerCase().includes(search.toLowerCase()) ||
         item.displayId?.toLowerCase().includes(search.toLowerCase()) ||
         item.email?.toLowerCase().includes(search.toLowerCase()) ||
+        item.roleLabel?.toLowerCase().includes(search.toLowerCase()) ||
         item.members?.some(m => m.name?.toLowerCase().includes(search.toLowerCase()) || m.username?.toLowerCase().includes(search.toLowerCase()));
 
       const matchType = typeFilter === 'All' ||
         (typeFilter === 'teams' && item.type === 'team') ||
-        (typeFilter === 'individuals' && item.type === 'individual');
+        (typeFilter === 'individuals' && (item.type === 'individual' || item.type === 'team_member'));
 
-      const matchTrack = trackFilter === 'All' || item.track === trackFilter;
+      const matchRole = roleFilter === 'All' ||
+        (roleFilter === 'competitor' && item.category === 'competitor') ||
+        (roleFilter === 'judge' && item.category === 'judge') ||
+        (roleFilter === 'admin' && item.category === 'admin') ||
+        (roleFilter === 'teams' && item.type === 'team') ||
+        (roleFilter === 'individuals' && item.type !== 'team');
 
-      return matchSearch && matchType && matchTrack;
+      const matchTrack = trackFilter === 'All' || item.track === trackFilter || !item.track;
+
+      return matchSearch && matchType && matchRole && matchTrack;
     });
-  }, [unifiedList, search, typeFilter, trackFilter]);
+  }, [unifiedList, search, typeFilter, roleFilter, trackFilter]);
 
   // Summary Counts
   const totalEntries = unifiedList.length;
   const teamsCount = unifiedList.filter(i => i.type === 'team').length;
-  const individualsCount = unifiedList.filter(i => i.type === 'individual').length;
+  const competitorsCount = unifiedList.filter(i => i.category === 'competitor').length;
+  const judgesCount = unifiedList.filter(i => i.category === 'judge').length;
+  const adminsCount = unifiedList.filter(i => i.category === 'admin').length;
   const track1Count = unifiedList.filter(i => i.track === 'pop_science').length;
   const track2Count = unifiedList.filter(i => i.track === 'science_journalism').length;
 
@@ -878,12 +914,12 @@ export default function FTAdminCompetitors() {
       )}
 
       {/* Summary Stats Grid */}
-      <div className="ft-stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', marginBottom: '1.5rem' }}>
+      <div className="ft-stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginBottom: '1.5rem' }}>
         <div className="ft-stat-card">
           <div className="ft-stat-icon" style={{ background: 'var(--ft-primary-bg)' }}>👥</div>
           <div>
             <div className="ft-stat-value">{totalEntries}</div>
-            <div className="ft-stat-label">Total Entries</div>
+            <div className="ft-stat-label">Total System Users</div>
           </div>
         </div>
         <div className="ft-stat-card">
@@ -896,8 +932,22 @@ export default function FTAdminCompetitors() {
         <div className="ft-stat-card">
           <div className="ft-stat-icon" style={{ background: '#f0fdf4' }}>👤</div>
           <div>
-            <div className="ft-stat-value" style={{ color: '#059669' }}>{individualsCount}</div>
-            <div className="ft-stat-label">Individuals</div>
+            <div className="ft-stat-value" style={{ color: '#059669' }}>{competitorsCount}</div>
+            <div className="ft-stat-label">Competitors</div>
+          </div>
+        </div>
+        <div className="ft-stat-card">
+          <div className="ft-stat-icon" style={{ background: '#fef3c7' }}>🎓</div>
+          <div>
+            <div className="ft-stat-value" style={{ color: '#b45309' }}>{judgesCount}</div>
+            <div className="ft-stat-label">Judges Panel</div>
+          </div>
+        </div>
+        <div className="ft-stat-card">
+          <div className="ft-stat-icon" style={{ background: '#fae8ff' }}>👑</div>
+          <div>
+            <div className="ft-stat-value" style={{ color: '#86198f' }}>{adminsCount}</div>
+            <div className="ft-stat-label">Admins & Staff</div>
           </div>
         </div>
         <div className="ft-stat-card">
@@ -916,22 +966,25 @@ export default function FTAdminCompetitors() {
         </div>
       </div>
 
-      {/* Search Bar & Competition Filters */}
+      {/* Search Bar & Role/Track Filters */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem', background: '#ffffff', padding: '1.25rem', borderRadius: '20px', border: '1.5px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
         <div className="ft-search-input-wrapper" style={{ width: '100%' }}>
           <Search size={18} />
-          <input type="text" placeholder="Search by name, ID number (T-101 / C-101), team name, or email..." value={search} onChange={e => setSearch(e.target.value)} />
+          <input type="text" placeholder="Search by name, ID number (T-101 / C-101 / J-201), team name, email, or role..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
 
-        {/* Competition Filters */}
-        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Type Filter */}
+        {/* Competition & System Role Filters */}
+        <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          
+          {/* System Role Filter */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#64748b' }}>Participation Mode:</span>
+            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#64748b' }}>Account Role:</span>
             <div className="ft-filter-chips" style={{ margin: 0 }}>
-              <button className={`ft-chip ${typeFilter === 'All' ? 'active' : ''}`} onClick={() => setTypeFilter('All')}>All Types</button>
-              <button className={`ft-chip ${typeFilter === 'teams' ? 'active' : ''}`} onClick={() => setTypeFilter('teams')}>👥 Teams Only</button>
-              <button className={`ft-chip ${typeFilter === 'individuals' ? 'active' : ''}`} onClick={() => setTypeFilter('individuals')}>👤 Individuals Only</button>
+              <button className={`ft-chip ${roleFilter === 'All' ? 'active' : ''}`} onClick={() => setRoleFilter('All')}>All Roles ({totalEntries})</button>
+              <button className={`ft-chip ${roleFilter === 'competitor' ? 'active' : ''}`} onClick={() => setRoleFilter('competitor')}>👤 Competitors ({competitorsCount})</button>
+              <button className={`ft-chip ${roleFilter === 'judge' ? 'active' : ''}`} onClick={() => setRoleFilter('judge')}>🎓 Judges ({judgesCount})</button>
+              <button className={`ft-chip ${roleFilter === 'admin' ? 'active' : ''}`} onClick={() => setRoleFilter('admin')}>👑 Admins & Staff ({adminsCount})</button>
+              <button className={`ft-chip ${roleFilter === 'teams' ? 'active' : ''}`} onClick={() => setRoleFilter('teams')}>👥 Teams ({teamsCount})</button>
             </div>
           </div>
 
@@ -940,8 +993,8 @@ export default function FTAdminCompetitors() {
             <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#64748b' }}>Competition Track:</span>
             <div className="ft-filter-chips" style={{ margin: 0 }}>
               <button className={`ft-chip ${trackFilter === 'All' ? 'active' : ''}`} onClick={() => setTrackFilter('All')}>All Tracks</button>
-              <button className={`ft-chip ${trackFilter === 'pop_science' ? 'active' : ''}`} onClick={() => setTrackFilter('pop_science')}>🎬 Track 1: Pop Videos</button>
-              <button className={`ft-chip ${trackFilter === 'science_journalism' ? 'active' : ''}`} onClick={() => setTrackFilter('science_journalism')}>📰 Track 2: Journalism</button>
+              <button className={`ft-chip ${trackFilter === 'pop_science' ? 'active' : ''}`} onClick={() => setTrackFilter('pop_science')}>🎬 Track 1: Pop Videos ({track1Count})</button>
+              <button className={`ft-chip ${trackFilter === 'science_journalism' ? 'active' : ''}`} onClick={() => setTrackFilter('science_journalism')}>📰 Track 2: Journalism ({track2Count})</button>
             </div>
           </div>
         </div>
@@ -1063,19 +1116,28 @@ export default function FTAdminCompetitors() {
                       </td>
 
                       {/* Actions */}
-                      <td style={{ width: '90px' }} onClick={e => e.stopPropagation()}>
+                      <td style={{ width: '120px' }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: 'flex', gap: '0.35rem' }}>
+                          <button
+                            className="ft-btn"
+                            onClick={() => setOverviewModalDoc(item)}
+                            title="View Account Overview & Details"
+                            style={{ background: '#e0f2fe', border: 'none', padding: '0.35rem', borderRadius: '8px', color: '#0284c7', cursor: 'pointer' }}
+                          >
+                            <Eye size={15} />
+                          </button>
+
                           <button
                             className="ft-btn"
                             onClick={() => {
                               if (item.type === 'team') {
-                                const leaderDoc = item.memberDocs?.find(d => d.id === item.rawDoc.leaderId || d.username === item.rawDoc.leaderUsername) || item.memberDocs?.[0] || item.rawDoc;
+                                const leaderDoc = item.memberDocs?.find(d => d.id === item.rawDoc?.leaderId || d.username === item.rawDoc?.leaderUsername) || item.memberDocs?.[0] || item.rawDoc;
                                 openEditModal(leaderDoc);
                               } else {
-                                openEditModal(item.rawDoc);
+                                openEditModal(item.rawDoc || item);
                               }
                             }}
-                            title="Edit Competitor Details & Mode"
+                            title="Edit Account / Competitor Details"
                             style={{ background: '#f1f5f9', border: 'none', padding: '0.35rem', borderRadius: '8px', color: '#2563eb', cursor: 'pointer' }}
                           >
                             <Edit3 size={15} />
@@ -1435,6 +1497,100 @@ export default function FTAdminCompetitors() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
               <button type="button" className="ft-btn ft-btn-secondary" onClick={() => setAddingToTeamModal(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ACCOUNT OVERVIEW MODAL */}
+      {overviewModalDoc && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100000, padding: '1rem' }} onClick={() => setOverviewModalDoc(null)}>
+          <div className="ft-card ft-animate-in" style={{ background: '#ffffff', borderRadius: '24px', padding: '2rem', maxWidth: '580px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px rgba(0,0,0,0.3)', border: '1.5px solid #cbd5e1' }} onClick={e => e.stopPropagation()}>
+            
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #f1f5f9', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <img
+                  src={overviewModalDoc.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${overviewModalDoc.username || overviewModalDoc.id}`}
+                  alt=""
+                  style={{ width: '56px', height: '56px', borderRadius: '50%', border: '2.5px solid #be123c', objectFit: 'cover' }}
+                />
+                <div>
+                  <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: 0, fontFamily: "'Outfit', sans-serif" }}>
+                    {overviewModalDoc.name}
+                  </h3>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 800, background: '#f1f5f9', padding: '0.15rem 0.55rem', borderRadius: '8px', color: '#334155' }}>
+                      ID: {overviewModalDoc.displayId}
+                    </span>
+                    <span>·</span>
+                    <span style={{ fontWeight: 800, color: '#be123c' }}>
+                      {overviewModalDoc.roleLabel || overviewModalDoc.role}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button type="button" onClick={() => setOverviewModalDoc(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontSize: '1rem', color: '#64748b', fontWeight: 900 }}>
+                ✕
+              </button>
+            </div>
+
+            {/* Profile Details Cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              
+              <div style={{ background: '#f8fafc', padding: '1.1rem 1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.9rem' }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Email Address</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', marginTop: '0.15rem', wordBreak: 'break-all' }}>{overviewModalDoc.email || '—'}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Phone / WhatsApp</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', marginTop: '0.15rem' }}>{overviewModalDoc.phone || '—'}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Competition Track</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#be123c', marginTop: '0.15rem' }}>
+                    {overviewModalDoc.track === 'science_journalism' ? '📰 Track 2: Science Journalism' : (overviewModalDoc.track === 'pop_science' ? '🎥 Track 1: Pop Science Videos' : 'All Competition Tracks')}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Institution / Dept</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', marginTop: '0.15rem' }}>
+                    {overviewModalDoc.institutionName || 'AIU'} ({overviewModalDoc.department || 'General'})
+                  </div>
+                </div>
+              </div>
+
+              {/* If Team */}
+              {overviewModalDoc.type === 'team' && (
+                <div style={{ background: '#fff1f2', padding: '1.1rem', borderRadius: '16px', border: '1px solid #fecdd3' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 900, color: '#9f1239', marginBottom: '0.5rem' }}>
+                    👥 Team Members ({overviewModalDoc.members?.length || 0}) — Invite Code: <strong>{overviewModalDoc.teamInviteCode}</strong>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                    {(overviewModalDoc.members || []).map((m, idx) => (
+                      <div key={idx} style={{ background: '#ffffff', padding: '0.55rem 0.85rem', borderRadius: '10px', border: '1px solid #fecdd3', fontSize: '0.82rem', fontWeight: 800, color: '#334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>{m.name || m.username}</span>
+                        <span style={{ color: '#be123c', fontWeight: 900 }}>{m.role || 'Member'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '1.25rem', marginTop: '1.25rem', borderTop: '1px solid #f1f5f9', gap: '0.75rem' }}>
+              <button
+                type="button"
+                className="ft-btn ft-btn-primary"
+                onClick={() => setOverviewModalDoc(null)}
+                style={{ borderRadius: '10px', padding: '0.55rem 1.3rem', fontWeight: 800 }}
+              >
+                Close Overview
+              </button>
             </div>
           </div>
         </div>
