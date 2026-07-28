@@ -16,6 +16,7 @@ export default function FTOurTeam() {
   const [createTeamName, setCreateTeamName] = useState('');
   const [createTrack, setCreateTrack] = useState('pop_science');
   const [joinCodeInput, setJoinCodeInput] = useState('');
+  const [customInviteCodeInput, setCustomInviteCodeInput] = useState('');
   
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showTeamSetupSection, setShowTeamSetupSection] = useState(false);
