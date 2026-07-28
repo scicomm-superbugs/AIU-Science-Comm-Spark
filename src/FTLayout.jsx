@@ -2,9 +2,9 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { db, firestore, getCollectionName, useLiveCollection, getFirebaseAuth, uploadFile } from './db';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { MapPin, BookOpen, Users, Settings, ClipboardCheck, LayoutDashboard, LogOut, Moon, Sun, Menu, X, ChevronDown, GraduationCap, Bell, AlertTriangle, Calendar, FileText, Globe, Camera, TestTube } from 'lucide-react';
+import { MapPin, BookOpen, Users, Settings, ClipboardCheck, LayoutDashboard, LogOut, Moon, Sun, Menu, X, ChevronDown, GraduationCap, Bell, AlertTriangle, Calendar, FileText, Globe, Camera, TestTube, RotateCcw } from 'lucide-react';
 import { FT_FACULTY, FT_ROLE_LABELS, FT_ROLE_COLORS, isFacultyRole, isJudgeRole, isCompetitorRole, FT_DEFAULT_REQUIRED_HOURS } from './ftConstants';
 import { getUserConflicts } from './ftConflictUtils';
 import bcrypt from 'bcryptjs';
@@ -698,9 +698,9 @@ export default function FTLayout() {
         </div>
 
 
-        {/* Center Admin View As Role Impersonation Selector */}
+        {/* Center Admin View As Role Impersonation Selector & Reset Test Button */}
         {isRealAdmin && (
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 1rem' }}>
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.65rem', margin: '0 1rem', flexWrap: 'wrap' }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -756,6 +756,31 @@ export default function FTLayout() {
                 </optgroup>
               </select>
             </div>
+
+            <button
+              onClick={handleResetTestData}
+              disabled={resettingTestData}
+              title="Reset all test user submissions, scores, comments, and notifications"
+              style={{
+                background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)',
+                color: '#be123c',
+                border: '1.5px solid #fecdd3',
+                padding: '0.35rem 0.85rem',
+                borderRadius: '12px',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                cursor: resettingTestData ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                boxShadow: '0 2px 6px rgba(190, 18, 60, 0.08)',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <RotateCcw size={14} style={{ animation: resettingTestData ? 'spin 1s linear infinite' : 'none' }} />
+              {resettingTestData ? 'Resetting Test Data...' : '🔄 Reset Test Users & Submissions'}
+            </button>
           </div>
         )}
 
