@@ -103,10 +103,13 @@ export default function FTOurTeam() {
       const memberUserIds = (team.members || []).map(m => m.userId).filter(Boolean);
       const memberUsernames = (team.members || []).map(m => m.username).filter(Boolean);
 
+      const teamCode = formatSimpleCode(team.code, true);
       const teamEvals = allEvaluations.filter(ev => 
-        memberUserIds.includes(ev.competitorId) || 
-        memberUsernames.includes(ev.competitorUsername) ||
-        ev.teamId === team.id
+        (memberUserIds.length > 0 && memberUserIds.includes(ev.competitorId)) || 
+        (memberUsernames.length > 0 && memberUsernames.includes(ev.competitorUsername)) ||
+        ev.teamId === team.id ||
+        ev.targetId === team.id ||
+        ev.competitorCode === teamCode
       );
 
       const totalPoints = calculateAveragedPoints(teamEvals);
@@ -121,7 +124,7 @@ export default function FTOurTeam() {
         id: team.id,
         name: team.name,
         type: 'team', // 'team' | 'individual'
-        code: formatSimpleCode(team.code, true),
+        code: teamCode,
         track: team.track,
         membersCount: (team.members || []).length,
         totalPoints,
@@ -137,11 +140,18 @@ export default function FTOurTeam() {
     );
 
     const soloEntries = soloCompetitors.map(s => {
-      const sEvals = allEvaluations.filter(ev => ev.competitorId === s.id || ev.competitorUsername === s.username);
-      const totalPoints = calculateAveragedPoints(sEvals);
-      const sSubs = allSubmissions.filter(sub => sub.competitorId === s.id || sub.competitorUsername === s.username);
       const rawCode = s.competitorCode || s.competitorIdNumber || s.employeeId || s.universityId || s.id;
       const code = formatSimpleCode(rawCode, false);
+
+      const sEvals = allEvaluations.filter(ev => 
+        ev.competitorId === s.id || 
+        ev.targetId === s.id ||
+        ev.competitorUsername === s.username ||
+        (ev.competitorName && (ev.competitorName === s.name || ev.competitorName === s.username)) ||
+        (ev.competitorCode && ev.competitorCode === code)
+      );
+      const totalPoints = calculateAveragedPoints(sEvals);
+      const sSubs = allSubmissions.filter(sub => sub.competitorId === s.id || sub.competitorUsername === s.username);
 
       return {
         id: s.id,

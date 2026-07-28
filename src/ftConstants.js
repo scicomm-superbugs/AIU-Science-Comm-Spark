@@ -156,35 +156,29 @@ export const cleanWaveName = (name) => {
   return name.replace(/\((Wave\s+\d+:\s*)/i, '(');
 };
 
-// Sum stage points across 1 Academic Judge + 1 SciComm Judge evaluation
+// Sum stage points across evaluated stages (averaging scores per stage)
 export const calculateTotalStagePoints = (evaluationsList = []) => {
   if (!evaluationsList || evaluationsList.length === 0) return 0;
 
-  // Group evaluations by stageId
+  const scoredEvals = evaluationsList.filter(ev =>
+    ev.score !== undefined && ev.score !== null && ev.score !== '' && !isNaN(Number(ev.score))
+  );
+
+  if (scoredEvals.length === 0) return 0;
+
+  // Group scored evaluations by stageId
   const byStage = {};
-  evaluationsList.forEach(ev => {
+  scoredEvals.forEach(ev => {
     const stageId = Number(ev.stageId) || 1;
     if (!byStage[stageId]) byStage[stageId] = [];
-    byStage[stageId].push(ev);
+    byStage[stageId].push(Number(ev.score));
   });
 
   let totalPoints = 0;
-
-  Object.values(byStage).forEach(stageEvals => {
-    // Stage score = 1 Academic evaluation score + 1 SciComm evaluation score
-    const academicEval = stageEvals.find(e => e.judgeRole === 'academic_judge');
-    const scicommEval = stageEvals.find(e => e.judgeRole === 'scicomm_judge');
-
-    const acadScore = academicEval ? Number(academicEval.totalScore || academicEval.score || 0) : 0;
-    const scicommScore = scicommEval ? Number(scicommEval.totalScore || scicommEval.score || 0) : 0;
-
-    if (academicEval || scicommEval) {
-      totalPoints += (acadScore + scicommScore);
-    } else {
-      // Fallback if role labels differ
-      stageEvals.forEach(e => {
-        totalPoints += Number(e.totalScore || e.score || 0);
-      });
+  Object.values(byStage).forEach(scores => {
+    if (scores.length > 0) {
+      const stageAvg = scores.reduce((a, b) => a + b, 0) / scores.length;
+      totalPoints += stageAvg;
     }
   });
 

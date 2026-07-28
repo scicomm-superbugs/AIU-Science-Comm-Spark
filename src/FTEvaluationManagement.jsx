@@ -17,6 +17,10 @@ export default function FTEvaluationManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState('');
 
+  // Editing single evaluation state
+  const [editingEvalId, setEditingEvalId] = useState(null);
+  const [editForm, setEditForm] = useState({ judgeName: '', score: '', comments: '' });
+
   // Controlled evaluation form URLs state per submission deliverable
   const [evalUrls, setEvalUrls] = useState({}); // { [subFieldId]: url }
 
@@ -39,8 +43,15 @@ export default function FTEvaluationManagement() {
   const currentStageConfig = useMemo(() => {
     const customConfig = timelineConfig.find(c => c.track === selectedTrack && Number(c.stageId) === Number(selectedStageId));
     const defaultConfig = (DEFAULT_STAGES[selectedTrack] || DEFAULT_STAGES.pop_science).find(s => Number(s.stageId) === Number(selectedStageId));
-    return customConfig ? { ...defaultConfig, ...customConfig } : defaultConfig;
+    return customConfig ? { ...defaultConfig, ...currentConfig } : defaultConfig;
   }, [timelineConfig, selectedTrack, selectedStageId]);
+
+  // Calculate max possible stage points from stage criteria
+  const maxStagePoints = useMemo(() => {
+    if (!currentStageConfig || !currentStageConfig.criteria || currentStageConfig.criteria.length === 0) return 50;
+    const sum = currentStageConfig.criteria.reduce((acc, c) => acc + Number(c.maxPoints || c.points || 0), 0);
+    return sum > 0 ? sum : 50;
+  }, [currentStageConfig]);
 
   // Assigned judges list for current stage
   const assignedJudgeIds = currentStageConfig?.assignedJudgeIds || [];
@@ -247,6 +258,49 @@ export default function FTEvaluationManagement() {
       showToast(`✅ Grade & comment saved for ${targetItem.name} under judge "${judgeName}"!`);
     } catch (err) {
       alert('Failed to save evaluation: ' + err.message);
+    }
+  };
+
+  // Delete an existing evaluation record
+  const handleDeleteEvaluation = async (evalId) => {
+    if (!evalId) return;
+    if (!window.confirm('Are you sure you want to delete this evaluation entry?')) return;
+    try {
+      await db.ft_evaluations.delete(evalId);
+      showToast('🗑️ Evaluation record deleted successfully.');
+    } catch (err) {
+      alert('Failed to delete evaluation record: ' + err.message);
+    }
+  };
+
+  // Start editing an evaluation record
+  const handleStartEditEvaluation = (ev) => {
+    setEditingEvalId(ev.id);
+    setEditForm({
+      judgeName: ev.judgeName || '',
+      score: ev.score !== undefined && ev.score !== null ? String(ev.score) : '',
+      comments: ev.comments || ''
+    });
+  };
+
+  // Save edited evaluation record
+  const handleSaveEditedEvaluation = async (evId) => {
+    try {
+      const scoreVal = editForm.score !== '' && !isNaN(Number(editForm.score))
+        ? Math.min(maxStagePoints, Math.max(0, Number(editForm.score)))
+        : null;
+
+      await db.ft_evaluations.set(evId, {
+        judgeName: editForm.judgeName.trim() || 'Official Judge Panel',
+        score: scoreVal,
+        comments: editForm.comments.trim(),
+        updatedAt: new Date().toISOString()
+      });
+
+      setEditingEvalId(null);
+      showToast('✅ Evaluation entry updated successfully!');
+    } catch (err) {
+      alert('Failed to save evaluation edits: ' + err.message);
     }
   };
 
@@ -507,30 +561,124 @@ export default function FTEvaluationManagement() {
 
                   {/* Existing Judge Feedback & Scores List */}
                   {existingEvals.length > 0 && (
-                    <div style={{ background: '#ffffff', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                    <div style={{ background: '#ffffff', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                       <div style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                         <MessageSquare size={15} style={{ color: '#be123c' }} />
                         Recorded Judge Comments & Scores:
                       </div>
-                      {existingEvals.map((ev, evIdx) => (
-                        <div key={ev.id || evIdx} style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontWeight: 900, fontSize: '0.85rem', color: '#be123c' }}>
-                              👨‍⚖️ Judge: {ev.judgeName || 'Official Judge Panel'}
-                            </span>
-                            {ev.score !== null && ev.score !== undefined && (
-                              <span style={{ background: '#0284c7', color: '#ffffff', fontWeight: 900, fontSize: '0.82rem', padding: '0.2rem 0.6rem', borderRadius: '8px' }}>
-                                ⭐ Score: {ev.score} pts
+                      {existingEvals.map((ev, evIdx) => {
+                        const targetEvId = ev.id || evIdx;
+                        const isEditingThis = editingEvalId === targetEvId;
+
+                        if (isEditingThis) {
+                          return (
+                            <div key={targetEvId} style={{ background: '#f0f9ff', padding: '0.9rem 1rem', borderRadius: '12px', border: '1.5px solid #0284c7', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                              <div style={{ fontWeight: 900, fontSize: '0.84rem', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                ✏️ Edit Evaluation Entry:
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '0.6rem' }}>
+                                <div>
+                                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '0.2rem' }}>👨‍⚖️ Judge Name:</label>
+                                  <input
+                                    type="text"
+                                    className="ft-input"
+                                    style={{ fontSize: '0.82rem', padding: '0.35rem 0.6rem' }}
+                                    value={editForm.judgeName}
+                                    onChange={e => setEditForm(prev => ({ ...prev, judgeName: e.target.value }))}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '0.2rem' }}>⭐ Score (0 - {maxStagePoints} pts max):</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max={maxStagePoints}
+                                    className="ft-input"
+                                    style={{ fontSize: '0.82rem', padding: '0.35rem 0.6rem' }}
+                                    value={editForm.score}
+                                    onChange={e => {
+                                      let v = e.target.value;
+                                      if (v !== '' && Number(v) > maxStagePoints) v = String(maxStagePoints);
+                                      setEditForm(prev => ({ ...prev, score: v }));
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '0.2rem' }}>💬 Judge Comment:</label>
+                                <textarea
+                                  className="ft-textarea"
+                                  style={{ fontSize: '0.82rem', padding: '0.4rem 0.6rem', minHeight: '55px' }}
+                                  value={editForm.comments}
+                                  onChange={e => setEditForm(prev => ({ ...prev, comments: e.target.value }))}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.2rem' }}>
+                                <button
+                                  type="button"
+                                  className="ft-btn"
+                                  onClick={() => setEditingEvalId(null)}
+                                  style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.78rem', padding: '0.3rem 0.75rem', borderRadius: '8px', fontWeight: 700 }}
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  className="ft-btn ft-btn-primary"
+                                  onClick={() => handleSaveEditedEvaluation(ev.id)}
+                                  style={{ fontSize: '0.78rem', padding: '0.3rem 0.75rem', borderRadius: '8px', fontWeight: 800 }}
+                                >
+                                  💾 Save Changes
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div key={targetEvId} style={{ background: '#f8fafc', padding: '0.8rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              <span style={{ fontWeight: 900, fontSize: '0.85rem', color: '#be123c' }}>
+                                👨‍⚖️ Judge: {ev.judgeName || 'Official Judge Panel'}
                               </span>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                {ev.score !== null && ev.score !== undefined && ev.score !== '' && (
+                                  <span style={{ background: '#0284c7', color: '#ffffff', fontWeight: 900, fontSize: '0.82rem', padding: '0.2rem 0.65rem', borderRadius: '8px' }}>
+                                    ⭐ Score: {ev.score} pts
+                                  </span>
+                                )}
+
+                                {ev.id && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStartEditEvaluation(ev)}
+                                      style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer' }}
+                                      title="Edit this comment or score"
+                                    >
+                                      ✏️ Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteEvaluation(ev.id)}
+                                      style={{ background: '#fff1f2', border: '1px solid #fecdd3', color: '#be123c', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer' }}
+                                      title="Delete this comment or score"
+                                    >
+                                      🗑️ Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            {ev.comments && (
+                              <p style={{ fontSize: '0.82rem', color: '#334155', margin: 0, fontStyle: 'italic', lineHeight: 1.45 }}>
+                                "{ev.comments}"
+                              </p>
                             )}
                           </div>
-                          {ev.comments && (
-                            <p style={{ fontSize: '0.82rem', color: '#334155', margin: 0, fontStyle: 'italic', lineHeight: 1.4 }}>
-                              "{ev.comments}"
-                            </p>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
 
@@ -576,18 +724,24 @@ export default function FTEvaluationManagement() {
                       {/* Final Grade / Points Input */}
                       <div>
                         <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem' }}>
-                          ⭐ Final Grade / Points (e.g. 0 - 100)
+                          ⭐ Final Grade / Points (0 - {maxStagePoints} pts max)
                         </label>
                         <input
                           type="number"
+                          min="0"
+                          max={maxStagePoints}
                           className="ft-input"
                           style={{ fontSize: '0.85rem' }}
-                          placeholder="e.g. 95"
+                          placeholder={`e.g. ${Math.round(maxStagePoints * 0.9)}`}
                           value={draft.score !== undefined ? draft.score : ''}
-                          onChange={e => setEvalForm(prev => ({
-                            ...prev,
-                            [item.targetId]: { ...prev[item.targetId], score: e.target.value }
-                          }))}
+                          onChange={e => {
+                            let val = e.target.value;
+                            if (val !== '' && Number(val) > maxStagePoints) val = String(maxStagePoints);
+                            setEvalForm(prev => ({
+                              ...prev,
+                              [item.targetId]: { ...prev[item.targetId], score: val }
+                            }));
+                          }}
                         />
                       </div>
                     </div>
