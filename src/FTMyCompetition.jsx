@@ -566,11 +566,24 @@ export default function FTMyCompetition() {
                         <>
                           <span>🛑 Window Closed:</span> {sf.name || `Stage ${st.stageId}`}
                         </>
-                      ) : isEvaluated ? (
-                        <>
-                          <span>⭐ Evaluated ({totalScore} pts):</span> {sf.name || `Stage ${st.stageId}`} ↗
-                        </>
-                      ) : isFieldSubmitted ? (
+                      ) : isEvaluated ? (() => {
+                        const userTrack = meDoc?.registeredTrack || 'pop_science';
+                        const pubDoc = publishedResults.find(p => 
+                          Number(p.stageId) === Number(st.stageId) && 
+                          (p.track === userTrack || p.track === 'all') &&
+                          (p.subId === sf.id || p.subId === 'all' || !p.subId)
+                        );
+                        const isPublished = Boolean(pubDoc?.isPublished) || isAdminOrStaff;
+                        return isPublished ? (
+                          <>
+                            <span>⭐ Evaluated:</span> {sf.name || `Stage ${st.stageId}`} ↗
+                          </>
+                        ) : (
+                          <>
+                            <span>⏳ Under Evaluation:</span> {sf.name || `Stage ${st.stageId}`} ↗
+                          </>
+                        );
+                      })() : isFieldSubmitted ? (
                         <>
                           <span>⏳ Under Evaluation:</span> {sf.name || `Stage ${st.stageId}`} ↗
                         </>
