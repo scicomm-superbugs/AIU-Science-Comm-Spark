@@ -21,6 +21,109 @@ export default function FTLayout() {
   const [meDoc, setMeDoc] = useState(null);
   const userRole = user?.role || 'competitor';
 
+  const [resettingTestData, setResettingTestData] = useState(false);
+
+  const handleResetTestData = async () => {
+    if (!window.confirm('⚠️ Are you sure you want to RESET ALL TEST USER DATA?\n\nThis will permanently delete all submissions, evaluation scores, judge comments, and test notifications created by or for test accounts (test-comp-*, test-judge-*).\n\nReal user accounts and data will NOT be touched.')) {
+      return;
+    }
+
+    setResettingTestData(true);
+    try {
+      const TEST_KEYS = [
+        'test_comp_pop_team', 'test_comp_pop_solo', 'test_comp_jour_team', 'test_comp_jour_solo',
+        'student_pop_team', 'student_pop_ind', 'student_jour_team', 'student_jour_ind',
+        'test-comp-pop-team', 'test-comp-pop-solo', 'test-comp-jour-team', 'test-comp-jour-solo',
+        'test_judge_1', 'test_judge_trainer', 'test-judge-1', 'test-judge-trainer',
+        'test_judge_academic', 'test_judge_scicomm', 'judge_academic', 'judge_scicomm',
+        'J-201', 'J-301', 'J-401', 'C-901', 'C-902', 'C-801', 'C-802'
+      ];
+
+      const isTestDoc = (val) => {
+        if (!val) return false;
+        const s = String(val).toLowerCase();
+        return TEST_KEYS.some(k => s.includes(k.toLowerCase())) || s.includes('test-comp') || s.includes('test-judge') || s.includes('test_comp') || s.includes('test_judge');
+      };
+
+      // 1. Delete Submissions created by test accounts
+      const subSnap = await getDocs(collection(firestore, getCollectionName('submissions')));
+      for (const dSnap of subSnap.docs) {
+        const sub = dSnap.data();
+        if (
+          isTestDoc(sub.competitorId) ||
+          isTestDoc(sub.competitorUsername) ||
+          isTestDoc(sub.competitorName) ||
+          isTestDoc(sub.teamId) ||
+          isTestDoc(sub.teamCode) ||
+          isTestDoc(sub.competitorCode) ||
+          isTestDoc(sub.submittedBy) ||
+          isTestDoc(dSnap.id)
+        ) {
+          try {
+            await deleteDoc(doc(firestore, getCollectionName('submissions'), dSnap.id));
+          } catch (e) {
+            console.warn('Failed to delete test submission doc:', dSnap.id, e);
+          }
+        }
+      }
+
+      // 2. Delete Evaluations submitted for/by test users/judges
+      const evalSnap = await getDocs(collection(firestore, getCollectionName('ft_evaluations')));
+      for (const dSnap of evalSnap.docs) {
+        const ev = dSnap.data();
+        if (
+          isTestDoc(ev.competitorId) ||
+          isTestDoc(ev.competitorName) ||
+          isTestDoc(ev.competitorCode) ||
+          isTestDoc(ev.teamId) ||
+          isTestDoc(ev.judgeId) ||
+          isTestDoc(ev.judgeName) ||
+          isTestDoc(dSnap.id)
+        ) {
+          try {
+            await deleteDoc(doc(firestore, getCollectionName('ft_evaluations'), dSnap.id));
+          } catch (e) {
+            console.warn('Failed to delete test evaluation doc:', dSnap.id, e);
+          }
+        }
+      }
+
+      // 3. Delete Published Results for test submissions
+      const pubSnap = await getDocs(collection(firestore, getCollectionName('published_results')));
+      for (const dSnap of pubSnap.docs) {
+        const pub = dSnap.data();
+        if (isTestDoc(pub.subId) || isTestDoc(dSnap.id)) {
+          try {
+            await deleteDoc(doc(firestore, getCollectionName('published_results'), dSnap.id));
+          } catch (e) {
+            console.warn('Failed to delete test published_results doc:', dSnap.id, e);
+          }
+        }
+      }
+
+      // 4. Delete Notifications for test users
+      const notifSnap = await getDocs(collection(firestore, getCollectionName('ft_notifications')));
+      for (const dSnap of notifSnap.docs) {
+        const notif = dSnap.data();
+        if (isTestDoc(notif.targetUserId) || isTestDoc(notif.title) || isTestDoc(dSnap.id)) {
+          try {
+            await deleteDoc(doc(firestore, getCollectionName('ft_notifications'), dSnap.id));
+          } catch (e) {
+            console.warn('Failed to delete test notification doc:', dSnap.id, e);
+          }
+        }
+      }
+
+      setViewAsMode(null);
+      alert('✅ Test accounts reset successfully! All test submissions, scores, comments, and notifications have been cleared.');
+    } catch (err) {
+      console.error('Failed to reset test data:', err);
+      alert('Failed to reset test data: ' + err.message);
+    } finally {
+      setResettingTestData(false);
+    }
+  };
+
   const avatarFileRef = useRef(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileForm, setProfileForm] = useState({
