@@ -24,7 +24,7 @@ export default function FTLayout() {
   const [resettingTestData, setResettingTestData] = useState(false);
 
   const handleResetTestData = async () => {
-    if (!window.confirm('⚠️ Are you sure you want to RESET ALL TEST DATA & SUBMISSIONS?\n\nThis will permanently delete all test submissions, evaluation scores, judge feedback, published stage results, and notifications created by test accounts or Admin during testing.')) {
+    if (!window.confirm('⚠️ Are you sure you want to RESET TEST & ADMIN SUBMISSIONS?\n\nThis will delete test submissions, test evaluation scores, and test notifications for test users and Admin test runs.\n\nReal competitors, real judges, and admin evaluation management configurations will remain untouched.')) {
       return;
     }
 
@@ -48,84 +48,85 @@ export default function FTLayout() {
         meDoc?.email
       ].filter(Boolean);
 
-      const isTestDoc = (val) => {
+      const isTestUserOrAdmin = (val) => {
         if (!val) return false;
         const s = String(val).toLowerCase().trim();
         const isKeyMatch = TEST_KEYS.some(k => s.includes(k.toLowerCase())) ||
           s.includes('test-comp') || s.includes('test-judge') || s.includes('test_comp') || s.includes('test_judge');
-        const isAdminMatch = currentAdminIds.some(aid => String(aid).toLowerCase().trim() === s || (s.length > 3 && String(aid).toLowerCase().trim().includes(s)));
+        const isAdminMatch = currentAdminIds.some(aid => String(aid).toLowerCase().trim() === s);
         return isKeyMatch || isAdminMatch;
       };
 
-      // 1. Delete Submissions created by test accounts or admin
+      // 1. Delete Submissions created by test accounts or logged-in admin testing
       const subSnap = await getDocs(collection(firestore, getCollectionName('submissions')));
       for (const dSnap of subSnap.docs) {
         const sub = dSnap.data();
         if (
-          isTestDoc(sub.competitorId) ||
-          isTestDoc(sub.competitorUsername) ||
-          isTestDoc(sub.competitorName) ||
-          isTestDoc(sub.teamId) ||
-          isTestDoc(sub.teamCode) ||
-          isTestDoc(sub.competitorCode) ||
-          isTestDoc(sub.submittedBy) ||
-          isTestDoc(sub.userId) ||
-          isTestDoc(dSnap.id)
+          isTestUserOrAdmin(sub.competitorId) ||
+          isTestUserOrAdmin(sub.competitorUsername) ||
+          isTestUserOrAdmin(sub.competitorName) ||
+          isTestUserOrAdmin(sub.teamId) ||
+          isTestUserOrAdmin(sub.teamCode) ||
+          isTestUserOrAdmin(sub.competitorCode) ||
+          isTestUserOrAdmin(sub.submittedBy) ||
+          isTestUserOrAdmin(sub.userId)
         ) {
           try {
             await deleteDoc(doc(firestore, getCollectionName('submissions'), dSnap.id));
           } catch (e) {
-            console.warn('Failed to delete submission doc:', dSnap.id, e);
+            console.warn('Failed to delete test/admin submission doc:', dSnap.id, e);
           }
         }
       }
 
-      // 2. Delete Evaluations submitted for/by test users/judges or admin
+      // 2. Delete Evaluations for/by test users/judges or admin testing ONLY
       const evalSnap = await getDocs(collection(firestore, getCollectionName('ft_evaluations')));
       for (const dSnap of evalSnap.docs) {
         const ev = dSnap.data();
         if (
-          isTestDoc(ev.competitorId) ||
-          isTestDoc(ev.competitorName) ||
-          isTestDoc(ev.competitorCode) ||
-          isTestDoc(ev.teamId) ||
-          isTestDoc(ev.judgeId) ||
-          isTestDoc(ev.judgeName) ||
-          isTestDoc(dSnap.id)
+          isTestUserOrAdmin(ev.competitorId) ||
+          isTestUserOrAdmin(ev.competitorName) ||
+          isTestUserOrAdmin(ev.competitorCode) ||
+          isTestUserOrAdmin(ev.teamId) ||
+          isTestUserOrAdmin(ev.judgeId) ||
+          isTestUserOrAdmin(ev.judgeName)
         ) {
           try {
             await deleteDoc(doc(firestore, getCollectionName('ft_evaluations'), dSnap.id));
           } catch (e) {
-            console.warn('Failed to delete evaluation doc:', dSnap.id, e);
+            console.warn('Failed to delete test/admin evaluation doc:', dSnap.id, e);
           }
         }
       }
 
-      // 3. Delete Published Results created during testing
+      // 3. Delete Published Results ONLY for test submissions (Preserve real admin evaluation management config)
       const pubSnap = await getDocs(collection(firestore, getCollectionName('published_results')));
       for (const dSnap of pubSnap.docs) {
-        try {
-          await deleteDoc(doc(firestore, getCollectionName('published_results'), dSnap.id));
-        } catch (e) {
-          console.warn('Failed to delete published_results doc:', dSnap.id, e);
+        const pub = dSnap.data();
+        if (isTestUserOrAdmin(pub.subId)) {
+          try {
+            await deleteDoc(doc(firestore, getCollectionName('published_results'), dSnap.id));
+          } catch (e) {
+            console.warn('Failed to delete test published_results doc:', dSnap.id, e);
+          }
         }
       }
 
-      // 4. Delete Notifications for test users or admin
+      // 4. Delete Notifications for test accounts or admin testing ONLY
       const notifSnap = await getDocs(collection(firestore, getCollectionName('ft_notifications')));
       for (const dSnap of notifSnap.docs) {
         const notif = dSnap.data();
-        if (isTestDoc(notif.targetUserId) || isTestDoc(notif.title) || isTestDoc(dSnap.id)) {
+        if (isTestUserOrAdmin(notif.targetUserId) || (notif.title && isTestUserOrAdmin(notif.title))) {
           try {
             await deleteDoc(doc(firestore, getCollectionName('ft_notifications'), dSnap.id));
           } catch (e) {
-            console.warn('Failed to delete notification doc:', dSnap.id, e);
+            console.warn('Failed to delete test notification doc:', dSnap.id, e);
           }
         }
       }
 
       setViewAsMode(null);
-      alert('✅ Test accounts and Admin test submissions have been successfully reset! All test submissions, scores, comments, published states, and notifications have been cleared.');
+      alert('✅ Reset complete! Test user and Admin test submissions have been cleared. Real competitors, judges, and evaluation management settings were preserved.');
     } catch (err) {
       console.error('Failed to reset test data:', err);
       alert('Failed to reset test data: ' + err.message);
