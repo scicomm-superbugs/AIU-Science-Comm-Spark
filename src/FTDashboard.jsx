@@ -844,58 +844,60 @@ export default function FTDashboard() {
               </div>
             </div>
 
-            {/* CTA Button in HUD Header */}
-            <div className="ft-timeline-hud-cta">
-              {activeStep.type === 'stage' && !['judge', 'academic_judge', 'scicomm_judge', 'trainer_judge', 'trainer', 'admin', 'master'].includes(user?.role) ? (
-                <button
-                  className="ft-btn"
-                  onClick={() => navigate('/my-competition')}
-                  style={{
-                    background: `linear-gradient(135deg, ${activeStep.color} 0%, #e11d48 100%)`,
-                    color: '#ffffff', fontWeight: 900, padding: '0.85rem 1.6rem', borderRadius: '14px',
-                    fontSize: '0.98rem', border: 'none', boxShadow: `0 4px 20px ${activeStep.color}80`,
-                    display: 'flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer',
-                    letterSpacing: '0.01em'
-                  }}
-                >
-                  Submit Work for Stage {activeStep.id} <ArrowRight size={18} />
-                </button>
-              ) : activeStep.meetingLink ? (
-                <a
-                  href={activeStep.meetingLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="ft-btn"
-                  style={{
-                    background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-                    color: '#ffffff', fontWeight: 900, padding: '0.85rem 1.6rem', borderRadius: '14px',
-                    fontSize: '0.98rem', textDecoration: 'none', border: 'none',
-                    boxShadow: '0 4px 20px rgba(16, 185, 129, 0.45)',
-                    display: 'flex', alignItems: 'center', gap: '0.55rem'
-                  }}
-                >
-                  {activeStep.badge === 'Orientation' ? '🚀 Join Orientation Session'
-                    : activeStep.badge === 'Lecture' ? '🎙️ Join Live Lecture'
-                    : activeStep.badge === 'Office Hours' ? '💬 Join Office Hours'
-                    : '🎓 Join Workshop Session'} <ExternalLink size={16} />
-                </a>
-              ) : (
-                <a
-                  href="#workshops-section"
-                  className="ft-btn"
-                  style={{
-                    background: '#1e293b', border: `2px solid ${activeStep.color}`,
-                    color: '#ffffff', fontWeight: 900, padding: '0.85rem 1.6rem', borderRadius: '14px',
-                    fontSize: '0.98rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.55rem'
-                  }}
-                >
-                  {activeStep.badge === 'Orientation' ? '🚀 View Orientation Schedule'
-                    : activeStep.badge === 'Lecture' ? '🎙️ View Lecture Schedule'
-                    : activeStep.badge === 'Office Hours' ? '💬 View Office Hours Schedule'
-                    : '🎓 View Workshop Schedule'} <ExternalLink size={16} />
-                </a>
-              )}
-            </div>
+            {/* CTA Button in HUD Header - Only visible to competitors */}
+            {!['judge', 'academic_judge', 'scicomm_judge', 'trainer_judge', 'trainer', 'admin', 'master'].includes(user?.role) && (
+              <div className="ft-timeline-hud-cta">
+                {activeStep.type === 'stage' ? (
+                  <button
+                    className="ft-btn"
+                    onClick={() => navigate('/my-competition')}
+                    style={{
+                      background: `linear-gradient(135deg, ${activeStep.color} 0%, #e11d48 100%)`,
+                      color: '#ffffff', fontWeight: 900, padding: '0.85rem 1.6rem', borderRadius: '14px',
+                      fontSize: '0.98rem', border: 'none', boxShadow: `0 4px 20px ${activeStep.color}80`,
+                      display: 'flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer',
+                      letterSpacing: '0.01em'
+                    }}
+                  >
+                    Submit Work for Stage {activeStep.id} <ArrowRight size={18} />
+                  </button>
+                ) : activeStep.meetingLink ? (
+                  <a
+                    href={activeStep.meetingLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="ft-btn"
+                    style={{
+                      background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+                      color: '#ffffff', fontWeight: 900, padding: '0.85rem 1.6rem', borderRadius: '14px',
+                      fontSize: '0.98rem', textDecoration: 'none', border: 'none',
+                      boxShadow: '0 4px 20px rgba(16, 185, 129, 0.45)',
+                      display: 'flex', alignItems: 'center', gap: '0.55rem'
+                    }}
+                  >
+                    {activeStep.badge === 'Orientation' ? '🚀 Join Orientation Session'
+                      : activeStep.badge === 'Lecture' ? '🎙️ Join Live Lecture'
+                      : activeStep.badge === 'Office Hours' ? '💬 Join Office Hours'
+                      : '🎓 Join Workshop Session'} <ExternalLink size={16} />
+                  </a>
+                ) : (
+                  <a
+                    href="#workshops-section"
+                    className="ft-btn"
+                    style={{
+                      background: '#1e293b', border: `2px solid ${activeStep.color}`,
+                      color: '#ffffff', fontWeight: 900, padding: '0.85rem 1.6rem', borderRadius: '14px',
+                      fontSize: '0.98rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.55rem'
+                    }}
+                  >
+                    {activeStep.badge === 'Orientation' ? '🚀 View Orientation Schedule'
+                      : activeStep.badge === 'Lecture' ? '🎙️ View Lecture Schedule'
+                      : activeStep.badge === 'Office Hours' ? '💬 View Office Hours Schedule'
+                      : '🎓 View Workshop Schedule'} <ExternalLink size={16} />
+                  </a>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Body content inside HUD Card */}
