@@ -153,71 +153,13 @@ export default function FTLayout() {
           where('type', '==', 'system_release_notes')
         );
         const snap = await getDocs(q);
-        
-        if (snap.empty) {
-          // Create competitor update notification
-          await db.ft_notifications.add({
-            title: 'System Update: Version 2.0 is Live! 🚀',
-            message: 'We have updated the portal with multiple registrations, payment receipt uploads, and real-time notifications. Click to see what is new!',
-            type: 'system_release_notes',
-            status: 'unread',
-            targetRoles: ['competitor', 'user'],
-            targetUserId: null,
-            createdAt: new Date().toISOString(),
-            link: '#open-release-notes'
-          });
-
-          // Create judge update notification
-          await db.ft_notifications.add({
-            title: 'System Update: Version 2.0 is Live! 🚀',
-            message: 'New mobile-friendly trainee cards, quick actions, and evaluation notification alerts are now live. Click to view!',
-            type: 'system_release_notes',
-            status: 'unread',
-            targetRoles: ['judge'],
-            targetUserId: null,
-            createdAt: new Date().toISOString(),
-            link: '#open-release-notes'
-          });
-
-          // Create admin update notification
-          await db.ft_notifications.add({
-            title: 'System Update: Version 2.0 is Live! 🚀',
-            message: 'Customize wave deadlines, view real-time seat capacity conflicts, and export full receipt CSVs. Click to view release notes!',
-            type: 'system_release_notes',
-            status: 'unread',
-            targetRoles: ['admin', 'master', 'faculty'],
-            targetUserId: null,
-            createdAt: new Date().toISOString(),
-            link: '#open-release-notes'
-          });
-          // Seed active stage submission window & judge reminder notification
-          const qDeadline = query(
-            collection(firestore, notifCol),
-            where('type', '==', 'stage_deadline_reminder')
-          );
-          const snapDeadline = await getDocs(qDeadline);
-          if (snapDeadline.empty) {
-            await db.ft_notifications.add({
-              title: '⏳ Active Submission Window Open!',
-              message: 'Stage 1: Topic Research & Submission Window is active! Please check your deadlines and submit deliverables.',
-              type: 'stage_deadline_reminder',
-              status: 'unread',
-              targetRoles: ['competitor', 'user'],
-              createdAt: new Date().toISOString(),
-              link: '/dashboard/my-competition'
-            });
-            await db.ft_notifications.add({
-              title: '⚖️ Stage Evaluation Window Active',
-              message: 'Judges Evaluation Window is active for current stage submissions. Check your Judge Portal for assigned entries.',
-              type: 'stage_deadline_reminder',
-              status: 'unread',
-              targetRoles: ['judge', 'academic_judge', 'scicomm_judge'],
-              createdAt: new Date().toISOString(),
-              link: '/dashboard/judge'
-            });
+        snap.forEach(async (dSnap) => {
+          try {
+            await deleteDoc(doc(firestore, notifCol, dSnap.id));
+          } catch (err) {
+            console.warn('Failed to delete old release note notification:', err);
           }
-          console.log("Seeded system release notes notifications successfully!");
-        }
+        });
       } catch (err) {
         console.error("Failed to seed system release notes notifications:", err);
       }
@@ -525,6 +467,9 @@ export default function FTLayout() {
     const effectiveRole = user.role || userRole || 'competitor';
     return notifications
       .filter(n => {
+        // Exclude old release notes notifications
+        if (n.type === 'system_release_notes' || n.title?.includes('Version 2.0 is Live!')) return false;
+
         // Direct target user match
         if (n.targetUserId && (n.targetUserId === user.id || n.targetUserId === user.username)) return true;
         
