@@ -521,17 +521,6 @@ export default function FTTimelineManagement() {
                 />
               </div>
 
-              <div>
-                <label className="ft-label">Custom Google Form Link for Submissions</label>
-                <input
-                  type="url"
-                  className="ft-input"
-                  placeholder="e.g. https://docs.google.com/forms/d/e/.../viewform"
-                  value={editingStage.googleFormUrl || ''}
-                  onChange={e => setEditingStage({ ...editingStage, googleFormUrl: e.target.value })}
-                />
-              </div>
-
               {/* STAGE SUBMISSION REQUIREMENTS & FIELDS */}
               <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '14px', border: '1.5px solid #e2e8f0' }}>
                 <label className="ft-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '1rem', color: '#0f172a' }}>
@@ -604,21 +593,6 @@ export default function FTTimelineManagement() {
                       placeholder="e.g. https://forms.gle/tzgEf9QxBj3nG43S9 or https://docs.google.com/forms/d/e/.../viewform"
                       value={newSubGoogleFormUrl}
                       onChange={e => setNewSubGoogleFormUrl(e.target.value)}
-                      style={{ fontSize: '0.85rem' }}
-                    />
-                  </div>
-
-                  {/* Multi-Line Description & Requirements Box */}
-                  <div>
-                    <label className="ft-label" style={{ fontSize: '0.82rem', color: '#334155', fontWeight: 800, margin: '0 0 0.3rem 0' }}>
-                      📝 Detailed Description & Requirements Box (Write what exactly is needed):
-                    </label>
-                    <textarea
-                      className="ft-textarea"
-                      rows={2}
-                      placeholder="e.g. Submit a brief preparation document (maximum 1 page) that includes: Interviewee Profile Name, Target Audience, and Core Topics."
-                      value={newSubQuestion}
-                      onChange={e => setNewSubQuestion(e.target.value)}
                       style={{ fontSize: '0.85rem' }}
                     />
                   </div>
@@ -702,20 +676,6 @@ export default function FTTimelineManagement() {
                               />
                               <span>{editSubData.isOpen !== false ? '✅ Accepting Submissions' : '🛑 Submissions Closed'}</span>
                             </label>
-                          </div>
-
-                          {/* Description & Requirements Box */}
-                          <div>
-                            <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem' }}>
-                              📝 Detailed Description & Requirements Box (Supports Markdown):
-                            </label>
-                            <textarea
-                              className="ft-textarea"
-                              rows={3}
-                              style={{ fontSize: '0.85rem' }}
-                              value={editSubData.description || editSubData.question || ''}
-                              onChange={e => setEditSubData({ ...editSubData, description: e.target.value, question: e.target.value })}
-                            />
                           </div>
 
                           <div>
