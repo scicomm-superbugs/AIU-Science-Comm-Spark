@@ -146,6 +146,31 @@ export default function FTJudgeDashboard() {
     return url;
   };
 
+  const handleMarkEvaluationCompleted = async (stage, field) => {
+    try {
+      const fieldId = field?.id || 'sub_def_1';
+      const myJudgeId = userId || meDoc?.id || user?.id || 'judge_user';
+      const myJudgeName = meDoc?.name || meDoc?.username || user?.name || user?.username || 'Judge';
+
+      const evalData = {
+        stageId: Number(stage.stageId),
+        track: stage.track || 'pop_science',
+        fieldId: fieldId,
+        judgeId: myJudgeId,
+        judgeName: myJudgeName,
+        status: 'completed',
+        comments: 'Google Evaluation Form Submitted',
+        evaluatedAt: new Date().toISOString()
+      };
+
+      await db.ft_evaluations.add(evalData);
+      setToast({ type: 'success', text: `Evaluation marked as completed for ${field?.name || stage.title}!` });
+      setTimeout(() => setToast(null), 3500);
+    } catch (err) {
+      console.error('Failed to log evaluation completion:', err);
+    }
+  };
+
   return (
     <div className="ft-animate-in" style={{ paddingBottom: '3rem' }}>
       {/* Top Banner Header */}
@@ -164,6 +189,12 @@ export default function FTJudgeDashboard() {
           {judgeRoleTitle}
         </div>
       </div>
+
+      {toast && (
+        <div style={{ padding: '0.9rem 1.25rem', borderRadius: '14px', background: '#f0fdf4', color: '#16a34a', border: '1.5px solid #86efac', marginBottom: '1.5rem', fontWeight: 800, fontSize: '0.92rem' }}>
+          ✅ {toast.text}
+        </div>
+      )}
 
       {/* Main Tab Switcher */}
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.75rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>
@@ -273,6 +304,11 @@ export default function FTJudgeDashboard() {
 
                   {deliverables.map((sf, idx) => {
                     const evalUrl = sf.evalGoogleFormUrl || st.evalGoogleFormUrl || st.googleFormUrl;
+                    const isCompleted = evaluations.some(e =>
+                      Number(e.stageId) === Number(st.stageId) &&
+                      (e.fieldId === sf.id || (e.comments && e.comments.includes('Evaluation Form Submitted'))) &&
+                      (e.judgeId === userId || e.judgeId === meDoc?.id || e.judgeId === user?.id)
+                    );
 
                     return (
                       <button
@@ -283,7 +319,9 @@ export default function FTJudgeDashboard() {
                           if (evalUrl) {
                             setEvalVirtualBrowserUrl({
                               rawUrl: evalUrl,
-                              title: `${st.title} - ${sf.name}`
+                              title: `${st.title} - ${sf.name}`,
+                              stage: st,
+                              field: sf
                             });
                           } else {
                             alert(`No evaluation Google Form URL has been configured for "${sf.name}" by Admin in Evaluation Management yet.`);
@@ -291,7 +329,9 @@ export default function FTJudgeDashboard() {
                         }}
                         style={{
                           width: '100%',
-                          background: evalUrl ? 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)' : '#cbd5e1',
+                          background: isCompleted
+                            ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                            : (evalUrl ? 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)' : '#cbd5e1'),
                           color: '#ffffff',
                           border: 'none',
                           fontSize: '0.85rem',
@@ -303,10 +343,10 @@ export default function FTJudgeDashboard() {
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: '0.45rem',
-                          boxShadow: evalUrl ? '0 4px 14px rgba(190, 18, 60, 0.25)' : 'none'
+                          boxShadow: isCompleted ? '0 4px 14px rgba(5,150,105,0.3)' : (evalUrl ? '0 4px 14px rgba(190, 18, 60, 0.25)' : 'none')
                         }}
                       >
-                        🏅 Open & Evaluate: {sf.name} ↗
+                        {isCompleted ? `✅ Evaluation Completed (${sf.name})` : `🏅 Open & Evaluate: ${sf.name} ↗`}
                       </button>
                     );
                   })}
@@ -419,21 +459,49 @@ export default function FTJudgeDashboard() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '1rem' }} onClick={() => setEvalVirtualBrowserUrl(null)}>
           <div className="ft-card ft-animate-in" style={{ width: '95vw', maxWidth: '1100px', height: '92vh', background: '#ffffff', borderRadius: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)', border: '1px solid #cbd5e1', position: 'relative' }} onClick={e => e.stopPropagation()}>
 
-            {/* Floating Close Button */}
-            <button
-              type="button"
-              onClick={() => setEvalVirtualBrowserUrl(null)}
-              style={{
-                position: 'absolute', top: '14px', right: '18px', zIndex: 30,
-                background: '#ffffff', border: '1.5px solid #cbd5e1', color: '#0f172a',
-                width: '36px', height: '36px', borderRadius: '50%', fontWeight: 900,
-                fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-              }}
-              title="Close Modal"
-            >
-              ✕
-            </button>
+            {/* Modal Header Bar with Explicit Submission Confirmation Button */}
+            <div style={{
+              padding: '0.85rem 1.25rem', background: '#0f172a', color: '#ffffff',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: '1rem', zIndex: 30
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                <span style={{ fontSize: '1.1rem' }}>📝</span>
+                <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#ffffff' }}>
+                  Evaluation Form: {evalVirtualBrowserUrl.title}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await handleMarkEvaluationCompleted(evalVirtualBrowserUrl.stage, evalVirtualBrowserUrl.field);
+                    setEvalVirtualBrowserUrl(null);
+                  }}
+                  style={{
+                    background: '#16a34a', color: '#ffffff', border: 'none',
+                    padding: '0.5rem 1.1rem', borderRadius: '10px', fontWeight: 900,
+                    fontSize: '0.84rem', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                    gap: '0.4rem', boxShadow: '0 4px 14px rgba(22,163,74,0.35)'
+                  }}
+                >
+                  ✅ I Have Completed & Submitted this Evaluation
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEvalVirtualBrowserUrl(null)}
+                  style={{
+                    background: 'rgba(255,255,255,0.15)', border: 'none', color: '#ffffff',
+                    width: '32px', height: '32px', borderRadius: '50%', fontWeight: 800,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}
+                  title="Close Modal"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
 
             {/* Embedded Iframe Container */}
             <div style={{ flex: 1, position: 'relative', width: '100%', height: '100%', background: '#ffffff', overflow: 'hidden' }}>
