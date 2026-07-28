@@ -43,7 +43,7 @@ export default function FTEvaluationManagement() {
   const currentStageConfig = useMemo(() => {
     const customConfig = timelineConfig.find(c => c.track === selectedTrack && Number(c.stageId) === Number(selectedStageId));
     const defaultConfig = (DEFAULT_STAGES[selectedTrack] || DEFAULT_STAGES.pop_science).find(s => Number(s.stageId) === Number(selectedStageId));
-    return customConfig ? { ...defaultConfig, ...currentConfig } : defaultConfig;
+    return customConfig ? { ...defaultConfig, ...customConfig } : defaultConfig;
   }, [timelineConfig, selectedTrack, selectedStageId]);
 
   // Calculate max possible stage points from stage criteria
