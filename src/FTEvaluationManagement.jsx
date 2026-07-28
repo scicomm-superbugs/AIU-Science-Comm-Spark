@@ -21,6 +21,12 @@ export default function FTEvaluationManagement() {
   const [editingEvalId, setEditingEvalId] = useState(null);
   const [editForm, setEditForm] = useState({ judgeName: '', score: '', comments: '' });
 
+  // Single evaluation entry form state
+  const [selectedTargetId, setSelectedTargetId] = useState('');
+  const [newJudgeId, setNewJudgeId] = useState('');
+  const [newScore, setNewScore] = useState('');
+  const [newComment, setNewComment] = useState('');
+
   // Controlled evaluation form URLs state per submission deliverable
   const [evalUrls, setEvalUrls] = useState({}); // { [subFieldId]: url }
 
@@ -304,6 +310,127 @@ export default function FTEvaluationManagement() {
     }
   };
 
+  // Compile all competitor and team options by code for selection
+  const competitorOptions = useMemo(() => {
+    const options = [];
+    const addedIds = new Set();
+
+    // 1. Teams
+    teams.forEach(t => {
+      const rawTrack = t.track || 'pop_science';
+      const normTrack = String(rawTrack).toLowerCase();
+      const isTrackMatch = selectedTrack === 'all' ||
+        (selectedTrack === 'science_journalism' ? (normTrack.includes('journal') || normTrack.includes('article')) : normTrack.includes('pop'));
+
+      if (isTrackMatch) {
+        const code = formatSimpleCode(t.code, true);
+        options.push({
+          targetId: t.id,
+          targetType: 'team',
+          code: code,
+          name: t.name,
+          displayText: `👥 ${code} - ${t.name} (Team)`
+        });
+        addedIds.add(t.id);
+      }
+    });
+
+    // 2. Solo Competitors
+    scientists.forEach(s => {
+      if (s.role === 'competitor' || s.role === 'user' || !s.role) {
+        const rawTrack = s.registeredTrack || 'pop_science';
+        const normTrack = String(rawTrack).toLowerCase();
+        const isTrackMatch = selectedTrack === 'all' ||
+          (selectedTrack === 'science_journalism' ? (normTrack.includes('journal') || normTrack.includes('article')) : normTrack.includes('pop'));
+
+        if (isTrackMatch && !addedIds.has(s.id)) {
+          const rawCode = s.competitorCode || s.competitorIdNumber || s.employeeId || s.id;
+          const code = formatSimpleCode(rawCode, false);
+          options.push({
+            targetId: s.id,
+            targetType: 'competitor',
+            code: code,
+            name: s.name || s.username,
+            displayText: `👤 ${code} - ${s.name || s.username} (Competitor)`
+          });
+          addedIds.add(s.id);
+        }
+      }
+    });
+
+    return options;
+  }, [teams, scientists, selectedTrack]);
+
+  // Handle saving new single evaluation entry
+  const handleSaveSingleEvaluation = async () => {
+    if (!selectedTargetId) {
+      alert('Please choose a competitor or team by code first.');
+      return;
+    }
+    if (newScore === '' || newScore === null || isNaN(Number(newScore))) {
+      alert(`Please enter points (Required: 0 - ${maxStagePoints} pts max).`);
+      return;
+    }
+
+    const scoreNum = Math.min(maxStagePoints, Math.max(0, Number(newScore)));
+    const targetObj = competitorOptions.find(o => o.targetId === selectedTargetId);
+    const selJudgeObj = allJudges.find(j => j.id === newJudgeId);
+    const judgeName = selJudgeObj ? (selJudgeObj.name || selJudgeObj.username) : 'Official Judge Panel';
+
+    try {
+      const evalData = {
+        stageId: Number(selectedStageId),
+        track: selectedTrack,
+        targetId: selectedTargetId,
+        targetType: targetObj?.targetType || 'competitor',
+        competitorId: selectedTargetId,
+        teamId: targetObj?.targetType === 'team' ? selectedTargetId : null,
+        competitorName: targetObj?.name || 'Competitor',
+        competitorCode: targetObj?.code || 'C-101',
+        judgeName: judgeName,
+        judgeId: newJudgeId || 'admin_eval',
+        comments: newComment.trim(),
+        score: scoreNum,
+        evaluatedAt: new Date().toISOString(),
+        status: 'completed'
+      };
+
+      await db.ft_evaluations.add(evalData);
+
+      setSelectedTargetId('');
+      setNewJudgeId('');
+      setNewScore('');
+      setNewComment('');
+
+      showToast(`✅ Saved ${scoreNum} pts for ${targetObj?.code || ''} (${targetObj?.name || ''})!`);
+    } catch (err) {
+      alert('Failed to save evaluation entry: ' + err.message);
+    }
+  };
+
+  // Evaluation & Grading History with Search & Filter
+  const historyList = useMemo(() => {
+    let list = evaluations.filter(ev => {
+      const isStageMatch = Number(ev.stageId) === Number(selectedStageId);
+      const normTrack = String(ev.track || '').toLowerCase();
+      const isTrackMatch = selectedTrack === 'all' ||
+        (selectedTrack === 'science_journalism' ? normTrack.includes('journal') : (!normTrack || normTrack.includes('pop')));
+      return isStageMatch && isTrackMatch;
+    });
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(ev =>
+        String(ev.competitorName || '').toLowerCase().includes(q) ||
+        String(ev.competitorCode || '').toLowerCase().includes(q) ||
+        String(ev.judgeName || '').toLowerCase().includes(q) ||
+        String(ev.comments || '').toLowerCase().includes(q)
+      );
+    }
+
+    return list.sort((a, b) => new Date(b.evaluatedAt || 0) - new Date(a.evaluatedAt || 0));
+  }, [evaluations, selectedStageId, selectedTrack, searchQuery]);
+
   return (
     <div className="ft-animate-in" style={{ paddingBottom: '3rem' }}>
       {/* Toast Notification */}
@@ -488,299 +615,281 @@ export default function FTEvaluationManagement() {
         </div>
       </div>
 
-      {/* SECTION 2: COMPETITOR & TEAM GRADES, SCORES & JUDGE COMMENTS */}
+      {/* SECTION 2: COMPETITOR & TEAM GRADES & JUDGE FEEDBACK ENTRY & HISTORY */}
       <div className="ft-card" style={{ padding: '1.75rem', borderRadius: '24px', background: '#ffffff', border: '1.5px solid #e2e8f0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <div style={{ background: '#fff1f2', color: '#be123c', padding: '0.55rem', borderRadius: '12px' }}>
-              <Award size={22} />
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.5rem' }}>
+          <div style={{ background: '#fff1f2', color: '#be123c', padding: '0.55rem', borderRadius: '12px' }}>
+            <Award size={22} />
+          </div>
+          <div>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
+              Competitor & Team Final Grades & Judge Feedback Center (Stage {selectedStageId})
+            </h3>
+            <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.1rem 0 0 0' }}>
+              Select a competitor by code, choose judge name, enter points (required), write optional comments, and view history log.
+            </p>
+          </div>
+        </div>
+
+        {/* SINGLE EVALUATION ENTRY FORM */}
+        <div style={{ background: '#f8fafc', padding: '1.35rem 1.5rem', borderRadius: '18px', border: '1.5px solid #cbd5e1', marginBottom: '2rem', display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+          <div style={{ fontSize: '0.95rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <Sparkles size={18} style={{ color: '#be123c' }} />
+            Add Grade Score & Feedback Entry (Stage {selectedStageId}):
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.85rem' }}>
+            {/* Competitor / Team Selector by Code */}
             <div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
-                Competitor & Team Final Grades & Judge Feedback Center
-              </h3>
-              <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.1rem 0 0 0' }}>
-                Write comments using specific judge names and set final points for each competitor or team.
-              </p>
+              <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem', fontWeight: 800 }}>
+                👤 Select Competitor / Team Code *
+              </label>
+              <select
+                className="ft-select"
+                style={{ fontSize: '0.85rem', fontWeight: 700 }}
+                value={selectedTargetId}
+                onChange={e => setSelectedTargetId(e.target.value)}
+              >
+                <option value="">-- Choose Competitor or Team by Code --</option>
+                {competitorOptions.map(opt => (
+                  <option key={opt.targetId} value={opt.targetId}>
+                    {opt.displayText}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Judge Selection Dropdown */}
+            <div>
+              <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem', fontWeight: 800 }}>
+                👨‍⚖️ Select Judge Name
+              </label>
+              <select
+                className="ft-select"
+                style={{ fontSize: '0.85rem' }}
+                value={newJudgeId}
+                onChange={e => setNewJudgeId(e.target.value)}
+              >
+                <option value="">-- Select Assigned Judge Name (Default: Panel) --</option>
+                {allJudges.map(j => (
+                  <option key={j.id} value={j.id}>
+                    {j.name || j.username} ({j.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Final Grade / Points Input (REQUIRED) */}
+            <div>
+              <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem', fontWeight: 800, color: '#be123c' }}>
+                ⭐ Grade / Points * (Required: 0 - {maxStagePoints} pts max)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max={maxStagePoints}
+                className="ft-input"
+                style={{ fontSize: '0.85rem', fontWeight: 700 }}
+                placeholder={`Required e.g. ${Math.round(maxStagePoints * 0.9)}`}
+                value={newScore}
+                onChange={e => {
+                  let val = e.target.value;
+                  if (val !== '' && Number(val) > maxStagePoints) val = String(maxStagePoints);
+                  setNewScore(val);
+                }}
+              />
             </div>
           </div>
 
-          <div className="ft-input-group" style={{ margin: 0, minWidth: '260px' }}>
-            <div style={{ position: 'relative' }}>
+          {/* Optional Judge Comment */}
+          <div>
+            <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem', fontWeight: 800 }}>
+              💬 Judge Comment & Evaluation Feedback (Optional)
+            </label>
+            <textarea
+              className="ft-textarea"
+              rows={2}
+              style={{ fontSize: '0.85rem' }}
+              placeholder="Write judge feedback or comment (Optional)..."
+              value={newComment}
+              onChange={e => setNewComment(e.target.value)}
+            />
+          </div>
+
+          {/* Submit Button */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              className="ft-btn ft-btn-primary"
+              onClick={handleSaveSingleEvaluation}
+              style={{ fontWeight: 800, fontSize: '0.88rem', padding: '0.65rem 1.4rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '0.4rem', boxShadow: '0 4px 14px rgba(190,18,60,0.3)' }}
+            >
+              <Save size={16} /> Save Grade & Comment to History
+            </button>
+          </div>
+        </div>
+
+        {/* GRADING & FEEDBACK HISTORY SECTION WITH SEARCH & FILTERS */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderBottom: '2px solid #f1f5f9', paddingBottom: '0.75rem' }}>
+            <div style={{ fontSize: '1rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <MessageSquare size={18} style={{ color: '#be123c' }} />
+              Grading & Feedback History Log ({historyList.length} Entries)
+            </div>
+
+            {/* Search Input for History Log */}
+            <div style={{ position: 'relative', minWidth: '280px' }}>
               <Search size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
                 type="text"
                 className="ft-input"
-                style={{ paddingLeft: '2.5rem', fontSize: '0.85rem' }}
-                placeholder="Search competitors by name or ID..."
+                style={{ paddingLeft: '2.5rem', fontSize: '0.85rem', background: '#f8fafc' }}
+                placeholder="Search history by code, name, judge, or comment..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
-        </div>
 
-        {competitorsList.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3rem 1.5rem', background: '#f8fafc', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📋</div>
-            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>No Submissions Found for Stage {selectedStageId}</div>
-            <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '0.25rem' }}>
-              Competitors submitting via Google Forms or workspace will automatically appear here for grading & judge commenting.
+          {historyList.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2.5rem 1.5rem', background: '#f8fafc', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
+              <div style={{ fontSize: '2.2rem', marginBottom: '0.4rem' }}>📋</div>
+              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>No Evaluation History Found</div>
+              <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '0.2rem' }}>
+                Use the form above to record grades and comments for Stage {selectedStageId}.
+              </div>
             </div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {competitorsList.map((item) => {
-              const draft = evalForm[item.targetId] || {};
-              const existingEvals = item.evals || [];
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {historyList.map((ev, evIdx) => {
+                const targetEvId = ev.id || evIdx;
+                const isEditingThis = editingEvalId === targetEvId;
 
-              return (
-                <div key={item.targetId} style={{ background: '#f8fafc', borderRadius: '18px', padding: '1.4rem 1.6rem', border: '1.5px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-                  {/* Competitor / Team Row Header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.85rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 900, background: item.targetType === 'team' ? '#eff6ff' : '#f0fdf4', color: item.targetType === 'team' ? '#2563eb' : '#16a34a', border: `1px solid ${item.targetType === 'team' ? '#bfdbfe' : '#bbf7d0'}`, padding: '0.25rem 0.65rem', borderRadius: '10px' }}>
-                        {item.code}
-                      </span>
-                      <div>
-                        <h4 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
-                          {item.name}
-                        </h4>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.1rem' }}>
-                          {item.targetType === 'team' ? '👥 Team Competitor' : '👤 Solo Competitor'} · Stage {selectedStageId}
+                if (isEditingThis) {
+                  return (
+                    <div key={targetEvId} style={{ background: '#f0f9ff', padding: '1rem 1.2rem', borderRadius: '14px', border: '1.5px solid #0284c7', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ fontWeight: 900, fontSize: '0.88rem', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        ✏️ Edit History Entry for {ev.competitorCode || 'Competitor'} ({ev.competitorName || ''}):
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '0.75rem' }}>
+                        <div>
+                          <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '0.2rem' }}>👨‍⚖️ Judge Name:</label>
+                          <input
+                            type="text"
+                            className="ft-input"
+                            style={{ fontSize: '0.82rem', padding: '0.4rem 0.65rem' }}
+                            value={editForm.judgeName}
+                            onChange={e => setEditForm(prev => ({ ...prev, judgeName: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '0.2rem' }}>⭐ Points (0 - {maxStagePoints} max):</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max={maxStagePoints}
+                            className="ft-input"
+                            style={{ fontSize: '0.82rem', padding: '0.4rem 0.65rem' }}
+                            value={editForm.score}
+                            onChange={e => {
+                              let v = e.target.value;
+                              if (v !== '' && Number(v) > maxStagePoints) v = String(maxStagePoints);
+                              setEditForm(prev => ({ ...prev, score: v }));
+                            }}
+                          />
                         </div>
                       </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 800, background: existingEvals.length > 0 ? '#dcfce7' : '#fffbeb', color: existingEvals.length > 0 ? '#15803d' : '#b45309', padding: '0.3rem 0.75rem', borderRadius: '8px', border: `1px solid ${existingEvals.length > 0 ? '#86efac' : '#fde68a'}` }}>
-                        {existingEvals.length > 0 ? `✅ Evaluated (${existingEvals.length} Feedback entries)` : '⏳ Pending Grade & Comments'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Existing Judge Feedback & Scores List */}
-                  {existingEvals.length > 0 && (
-                    <div style={{ background: '#ffffff', padding: '1rem', borderRadius: '12px', border: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <MessageSquare size={15} style={{ color: '#be123c' }} />
-                        Recorded Judge Comments & Scores:
-                      </div>
-                      {existingEvals.map((ev, evIdx) => {
-                        const targetEvId = ev.id || evIdx;
-                        const isEditingThis = editingEvalId === targetEvId;
-
-                        if (isEditingThis) {
-                          return (
-                            <div key={targetEvId} style={{ background: '#f0f9ff', padding: '0.9rem 1rem', borderRadius: '12px', border: '1.5px solid #0284c7', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                              <div style={{ fontWeight: 900, fontSize: '0.84rem', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                ✏️ Edit Evaluation Entry:
-                              </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '0.6rem' }}>
-                                <div>
-                                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '0.2rem' }}>👨‍⚖️ Judge Name:</label>
-                                  <input
-                                    type="text"
-                                    className="ft-input"
-                                    style={{ fontSize: '0.82rem', padding: '0.35rem 0.6rem' }}
-                                    value={editForm.judgeName}
-                                    onChange={e => setEditForm(prev => ({ ...prev, judgeName: e.target.value }))}
-                                  />
-                                </div>
-                                <div>
-                                  <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '0.2rem' }}>⭐ Score (0 - {maxStagePoints} pts max):</label>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max={maxStagePoints}
-                                    className="ft-input"
-                                    style={{ fontSize: '0.82rem', padding: '0.35rem 0.6rem' }}
-                                    value={editForm.score}
-                                    onChange={e => {
-                                      let v = e.target.value;
-                                      if (v !== '' && Number(v) > maxStagePoints) v = String(maxStagePoints);
-                                      setEditForm(prev => ({ ...prev, score: v }));
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                              <div>
-                                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '0.2rem' }}>💬 Judge Comment:</label>
-                                <textarea
-                                  className="ft-textarea"
-                                  style={{ fontSize: '0.82rem', padding: '0.4rem 0.6rem', minHeight: '55px' }}
-                                  value={editForm.comments}
-                                  onChange={e => setEditForm(prev => ({ ...prev, comments: e.target.value }))}
-                                />
-                              </div>
-                              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.2rem' }}>
-                                <button
-                                  type="button"
-                                  className="ft-btn"
-                                  onClick={() => setEditingEvalId(null)}
-                                  style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.78rem', padding: '0.3rem 0.75rem', borderRadius: '8px', fontWeight: 700 }}
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  type="button"
-                                  className="ft-btn ft-btn-primary"
-                                  onClick={() => handleSaveEditedEvaluation(ev.id)}
-                                  style={{ fontSize: '0.78rem', padding: '0.3rem 0.75rem', borderRadius: '8px', fontWeight: 800 }}
-                                >
-                                  💾 Save Changes
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div key={targetEvId} style={{ background: '#f8fafc', padding: '0.8rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                              <span style={{ fontWeight: 900, fontSize: '0.85rem', color: '#be123c' }}>
-                                👨‍⚖️ Judge: {ev.judgeName || 'Official Judge Panel'}
-                              </span>
-
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                {ev.score !== null && ev.score !== undefined && ev.score !== '' && (
-                                  <span style={{ background: '#0284c7', color: '#ffffff', fontWeight: 900, fontSize: '0.82rem', padding: '0.2rem 0.65rem', borderRadius: '8px' }}>
-                                    ⭐ Score: {ev.score} pts
-                                  </span>
-                                )}
-
-                                {ev.id && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleStartEditEvaluation(ev)}
-                                      style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer' }}
-                                      title="Edit this comment or score"
-                                    >
-                                      ✏️ Edit
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteEvaluation(ev.id)}
-                                      style={{ background: '#fff1f2', border: '1px solid #fecdd3', color: '#be123c', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer' }}
-                                      title="Delete this comment or score"
-                                    >
-                                      🗑️ Delete
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            {ev.comments && (
-                              <p style={{ fontSize: '0.82rem', color: '#334155', margin: 0, fontStyle: 'italic', lineHeight: 1.45 }}>
-                                "{ev.comments}"
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Add / Update Judge Comment & Grade Entry Form */}
-                  <div style={{ background: '#ffffff', padding: '1.1rem 1.25rem', borderRadius: '14px', border: '1.5px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Sparkles size={16} style={{ color: '#be123c' }} />
-                      Add Judge Comment & Final Score for {item.name}:
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '0.75rem' }}>
-                      {/* Judge Name Dropdown / Input */}
                       <div>
-                        <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem' }}>
-                          👨‍⚖️ Select Judge Name for Comment *
-                        </label>
-                        <select
-                          className="ft-select"
-                          style={{ fontSize: '0.82rem' }}
-                          value={draft.judgeId || ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            const selJudge = allJudges.find(j => j.id === val);
-                            setEvalForm(prev => ({
-                              ...prev,
-                              [item.targetId]: {
-                                ...prev[item.targetId],
-                                judgeId: val,
-                                judgeName: selJudge ? (selJudge.name || selJudge.username) : val
-                              }
-                            }));
-                          }}
-                        >
-                          <option value="">-- Select Assigned Judge Name --</option>
-                          {allJudges.map(j => (
-                            <option key={j.id} value={j.id}>
-                              {j.name || j.username} ({j.role})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Final Grade / Points Input */}
-                      <div>
-                        <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem' }}>
-                          ⭐ Final Grade / Points (0 - {maxStagePoints} pts max)
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          max={maxStagePoints}
-                          className="ft-input"
-                          style={{ fontSize: '0.85rem' }}
-                          placeholder={`e.g. ${Math.round(maxStagePoints * 0.9)}`}
-                          value={draft.score !== undefined ? draft.score : ''}
-                          onChange={e => {
-                            let val = e.target.value;
-                            if (val !== '' && Number(val) > maxStagePoints) val = String(maxStagePoints);
-                            setEvalForm(prev => ({
-                              ...prev,
-                              [item.targetId]: { ...prev[item.targetId], score: val }
-                            }));
-                          }}
+                        <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '0.2rem' }}>💬 Feedback Comment (Optional):</label>
+                        <textarea
+                          className="ft-textarea"
+                          style={{ fontSize: '0.82rem', padding: '0.4rem 0.65rem', minHeight: '60px' }}
+                          value={editForm.comments}
+                          onChange={e => setEditForm(prev => ({ ...prev, comments: e.target.value }))}
                         />
                       </div>
+                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                        <button
+                          type="button"
+                          className="ft-btn"
+                          onClick={() => setEditingEvalId(null)}
+                          style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.78rem', padding: '0.35rem 0.85rem', borderRadius: '8px', fontWeight: 700 }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          className="ft-btn ft-btn-primary"
+                          onClick={() => handleSaveEditedEvaluation(ev.id)}
+                          style={{ fontSize: '0.78rem', padding: '0.35rem 0.85rem', borderRadius: '8px', fontWeight: 800 }}
+                        >
+                          💾 Save Changes
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={targetEvId} style={{ background: '#ffffff', padding: '0.9rem 1.25rem', borderRadius: '14px', border: '1.5px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.45rem', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 900, background: ev.targetType === 'team' ? '#eff6ff' : '#f0fdf4', color: ev.targetType === 'team' ? '#2563eb' : '#16a34a', border: `1px solid ${ev.targetType === 'team' ? '#bfdbfe' : '#bbf7d0'}`, padding: '0.2rem 0.6rem', borderRadius: '8px' }}>
+                          {ev.competitorCode || 'C-101'}
+                        </span>
+                        <strong style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: 900 }}>
+                          {ev.competitorName || 'Competitor'}
+                        </strong>
+                        <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                          · 👨‍⚖️ {ev.judgeName || 'Official Judge Panel'}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        {ev.score !== null && ev.score !== undefined && ev.score !== '' && (
+                          <span style={{ background: '#0284c7', color: '#ffffff', fontWeight: 900, fontSize: '0.82rem', padding: '0.2rem 0.7rem', borderRadius: '8px' }}>
+                            ⭐ Score: {ev.score} pts
+                          </span>
+                        )}
+
+                        {ev.id && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditEvaluation(ev)}
+                              style={{ background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', padding: '0.2rem 0.6rem', borderRadius: '7px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer' }}
+                              title="Edit this comment or score"
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteEvaluation(ev.id)}
+                              style={{ background: '#fff1f2', border: '1px solid #fecdd3', color: '#be123c', padding: '0.2rem 0.6rem', borderRadius: '7px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer' }}
+                              title="Delete this comment or score"
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Judge Comment Textarea */}
-                    <div>
-                      <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem' }}>
-                        💬 Judge Comment & Evaluation Feedback (Using Judge Name)
-                      </label>
-                      <textarea
-                        className="ft-textarea"
-                        rows={2}
-                        style={{ fontSize: '0.85rem' }}
-                        placeholder={`Write feedback under judge "${draft.judgeName || 'Selected Judge'}"...`}
-                        value={draft.comment || ''}
-                        onChange={e => setEvalForm(prev => ({
-                          ...prev,
-                          [item.targetId]: { ...prev[item.targetId], comment: e.target.value }
-                        }))}
-                      />
-                    </div>
-
-                    {/* Save Button */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <button
-                        type="button"
-                        className="ft-btn ft-btn-primary"
-                        onClick={() => handleSaveEvaluation(item)}
-                        style={{ fontWeight: 800, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                      >
-                        <Save size={16} /> Save Grade & Comment
-                      </button>
-                    </div>
+                    {ev.comments ? (
+                      <p style={{ fontSize: '0.83rem', color: '#334155', margin: 0, fontStyle: 'italic', background: '#f8fafc', padding: '0.45rem 0.75rem', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                        💬 "{ev.comments}"
+                      </p>
+                    ) : (
+                      <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                        (No feedback comment entered)
+                      </div>
+                    )}
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
