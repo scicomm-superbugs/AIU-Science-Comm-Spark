@@ -23,8 +23,17 @@ export default function FTEvaluationManagement() {
 
   // Single evaluation entry form state
   const [selectedTargetId, setSelectedTargetId] = useState('');
+  const [targetSearchText, setTargetSearchText] = useState('');
+  const [showTargetDropdown, setShowTargetDropdown] = useState(false);
+
   const [selectedSubmissionId, setSelectedSubmissionId] = useState('');
+  const [subSearchText, setSubSearchText] = useState('');
+  const [showSubDropdown, setShowSubDropdown] = useState(false);
+
   const [newJudgeId, setNewJudgeId] = useState('');
+  const [judgeSearchText, setJudgeSearchText] = useState('');
+  const [showJudgeDropdown, setShowJudgeDropdown] = useState(false);
+
   const [newScore, setNewScore] = useState('');
   const [newComment, setNewComment] = useState('');
 
@@ -373,6 +382,34 @@ export default function FTEvaluationManagement() {
     return options;
   }, [teams, scientists, selectedTrack]);
 
+  // Filtered competitor options for autocomplete
+  const filteredCompetitorOptions = useMemo(() => {
+    if (!targetSearchText.trim()) return competitorOptions;
+    const q = targetSearchText.toLowerCase().trim();
+    return competitorOptions.filter(o =>
+      o.code.toLowerCase().includes(q) ||
+      o.name.toLowerCase().includes(q)
+    );
+  }, [competitorOptions, targetSearchText]);
+
+  // Filtered submission options for autocomplete
+  const filteredSubmissions = useMemo(() => {
+    if (!subSearchText.trim()) return stageSubmissions;
+    const q = subSearchText.toLowerCase().trim();
+    return stageSubmissions.filter(s => s.name.toLowerCase().includes(q));
+  }, [stageSubmissions, subSearchText]);
+
+  // Filtered judge options for autocomplete
+  const filteredJudges = useMemo(() => {
+    if (!judgeSearchText.trim()) return allJudges;
+    const q = judgeSearchText.toLowerCase().trim();
+    return allJudges.filter(j =>
+      (j.name || '').toLowerCase().includes(q) ||
+      (j.username || '').toLowerCase().includes(q) ||
+      (j.role || '').toLowerCase().includes(q)
+    );
+  }, [allJudges, judgeSearchText]);
+
   // Handle saving new single evaluation entry
   const handleSaveSingleEvaluation = async () => {
     if (!selectedTargetId) {
@@ -412,8 +449,13 @@ export default function FTEvaluationManagement() {
 
       await db.ft_evaluations.add(evalData);
 
+      // Reset form fields
       setSelectedTargetId('');
+      setTargetSearchText('');
+      setSelectedSubmissionId('');
+      setSubSearchText('');
       setNewJudgeId('');
+      setJudgeSearchText('');
       setNewScore('');
       setNewComment('');
 
@@ -658,64 +700,187 @@ export default function FTEvaluationManagement() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
-            {/* Competitor / Team Selector by Code */}
-            <div>
+            {/* Competitor / Team Selector with Live Search Suggestions */}
+            <div style={{ position: 'relative' }}>
               <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem', fontWeight: 800 }}>
                 👤 Select Competitor / Team Code *
               </label>
-              <select
-                className="ft-select"
-                style={{ fontSize: '0.85rem', fontWeight: 700 }}
-                value={selectedTargetId}
-                onChange={e => setSelectedTargetId(e.target.value)}
-              >
-                <option value="">-- Choose Competitor or Team by Code --</option>
-                {competitorOptions.map(opt => (
-                  <option key={opt.targetId} value={opt.targetId}>
-                    {opt.displayText}
-                  </option>
-                ))}
-              </select>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  className="ft-input"
+                  style={{ fontSize: '0.85rem', fontWeight: 700, paddingRight: '2rem' }}
+                  placeholder="🔍 Search code (e.g. C-941) or name..."
+                  value={targetSearchText}
+                  onFocus={() => setShowTargetDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowTargetDropdown(false), 200)}
+                  onChange={e => {
+                    setTargetSearchText(e.target.value);
+                    setSelectedTargetId('');
+                    setShowTargetDropdown(true);
+                  }}
+                />
+                <Search size={16} style={{ position: 'absolute', right: 10, top: 12, color: '#94a3b8', pointerEvents: 'none' }} />
+              </div>
+
+              {showTargetDropdown && (
+                <div
+                  style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                    background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: '12px',
+                    maxHeight: '220px', overflowY: 'auto', boxShadow: '0 10px 25px rgba(0,0,0,0.12)',
+                    marginTop: '0.25rem', padding: '0.35rem 0'
+                  }}
+                >
+                  {filteredCompetitorOptions.length === 0 ? (
+                    <div style={{ padding: '0.6rem 0.85rem', fontSize: '0.82rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                      No matching competitors found
+                    </div>
+                  ) : (
+                    filteredCompetitorOptions.map(opt => (
+                      <div
+                        key={opt.targetId}
+                        onClick={() => {
+                          setSelectedTargetId(opt.targetId);
+                          setTargetSearchText(opt.displayText);
+                          setShowTargetDropdown(false);
+                        }}
+                        style={{
+                          padding: '0.55rem 0.85rem', fontSize: '0.83rem', fontWeight: 700, color: '#0f172a',
+                          cursor: 'pointer', background: selectedTargetId === opt.targetId ? '#f0f9ff' : 'transparent',
+                          borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                        }}
+                        onMouseDown={e => e.preventDefault()}
+                      >
+                        <span>{opt.displayText}</span>
+                        {selectedTargetId === opt.targetId && <span style={{ color: '#0284c7', fontWeight: 900 }}>✓</span>}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Submission Deliverable Dropdown */}
-            <div>
+            {/* Submission Deliverable with Live Search Suggestions */}
+            <div style={{ position: 'relative' }}>
               <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem', fontWeight: 800 }}>
                 📝 Select Submission Task / Deliverable
               </label>
-              <select
-                className="ft-select"
-                style={{ fontSize: '0.85rem' }}
-                value={selectedSubmissionId}
-                onChange={e => setSelectedSubmissionId(e.target.value)}
-              >
-                <option value="">-- Select Stage Submission Deliverable --</option>
-                {stageSubmissions.map(sub => (
-                  <option key={sub.id} value={sub.id}>
-                    {sub.name}
-                  </option>
-                ))}
-              </select>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  className="ft-input"
+                  style={{ fontSize: '0.85rem', paddingRight: '2rem' }}
+                  placeholder="🔍 Search deliverable task..."
+                  value={subSearchText}
+                  onFocus={() => setShowSubDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowSubDropdown(false), 200)}
+                  onChange={e => {
+                    setSubSearchText(e.target.value);
+                    setSelectedSubmissionId('');
+                    setShowSubDropdown(true);
+                  }}
+                />
+                <Search size={16} style={{ position: 'absolute', right: 10, top: 12, color: '#94a3b8', pointerEvents: 'none' }} />
+              </div>
+
+              {showSubDropdown && (
+                <div
+                  style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                    background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: '12px',
+                    maxHeight: '220px', overflowY: 'auto', boxShadow: '0 10px 25px rgba(0,0,0,0.12)',
+                    marginTop: '0.25rem', padding: '0.35rem 0'
+                  }}
+                >
+                  {filteredSubmissions.length === 0 ? (
+                    <div style={{ padding: '0.6rem 0.85rem', fontSize: '0.82rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                      No matching deliverables found
+                    </div>
+                  ) : (
+                    filteredSubmissions.map(sub => (
+                      <div
+                        key={sub.id}
+                        onClick={() => {
+                          setSelectedSubmissionId(sub.id);
+                          setSubSearchText(sub.name);
+                          setShowSubDropdown(false);
+                        }}
+                        style={{
+                          padding: '0.55rem 0.85rem', fontSize: '0.83rem', fontWeight: 700, color: '#0f172a',
+                          cursor: 'pointer', background: selectedSubmissionId === sub.id ? '#f0f9ff' : 'transparent',
+                          borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                        }}
+                        onMouseDown={e => e.preventDefault()}
+                      >
+                        <span>📝 {sub.name}</span>
+                        {selectedSubmissionId === sub.id && <span style={{ color: '#0284c7', fontWeight: 900 }}>✓</span>}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Judge Selection Dropdown */}
-            <div>
+            {/* Judge Name with Live Search Suggestions */}
+            <div style={{ position: 'relative' }}>
               <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem', fontWeight: 800 }}>
                 👨‍⚖️ Select Judge Name
               </label>
-              <select
-                className="ft-select"
-                style={{ fontSize: '0.85rem' }}
-                value={newJudgeId}
-                onChange={e => setNewJudgeId(e.target.value)}
-              >
-                <option value="">-- Select Assigned Judge Name (Default: Panel) --</option>
-                {allJudges.map(j => (
-                  <option key={j.id} value={j.id}>
-                    {j.name || j.username} ({j.role})
-                  </option>
-                ))}
-              </select>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  className="ft-input"
+                  style={{ fontSize: '0.85rem', paddingRight: '2rem' }}
+                  placeholder="🔍 Search judge name or role..."
+                  value={judgeSearchText}
+                  onFocus={() => setShowJudgeDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowJudgeDropdown(false), 200)}
+                  onChange={e => {
+                    setJudgeSearchText(e.target.value);
+                    setNewJudgeId('');
+                    setShowJudgeDropdown(true);
+                  }}
+                />
+                <Search size={16} style={{ position: 'absolute', right: 10, top: 12, color: '#94a3b8', pointerEvents: 'none' }} />
+              </div>
+
+              {showJudgeDropdown && (
+                <div
+                  style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                    background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: '12px',
+                    maxHeight: '220px', overflowY: 'auto', boxShadow: '0 10px 25px rgba(0,0,0,0.12)',
+                    marginTop: '0.25rem', padding: '0.35rem 0'
+                  }}
+                >
+                  {filteredJudges.length === 0 ? (
+                    <div style={{ padding: '0.6rem 0.85rem', fontSize: '0.82rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                      No matching judges found
+                    </div>
+                  ) : (
+                    filteredJudges.map(j => (
+                      <div
+                        key={j.id}
+                        onClick={() => {
+                          setNewJudgeId(j.id);
+                          setJudgeSearchText(`${j.name || j.username} (${j.role})`);
+                          setShowJudgeDropdown(false);
+                        }}
+                        style={{
+                          padding: '0.55rem 0.85rem', fontSize: '0.83rem', fontWeight: 700, color: '#0f172a',
+                          cursor: 'pointer', background: newJudgeId === j.id ? '#f0f9ff' : 'transparent',
+                          borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                        }}
+                        onMouseDown={e => e.preventDefault()}
+                      >
+                        <span>👨‍⚖️ {j.name || j.username} <span style={{ fontSize: '0.72rem', color: '#64748b' }}>({j.role})</span></span>
+                        {newJudgeId === j.id && <span style={{ color: '#0284c7', fontWeight: 900 }}>✓</span>}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Final Grade / Points Input (REQUIRED) */}
