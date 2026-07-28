@@ -171,18 +171,49 @@ export default function FTOurTeam() {
     return combined.sort((a, b) => b.totalPoints - a.totalPoints);
   }, [teams, allScientists, allEvaluations, allSubmissions]);
 
-  // Personal Rank on Unified Leaderboard
+  // Selected track for Leaderboard tab
+  const [selectedLeaderboardTrack, setSelectedLeaderboardTrack] = useState('pop_science');
+
+  // Track 1: Pop Science Videos Leaderboard
+  const popScienceLeaderboard = useMemo(() => {
+    return unifiedLeaderboard.filter(item =>
+      item.track === 'pop_science' ||
+      item.track === 'Pop Science Videos' ||
+      !item.track
+    );
+  }, [unifiedLeaderboard]);
+
+  // Track 2: Science Journalism Leaderboard
+  const journalismLeaderboard = useMemo(() => {
+    return unifiedLeaderboard.filter(item =>
+      item.track === 'science_journalism' ||
+      item.track === 'Science Journalism'
+    );
+  }, [unifiedLeaderboard]);
+
+  // Active Leaderboard List based on Tab
+  const activeLeaderboard = useMemo(() => {
+    if (selectedLeaderboardTrack === 'science_journalism') return journalismLeaderboard;
+    if (selectedLeaderboardTrack === 'all') return unifiedLeaderboard;
+    return popScienceLeaderboard;
+  }, [selectedLeaderboardTrack, popScienceLeaderboard, journalismLeaderboard, unifiedLeaderboard]);
+
+  // Personal Rank on Track Leaderboard
   const myLeaderboardStat = useMemo(() => {
-    if (!user) return { rank: 1, totalPoints: 0, submissionsCount: 0 };
+    if (!user) return { rank: 1, totalPoints: 0, submissionsCount: 0, trackName: '' };
+    const myTrackKey = normalizeTrackKey(user?.registeredTrack || meDoc?.registeredTrack || myTeam?.track) || 'pop_science';
+    const targetTrackLeaderboard = myTrackKey === 'science_journalism' ? journalismLeaderboard : popScienceLeaderboard;
     const targetId = myTeam ? myTeam.id : user.id;
-    const index = unifiedLeaderboard.findIndex(item => item.id === targetId);
-    const entry = unifiedLeaderboard[index];
+
+    const index = targetTrackLeaderboard.findIndex(item => item.id === targetId);
+    const entry = targetTrackLeaderboard[index];
     return {
       rank: index >= 0 ? index + 1 : 1,
       totalPoints: entry?.totalPoints || 0,
-      submissionsCount: entry?.submissionsCount || 0
+      submissionsCount: entry?.submissionsCount || 0,
+      trackName: myTrackKey === 'science_journalism' ? 'Track 2: Science Journalism' : 'Track 1: Pop Science Videos'
     };
-  }, [user, myTeam, unifiedLeaderboard]);
+  }, [user, meDoc, myTeam, popScienceLeaderboard, journalismLeaderboard]);
 
   // Create Team Handler
   const handleCreateTeam = async (e) => {
@@ -773,73 +804,145 @@ export default function FTOurTeam() {
         </div>
       )}
 
-      {/* MASTER UNIFIED LEADERBOARD (TEAMS + INDIVIDUAL COMPETITORS TOGETHER!) */}
+      {/* SPLIT COMPETITION LEADERBOARDS (TRACK 1 & TRACK 2) */}
       <div className="ft-card" style={{ padding: '2rem', background: '#ffffff', borderRadius: '24px', border: '1.5px solid #e2e8f0' }}>
-        <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Trophy size={22} style={{ color: '#f59e0b' }} /> Competition Rankings & Leaderboard
-        </h3>
-        <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 1.25rem 0' }}>
-          Combined rankings of all registered Teams and Solo Competitors scored by judges across competition stages.
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem', borderBottom: '2px solid #f1f5f9', paddingBottom: '1rem' }}>
+          <div>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Trophy size={24} style={{ color: '#f59e0b' }} /> Competition Rankings & Leaderboards
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
+              Separate track rankings for Track 1 (Pop Science Videos) & Track 2 (Science Journalism).
+            </p>
+          </div>
 
+          {/* Track Leaderboard Selector Tabs */}
+          <div style={{ display: 'flex', gap: '0.5rem', background: '#f8fafc', padding: '0.35rem', borderRadius: '14px', border: '1px solid #cbd5e1', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => setSelectedLeaderboardTrack('pop_science')}
+              className="ft-btn"
+              style={{
+                padding: '0.5rem 1.1rem', borderRadius: '10px', fontWeight: 900, fontSize: '0.83rem',
+                background: selectedLeaderboardTrack === 'pop_science' ? 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)' : 'transparent',
+                color: selectedLeaderboardTrack === 'pop_science' ? '#ffffff' : '#64748b',
+                border: 'none', boxShadow: selectedLeaderboardTrack === 'pop_science' ? '0 4px 12px rgba(190,18,60,0.25)' : 'none',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem'
+              }}
+            >
+              <span>🎥 Track 1: Pop Science</span>
+              <span style={{ fontSize: '0.72rem', opacity: 0.85, background: selectedLeaderboardTrack === 'pop_science' ? 'rgba(255,255,255,0.25)' : '#e2e8f0', padding: '0.1rem 0.45rem', borderRadius: '6px', color: selectedLeaderboardTrack === 'pop_science' ? '#ffffff' : '#475569' }}>
+                {popScienceLeaderboard.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedLeaderboardTrack('science_journalism')}
+              className="ft-btn"
+              style={{
+                padding: '0.5rem 1.1rem', borderRadius: '10px', fontWeight: 900, fontSize: '0.83rem',
+                background: selectedLeaderboardTrack === 'science_journalism' ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' : 'transparent',
+                color: selectedLeaderboardTrack === 'science_journalism' ? '#ffffff' : '#64748b',
+                border: 'none', boxShadow: selectedLeaderboardTrack === 'science_journalism' ? '0 4px 12px rgba(37,99,235,0.25)' : 'none',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem'
+              }}
+            >
+              <span>📰 Track 2: Journalism</span>
+              <span style={{ fontSize: '0.72rem', opacity: 0.85, background: selectedLeaderboardTrack === 'science_journalism' ? 'rgba(255,255,255,0.25)' : '#e2e8f0', padding: '0.1rem 0.45rem', borderRadius: '6px', color: selectedLeaderboardTrack === 'science_journalism' ? '#ffffff' : '#475569' }}>
+                {journalismLeaderboard.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedLeaderboardTrack('all')}
+              className="ft-btn"
+              style={{
+                padding: '0.5rem 1rem', borderRadius: '10px', fontWeight: 800, fontSize: '0.83rem',
+                background: selectedLeaderboardTrack === 'all' ? '#0f172a' : 'transparent',
+                color: selectedLeaderboardTrack === 'all' ? '#ffffff' : '#64748b',
+                border: 'none', cursor: 'pointer'
+              }}
+            >
+              <span>🌐 All Tracks</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Active Leaderboard Table Cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {unifiedLeaderboard.map((item, idx) => {
-            const isMeOrMyTeam = myTeam ? item.id === myTeam.id : item.id === user.id;
-            return (
-              <div key={item.id} style={{
-                padding: '1.1rem 1.25rem', borderRadius: '16px',
-                background: isMeOrMyTeam ? '#fff1f2' : '#f8fafc',
-                border: isMeOrMyTeam ? '2px solid #be123c' : '1px solid #e2e8f0',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem',
-                boxShadow: isMeOrMyTeam ? '0 4px 16px rgba(190, 18, 60, 0.12)' : '0 2px 6px rgba(0,0,0,0.02)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <span style={{
-                    width: '38px', height: '38px', borderRadius: '50%',
-                    background: idx === 0 ? '#fef3c7' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#ffedd5' : '#f1f5f9',
-                    color: idx === 0 ? '#b45309' : idx === 1 ? '#475569' : idx === 2 ? '#c2410c' : '#64748b',
-                    fontWeight: 900, fontSize: '0.92rem', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                  }}>
-                    #{idx + 1}
-                  </span>
-
-                  <div>
-                    <div style={{ fontWeight: 900, fontSize: '1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      {item.name} 
-                      {isMeOrMyTeam && <span style={{ color: '#be123c', fontSize: '0.8rem', fontWeight: 800 }}>(You)</span>}
-                      
-                      {/* Type Badge: Team vs Solo */}
-                      <span style={{
-                        fontSize: '0.7rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '6px',
-                        background: item.type === 'team' ? '#fff1f2' : '#eff6ff',
-                        color: item.type === 'team' ? '#be123c' : '#2563eb',
-                        border: `1px solid ${item.type === 'team' ? '#fecdd3' : '#bfdbfe'}`
-                      }}>
-                        {item.type === 'team' ? `👥 Team (${item.membersCount} members)` : '👤 Solo Competitor'}
-                      </span>
-                    </div>
-
-                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <span>Track: <strong>{item.track === 'pop_science' ? 'Pop Videos' : 'Science Journalism'}</strong></span>
-                      <span>·</span>
-                      <span style={{ background: '#ffffff', padding: '0.1rem 0.45rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontWeight: 800, color: '#334155' }}>
-                        🏷️ Code: {item.code}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 900, fontSize: '1.25rem', color: '#0f172a' }}>
-                    {item.totalPoints || 0} pts
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                    {item.submissionsCount} submission(s)
-                  </div>
-                </div>
+          {activeLeaderboard.length === 0 ? (
+            <div style={{ padding: '2.5rem', textAlign: 'center', background: '#f8fafc', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
+              <div style={{ fontSize: '2.2rem', marginBottom: '0.4rem' }}>🏆</div>
+              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>No Ranked Competitors in this Track Yet</div>
+              <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '0.2rem' }}>
+                Scores will appear here as soon as judges evaluate submissions for this track.
               </div>
-            );
-          })}
+            </div>
+          ) : (
+            activeLeaderboard.map((item, idx) => {
+              const isMeOrMyTeam = myTeam ? item.id === myTeam.id : item.id === user.id;
+              const isPopTrack = item.track === 'pop_science' || item.track === 'Pop Science Videos' || !item.track;
+
+              return (
+                <div key={item.id} style={{
+                  padding: '1.1rem 1.25rem', borderRadius: '16px',
+                  background: isMeOrMyTeam ? '#fff1f2' : '#f8fafc',
+                  border: isMeOrMyTeam ? '2px solid #be123c' : '1px solid #e2e8f0',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem',
+                  boxShadow: isMeOrMyTeam ? '0 4px 16px rgba(190, 18, 60, 0.12)' : '0 2px 6px rgba(0,0,0,0.02)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <span style={{
+                      width: '38px', height: '38px', borderRadius: '50%',
+                      background: idx === 0 ? '#fef3c7' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#ffedd5' : '#f1f5f9',
+                      color: idx === 0 ? '#b45309' : idx === 1 ? '#475569' : idx === 2 ? '#c2410c' : '#64748b',
+                      fontWeight: 900, fontSize: '0.92rem', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                      #{idx + 1}
+                    </span>
+
+                    <div>
+                      <div style={{ fontWeight: 900, fontSize: '1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {item.name} 
+                        {isMeOrMyTeam && <span style={{ color: '#be123c', fontSize: '0.8rem', fontWeight: 800 }}>(You)</span>}
+                        
+                        {/* Type Badge: Team vs Solo */}
+                        <span style={{
+                          fontSize: '0.7rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '6px',
+                          background: item.type === 'team' ? '#fff1f2' : '#eff6ff',
+                          color: item.type === 'team' ? '#be123c' : '#2563eb',
+                          border: `1px solid ${item.type === 'team' ? '#fecdd3' : '#bfdbfe'}`
+                        }}>
+                          {item.type === 'team' ? `👥 Team (${item.membersCount} members)` : '👤 Solo Competitor'}
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ background: isPopTrack ? '#fff1f2' : '#eff6ff', color: isPopTrack ? '#be123c' : '#2563eb', padding: '0.1rem 0.5rem', borderRadius: '6px', fontWeight: 800 }}>
+                          {isPopTrack ? '🎥 Track 1: Pop Science' : '📰 Track 2: Science Journalism'}
+                        </span>
+                        <span>·</span>
+                        <span style={{ background: '#ffffff', padding: '0.1rem 0.45rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontWeight: 800, color: '#334155' }}>
+                          🏷️ Code: {item.code}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 900, fontSize: '1.25rem', color: '#0f172a' }}>
+                      {item.totalPoints || 0} pts
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                      {item.submissionsCount} submission(s)
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
