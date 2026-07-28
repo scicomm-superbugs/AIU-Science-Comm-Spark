@@ -224,6 +224,21 @@ export default function FTMyCompetition() {
       } else {
         await db.submissions.add(data);
       }
+
+      // Trigger Admin Notification for New Submission
+      try {
+        await db.ft_notifications.add({
+          targetRoles: ['admin', 'master'],
+          type: 'submission',
+          title: `📤 New Project Submission Received`,
+          message: `${user?.name || 'Competitor'} submitted project deliverable for Stage ${stageId}.`,
+          link: '/dashboard/evaluations',
+          createdAt: new Date().toISOString(),
+          status: 'unread'
+        });
+      } catch (nErr) {
+        console.warn('Failed to send admin submission notification:', nErr);
+      }
     } catch (err) {
       console.error('Failed to log submission:', err);
     }

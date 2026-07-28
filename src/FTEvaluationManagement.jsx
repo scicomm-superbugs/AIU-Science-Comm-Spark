@@ -338,6 +338,22 @@ export default function FTEvaluationManagement() {
 
       await db.ft_evaluations.add(evalData);
 
+      // Trigger Competitor Notification for New Evaluation
+      try {
+        await db.ft_notifications.add({
+          targetUserId: targetItem.competitorId || targetItem.id,
+          targetRoles: ['competitor', 'user'],
+          type: 'evaluation',
+          title: `🏅 New Evaluation Score Published`,
+          message: `Your Stage ${selectedStageId} submission received an evaluation score of ${scoreVal} pts from Judge "${judgeName}".`,
+          link: '/dashboard/my-competition',
+          createdAt: new Date().toISOString(),
+          status: 'unread'
+        });
+      } catch (nErr) {
+        console.warn('Failed to send competitor evaluation notification:', nErr);
+      }
+
       // Clear draft for this target
       setEvalForm(prev => ({
         ...prev,

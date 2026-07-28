@@ -251,6 +251,21 @@ export default function Register() {
         createdAt: new Date().toISOString()
       });
 
+      // Send Notification to Admins for New User Registration / Approval Request
+      try {
+        await db.ft_notifications.add({
+          targetRoles: ['admin', 'master'],
+          type: 'registration',
+          title: `👤 New Account Registration Request`,
+          message: `New account registered: ${formData.name.trim()} (${userRole}, Track: ${formData.registeredTrack || 'General'}).`,
+          link: '/dashboard/competitors',
+          createdAt: new Date().toISOString(),
+          status: 'unread'
+        });
+      } catch (nErr) {
+        console.warn('Failed to send admin registration notification:', nErr);
+      }
+
       if (isFirstUser) {
         const userData = {
           id: newId,

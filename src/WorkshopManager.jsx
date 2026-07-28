@@ -444,6 +444,21 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
       } else {
         await db.workshops.add({ ...payload, createdAt: new Date().toISOString() });
         setSuccess('Event / Workshop scheduled successfully!');
+
+        // Trigger Notification to All Users for New Workshop
+        try {
+          await db.ft_notifications.add({
+            targetRoles: ['competitor', 'user', 'judge', 'academic_judge', 'scicomm_judge', 'admin', 'master'],
+            type: 'workshop',
+            title: `🎓 New Training Workshop Scheduled`,
+            message: `Workshop "${payload.title}" is scheduled for ${payload.startDate || 'upcoming session'}. Click to view details and register.`,
+            link: '/dashboard/timeline',
+            createdAt: new Date().toISOString(),
+            status: 'unread'
+          });
+        } catch (nErr) {
+          console.warn('Failed to send workshop notification:', nErr);
+        }
       }
 
       setShowModal(false);

@@ -190,6 +190,32 @@ export default function FTLayout() {
             createdAt: new Date().toISOString(),
             link: '#open-release-notes'
           });
+          // Seed active stage submission window & judge reminder notification
+          const qDeadline = query(
+            collection(firestore, notifCol),
+            where('type', '==', 'stage_deadline_reminder')
+          );
+          const snapDeadline = await getDocs(qDeadline);
+          if (snapDeadline.empty) {
+            await db.ft_notifications.add({
+              title: '⏳ Active Submission Window Open!',
+              message: 'Stage 1: Topic Research & Submission Window is active! Please check your deadlines and submit deliverables.',
+              type: 'stage_deadline_reminder',
+              status: 'unread',
+              targetRoles: ['competitor', 'user'],
+              createdAt: new Date().toISOString(),
+              link: '/dashboard/my-competition'
+            });
+            await db.ft_notifications.add({
+              title: '⚖️ Stage Evaluation Window Active',
+              message: 'Judges Evaluation Window is active for current stage submissions. Check your Judge Portal for assigned entries.',
+              type: 'stage_deadline_reminder',
+              status: 'unread',
+              targetRoles: ['judge', 'academic_judge', 'scicomm_judge'],
+              createdAt: new Date().toISOString(),
+              link: '/dashboard/judge'
+            });
+          }
           console.log("Seeded system release notes notifications successfully!");
         }
       } catch (err) {
@@ -496,13 +522,21 @@ export default function FTLayout() {
 
   const myNotifications = useMemo(() => {
     if (!notifications || !user) return [];
+    const effectiveRole = user.role || userRole || 'competitor';
     return notifications
       .filter(n => {
-        if (userRole === 'admin' || userRole === 'master' || userRole === 'faculty') {
-          return n.targetRoles?.includes('admin') || n.targetRoles?.includes('master') || n.targetRoles?.includes('faculty') || n.targetUserId === user.id;
-        } else {
-          return n.targetUserId === user.id;
+        // Direct target user match
+        if (n.targetUserId && (n.targetUserId === user.id || n.targetUserId === user.username)) return true;
+        
+        // Role target match
+        if (n.targetRoles && Array.isArray(n.targetRoles)) {
+          if (n.targetRoles.includes(effectiveRole)) return true;
+          if ((effectiveRole === 'master' || effectiveRole === 'admin') && (n.targetRoles.includes('admin') || n.targetRoles.includes('master'))) return true;
+          if ((effectiveRole === 'academic_judge' || effectiveRole === 'scicomm_judge' || effectiveRole === 'judge') && n.targetRoles.includes('judge')) return true;
+          if (effectiveRole === 'competitor' && n.targetRoles.includes('competitor')) return true;
         }
+
+        return false;
       })
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [notifications, user, userRole]);
@@ -735,7 +769,14 @@ export default function FTLayout() {
                           onClick={() => handleNotificationClick(notif)}
                         >
                           <div className="ft-notifications-item-icon">
-                            {notif.type.includes('approved') ? '🎉' : notif.type.includes('rejected') ? '❌' : '🔔'}
+                            {notif.type === 'evaluation' ? '🏅' :
+                             notif.type === 'assignment' ? '⚖️' :
+                             notif.type === 'registration' ? '👤' :
+                             notif.type === 'submission' ? '📤' :
+                             notif.type === 'workshop' ? '🎓' :
+                             notif.type === 'stage_deadline_reminder' ? '⏳' :
+                             notif.type?.includes('approved') ? '🎉' :
+                             notif.type?.includes('rejected') ? '❌' : '🔔'}
                           </div>
                           <div className="ft-notifications-item-content">
                             <div className="ft-notifications-item-title">{notif.title}</div>

@@ -190,6 +190,24 @@ export default function FTAdminSubmissionAssignments() {
       } else {
         await db.submission_assignments.add(data);
       }
+
+      // Trigger Judge Notification for New Submission Assignment
+      if (updatedJudgeIds.includes(clickedJudge.id)) {
+        try {
+          await db.ft_notifications.add({
+            targetUserId: clickedJudge.id,
+            targetRoles: ['judge', 'academic_judge', 'scicomm_judge'],
+            type: 'assignment',
+            title: `⚖️ New Submission Assigned for Evaluation`,
+            message: `You have been assigned to evaluate Stage ${selectedStageId} submission for ${target.name} (${target.code}).`,
+            link: '/dashboard/judge',
+            createdAt: new Date().toISOString(),
+            status: 'unread'
+          });
+        } catch (nErr) {
+          console.warn('Failed to send judge assignment notification:', nErr);
+        }
+      }
     } catch (err) {
       console.error('Failed to save submission assignment:', err);
       showToast('❌ Failed to update assignment: ' + err.message);
