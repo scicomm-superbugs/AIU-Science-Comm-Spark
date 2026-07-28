@@ -569,10 +569,10 @@ export default function FTJudgeDashboard() {
           <div className="ft-card ft-animate-in" style={{ background: '#ffffff', padding: '1.75rem', borderRadius: '20px', maxWidth: '440px', width: '100%', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.25)' }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📝</div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.5rem 0' }}>
-              Did you submit your evaluation form?
+              Did you finish your evaluation?
             </h3>
             <p style={{ fontSize: '0.88rem', color: '#475569', lineHeight: 1.5, margin: '0 0 1.5rem 0' }}>
-              If you have submitted the Google Form response, mark it as completed to update your stage evaluation progress.
+              If you have completed evaluating this deliverable, mark it as completed to update your stage evaluation progress.
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
               <button
