@@ -22,9 +22,8 @@ export default function FTAdminCompetitors() {
   const [editingCompetitor, setEditingCompetitor] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [toast, setToast] = useState(null);
-  const [allScientists, setAllScientists] = useState([]);
-  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [addingToTeamModal, setAddingToTeamModal] = useState(null);
+  const [adminAddSearch, setAdminAddSearch] = useState('');
 
   const teams = useLiveCollection('ft_teams') || [];
   const tracksList = useLiveCollection('ft_tracks') || [];
@@ -640,6 +639,111 @@ export default function FTAdminCompetitors() {
     }
   };
 
+  const removeMemberFromTeam = async (teamItem, memberObj, memberDoc) => {
+    if (!teamItem) return;
+    const mId = memberDoc?.id || memberObj?.userId;
+    const mUsername = memberObj?.username || memberDoc?.username;
+    const mName = memberDoc?.name || memberObj?.name || mUsername || 'competitor';
+
+    if (!window.confirm(`Remove "${mName}" from team "${teamItem.name}"? (Status will change to Individual Competitor)`)) return;
+
+    try {
+      const updatedMembers = (teamItem.members || []).filter(m => m.userId !== mId && m.username !== mUsername);
+
+      if (updatedMembers.length === 0) {
+        await db.ft_teams.delete(teamItem.id);
+      } else {
+        let newLeaderId = teamItem.leaderId;
+        let newLeaderUsername = teamItem.leaderUsername;
+        if ((teamItem.leaderId === mId || teamItem.leaderUsername === mUsername) && updatedMembers.length > 0) {
+          updatedMembers[0].role = 'Team Leader';
+          newLeaderId = updatedMembers[0].userId;
+          newLeaderUsername = updatedMembers[0].username;
+        }
+        await db.ft_teams.update(teamItem.id, {
+          members: updatedMembers,
+          leaderId: newLeaderId,
+          leaderUsername: newLeaderUsername
+        });
+      }
+
+      if (mId) {
+        await db.scientists.update(mId, { participationMode: 'individual' });
+        setCompetitors(prev => prev.map(c => c.id === mId ? { ...c, participationMode: 'individual' } : c));
+      }
+
+      setToast({ type: 'success', text: `Removed "${mName}" from team and set to Individual mode!` });
+      setTimeout(() => setToast(null), 3000);
+    } catch (err) {
+      alert('Failed to remove member: ' + err.message);
+    }
+  };
+
+  const addMemberToTeam = async (targetTeam, candidateCompetitor) => {
+    if (!targetTeam || !candidateCompetitor) return;
+    if ((targetTeam.members || []).length >= 3) {
+      alert('This team has reached its maximum capacity of 3 members.');
+      return;
+    }
+
+    const candName = candidateCompetitor.name || candidateCompetitor.username;
+    if (!window.confirm(`Add "${candName}" to team "${targetTeam.name}"?`)) return;
+
+    try {
+      const newMemberObj = {
+        userId: candidateCompetitor.id,
+        name: candidateCompetitor.name || candidateCompetitor.username,
+        username: candidateCompetitor.username,
+        avatar: candidateCompetitor.avatarUrl || candidateCompetitor.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${candidateCompetitor.username}`,
+        role: 'Team Member',
+        joinedAt: new Date().toISOString()
+      };
+
+      const updatedMembers = [...(targetTeam.members || []), newMemberObj];
+
+      await db.ft_teams.update(targetTeam.id, { members: updatedMembers });
+      await db.scientists.update(candidateCompetitor.id, {
+        participationMode: 'team',
+        registeredTrack: targetTeam.track || candidateCompetitor.registeredTrack || 'pop_science'
+      });
+
+      setCompetitors(prev => prev.map(c => c.id === candidateCompetitor.id ? {
+        ...c,
+        participationMode: 'team',
+        registeredTrack: targetTeam.track || c.registeredTrack
+      } : c));
+
+      setAddingToTeamModal(null);
+      setToast({ type: 'success', text: `Added "${candName}" to team "${targetTeam.name}"!` });
+      setTimeout(() => setToast(null), 3000);
+    } catch (err) {
+      alert('Failed to add member to team: ' + err.message);
+    }
+  };
+
+  const availableForAdminAdd = useMemo(() => {
+    if (!addingToTeamModal) return [];
+    const teamMemberUserIds = (addingToTeamModal.members || []).map(m => m.userId).filter(Boolean);
+    const teamMemberUsernames = (addingToTeamModal.members || []).map(m => m.username).filter(Boolean);
+
+    return competitors.filter(c => {
+      const isAlreadyInTeam = teamMemberUserIds.includes(c.id) || teamMemberUsernames.includes(c.username);
+      const isRoleEligible = !c.role || c.role === 'competitor' || c.role === 'user';
+      const displayId = formatSimpleCode(c.competitorCode || c.competitorIdNumber || c.universityId || c.id, false);
+      const matchesSearch = !adminAddSearch || 
+        c.name?.toLowerCase().includes(adminAddSearch.toLowerCase()) ||
+        c.username?.toLowerCase().includes(adminAddSearch.toLowerCase()) ||
+        c.email?.toLowerCase().includes(adminAddSearch.toLowerCase()) ||
+        displayId.toLowerCase().includes(adminAddSearch.toLowerCase());
+
+      return !isAlreadyInTeam && isRoleEligible && matchesSearch;
+    }).map(c => ({
+      ...c,
+      rawDoc: c,
+      displayId: formatSimpleCode(c.competitorCode || c.competitorIdNumber || c.universityId || c.id, false)
+    }));
+  }, [addingToTeamModal, competitors, adminAddSearch]);
+
   const handleDeleteEntry = async (item) => {
     if (!window.confirm(`Are you sure you want to delete ${item.type === 'team' ? 'team' : 'competitor'} "${item.name}"?`)) return;
     setIsDeleting(true);
@@ -938,16 +1042,21 @@ export default function FTAdminCompetitors() {
                       {/* Actions */}
                       <td style={{ width: '90px' }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: 'flex', gap: '0.35rem' }}>
-                          {item.type === 'individual' && (
-                            <button
-                              className="ft-btn"
-                              onClick={() => openEditModal(item.rawDoc)}
-                              title="Edit Competitor"
-                              style={{ background: '#f1f5f9', border: 'none', padding: '0.35rem', borderRadius: '8px', color: '#2563eb', cursor: 'pointer' }}
-                            >
-                              <Edit3 size={15} />
-                            </button>
-                          )}
+                          <button
+                            className="ft-btn"
+                            onClick={() => {
+                              if (item.type === 'team') {
+                                const leaderDoc = item.memberDocs?.find(d => d.id === item.rawDoc.leaderId || d.username === item.rawDoc.leaderUsername) || item.memberDocs?.[0] || item.rawDoc;
+                                openEditModal(leaderDoc);
+                              } else {
+                                openEditModal(item.rawDoc);
+                              }
+                            }}
+                            title="Edit Competitor Details & Mode"
+                            style={{ background: '#f1f5f9', border: 'none', padding: '0.35rem', borderRadius: '8px', color: '#2563eb', cursor: 'pointer' }}
+                          >
+                            <Edit3 size={15} />
+                          </button>
 
                           <button
                             className="ft-btn"
@@ -1012,11 +1121,23 @@ export default function FTAdminCompetitors() {
                                 )}
                               </div>
 
-                              {/* Team Members List */}
+                              {/* Team Members List Header */}
                               <div>
-                                <h5 style={{ fontSize: '0.9rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.75rem 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                  👥 Team Members Personal Profiles ({(item.members || []).length} / 3)
-                                </h5>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                  <h5 style={{ fontSize: '0.9rem', fontWeight: 900, color: '#0f172a', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    👥 Team Members Personal Profiles ({(item.members || []).length} / 3)
+                                  </h5>
+                                  {(item.members || []).length < 3 && (
+                                    <button
+                                      type="button"
+                                      className="ft-btn"
+                                      onClick={(e) => { e.stopPropagation(); setAddingToTeamModal(item.rawDoc || item); setAdminAddSearch(''); }}
+                                      style={{ background: '#f0fdf4', color: '#16a34a', border: '1.5px solid #86efac', fontSize: '0.8rem', fontWeight: 800, padding: '0.35rem 0.8rem', borderRadius: '10px', cursor: 'pointer' }}
+                                    >
+                                      ➕ Add Competitor to Team
+                                    </button>
+                                  )}
+                                </div>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
                                   {(item.members || []).map((m, mIdx) => {
@@ -1066,6 +1187,26 @@ export default function FTAdminCompetitors() {
                                             <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase', display: 'block' }}>Institution / Dept</span>
                                             <strong style={{ color: '#0f172a' }}>🏫 {mDoc.institutionName || 'Alamein International University'} ({mDoc.department || 'Computer Science & AI'})</strong>
                                           </div>
+                                        </div>
+
+                                        {/* Admin Action Buttons for Member */}
+                                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9', flexWrap: 'wrap' }}>
+                                          <button
+                                            type="button"
+                                            className="ft-btn"
+                                            onClick={(e) => { e.stopPropagation(); openEditModal(mDoc); }}
+                                            style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', fontSize: '0.75rem', fontWeight: 800, padding: '0.3rem 0.65rem', borderRadius: '8px', cursor: 'pointer' }}
+                                          >
+                                            ✏️ Edit Competitor Details
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className="ft-btn"
+                                            onClick={(e) => { e.stopPropagation(); removeMemberFromTeam(item.rawDoc || item, m, mDoc); }}
+                                            style={{ background: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3', fontSize: '0.75rem', fontWeight: 800, padding: '0.3rem 0.65rem', borderRadius: '8px', cursor: 'pointer' }}
+                                          >
+                                            👤 Remove & Make Individual
+                                          </button>
                                         </div>
                                       </div>
                                     );
@@ -1234,6 +1375,72 @@ export default function FTAdminCompetitors() {
                 <button type="submit" className="ft-btn ft-btn-primary">Save Changes</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* ADD COMPETITOR TO TEAM MODAL */}
+      {addingToTeamModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '1rem' }}>
+          <div className="ft-card ft-animate-in" style={{ width: '100%', maxWidth: '540px', padding: '2rem', background: '#ffffff', borderRadius: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
+                  👥 Add Member to "{addingToTeamModal.name}"
+                </h3>
+                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0.2rem 0 0 0' }}>
+                  Current Capacity: {(addingToTeamModal.members || []).length} / 3 members
+                </p>
+              </div>
+              <button onClick={() => setAddingToTeamModal(null)} style={{ background: '#f1f5f9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', fontWeight: 800, cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div className="ft-input-group" style={{ marginBottom: '1.25rem' }}>
+              <label className="ft-label">Search Competitors by Name / Username / Email / ID</label>
+              <input
+                type="text"
+                className="ft-input"
+                value={adminAddSearch}
+                onChange={e => setAdminAddSearch(e.target.value)}
+                placeholder="Search registered competitors..."
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', maxHeight: '300px', overflowY: 'auto' }}>
+              {availableForAdminAdd.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.9rem' }}>
+                  No eligible competitors found to add.
+                </div>
+              ) : (
+                availableForAdminAdd.map(cand => (
+                  <div key={cand.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1rem', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <img
+                        src={cand.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${cand.username}`}
+                        alt=""
+                        style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #2563eb' }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a' }}>{cand.name}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>@{cand.username} · {cand.displayId}</div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="ft-btn"
+                      onClick={() => addMemberToTeam(addingToTeamModal, cand.rawDoc)}
+                      style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #86efac', fontSize: '0.78rem', fontWeight: 800, padding: '0.35rem 0.75rem', borderRadius: '8px', cursor: 'pointer' }}
+                    >
+                      ➕ Add to Team
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+              <button type="button" className="ft-btn ft-btn-secondary" onClick={() => setAddingToTeamModal(null)}>Close</button>
+            </div>
           </div>
         </div>
       )}
