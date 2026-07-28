@@ -115,6 +115,7 @@ export default function FTEvaluationManagement() {
           };
           if (s.googleFormUrl) cleaned.googleFormUrl = String(s.googleFormUrl);
           if (s.evalGoogleFormUrl) cleaned.evalGoogleFormUrl = String(s.evalGoogleFormUrl);
+          if (s.assignedJudgeIds) cleaned.assignedJudgeIds = s.assignedJudgeIds.map(id => String(id));
           return cleaned;
         }),
         assignedJudgeIds: newIds.map(id => String(id)),
@@ -163,6 +164,7 @@ export default function FTEvaluationManagement() {
           };
           if (s.googleFormUrl) cleaned.googleFormUrl = String(s.googleFormUrl);
           if (s.evalGoogleFormUrl) cleaned.evalGoogleFormUrl = String(s.evalGoogleFormUrl);
+          if (s.assignedJudgeIds) cleaned.assignedJudgeIds = s.assignedJudgeIds.map(id => String(id));
           return cleaned;
         }),
         assignedJudgeIds: (existingDoc?.assignedJudgeIds || currentStageConfig?.assignedJudgeIds || []).map(id => String(id)),
@@ -175,6 +177,62 @@ export default function FTEvaluationManagement() {
       showToast('✅ Evaluation Google Form URL saved successfully!');
     } catch (err) {
       alert('Failed to save evaluation form URL: ' + err.message);
+    }
+  };
+
+  // Toggle judge assignment specifically for a submission deliverable
+  const handleToggleSubmissionJudgeAssignment = async (subFieldId, judgeId) => {
+    try {
+      const existingDoc = timelineConfig.find(c => c.track === selectedTrack && Number(c.stageId) === Number(selectedStageId));
+      const targetDocId = existingDoc?.id || `${selectedTrack}_stage_${selectedStageId}`;
+      const currentSubs = existingDoc?.submissions || currentStageConfig?.submissions || [];
+
+      const updatedSubs = currentSubs.map(s => {
+        if (s.id === subFieldId) {
+          const currentJudgeIds = s.assignedJudgeIds || [];
+          const newJudgeIds = currentJudgeIds.includes(judgeId)
+            ? currentJudgeIds.filter(id => id !== judgeId)
+            : [...currentJudgeIds, judgeId];
+          return { ...s, assignedJudgeIds: newJudgeIds.map(id => String(id)) };
+        }
+        return s;
+      });
+
+      const dataToSave = {
+        id: String(targetDocId),
+        track: String(selectedTrack === 'all' ? (existingDoc?.track || 'pop_science') : selectedTrack),
+        stageId: Number(selectedStageId),
+        title: String(existingDoc?.title || currentStageConfig?.title || `Stage ${selectedStageId}`),
+        sub: String(existingDoc?.sub || currentStageConfig?.sub || ''),
+        deadline: String(existingDoc?.deadline || currentStageConfig?.deadline || 'TBD'),
+        isTbd: Boolean(existingDoc?.isTbd || currentStageConfig?.isTbd),
+        status: String(existingDoc?.status || currentStageConfig?.status || 'Active Stage'),
+        details: String(existingDoc?.details || currentStageConfig?.details || ''),
+        criteria: existingDoc?.criteria || currentStageConfig?.criteria || [],
+        submissions: updatedSubs.map(s => {
+          const cleaned = {
+            id: String(s.id || ''),
+            name: String(s.name || ''),
+            type: String(s.type || 'url'),
+            openDate: String(s.openDate || ''),
+            deadline: String(s.deadline || ''),
+            isOpen: Boolean(s.isOpen !== false)
+          };
+          if (s.googleFormUrl) cleaned.googleFormUrl = String(s.googleFormUrl);
+          if (s.evalGoogleFormUrl) cleaned.evalGoogleFormUrl = String(s.evalGoogleFormUrl);
+          if (s.assignedJudgeIds) cleaned.assignedJudgeIds = s.assignedJudgeIds.map(id => String(id));
+          return cleaned;
+        }),
+        assignedJudgeIds: (existingDoc?.assignedJudgeIds || currentStageConfig?.assignedJudgeIds || []).map(id => String(id)),
+        acceptSubmissions: Boolean(existingDoc?.acceptSubmissions !== false),
+        googleFormUrl: String(existingDoc?.googleFormUrl || currentStageConfig?.googleFormUrl || ''),
+        updatedAt: new Date().toISOString()
+      };
+
+      await db.timeline_config.set(targetDocId, dataToSave);
+      showToast('✅ Submission deliverable judge assignment updated successfully!');
+    } catch (err) {
+      alert('Failed to update submission judge assignment: ' + err.message);
     }
   };
 
@@ -642,13 +700,15 @@ export default function FTEvaluationManagement() {
             const currentEvalUrlVal = evalUrls[subField.id] !== undefined
               ? evalUrls[subField.id]
               : (subField.evalGoogleFormUrl || '');
+            const subAssignedIds = subField.assignedJudgeIds || [];
 
             return (
-              <div key={subField.id} style={{ background: '#ffffff', padding: '1rem 1.25rem', borderRadius: '14px', border: '1.5px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <div key={subField.id} style={{ background: '#ffffff', padding: '1.2rem 1.35rem', borderRadius: '16px', border: '1.5px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <span>📝 Submission Title:</span>
                   <strong style={{ color: '#be123c' }}>{subField.name}</strong>
                 </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.6rem' }}>
                   <input
                     type="url"
@@ -669,6 +729,42 @@ export default function FTEvaluationManagement() {
                   >
                     <Save size={15} /> Save Form URL
                   </button>
+                </div>
+
+                {/* Per-Submission Specific Judge Assignments */}
+                <div style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginTop: '0.25rem' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 900, color: '#0f172a', display: 'block', marginBottom: '0.45rem' }}>
+                    👨‍⚖️ Assign Judges specifically to evaluate "{subField.name}" ({subAssignedIds.length} Assigned):
+                  </label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {allJudges.length === 0 ? (
+                      <span style={{ fontSize: '0.78rem', color: '#64748b', fontStyle: 'italic' }}>
+                        No registered judges found.
+                      </span>
+                    ) : (
+                      allJudges.map(j => {
+                        const isSubAssigned = subAssignedIds.includes(j.id) || subAssignedIds.includes(j.username) || subAssignedIds.includes(j.email);
+                        return (
+                          <button
+                            key={j.id}
+                            type="button"
+                            onClick={() => handleToggleSubmissionJudgeAssignment(subField.id, j.id)}
+                            style={{
+                              padding: '0.35rem 0.75rem', borderRadius: '8px', fontWeight: 800, fontSize: '0.78rem',
+                              background: isSubAssigned ? '#f0fdf4' : '#ffffff',
+                              color: isSubAssigned ? '#16a34a' : '#475569',
+                              border: isSubAssigned ? '1.5px solid #86efac' : '1px solid #cbd5e1',
+                              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <span>{isSubAssigned ? '✅' : '➕'}</span>
+                            <span>{j.name || j.username}</span>
+                            <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>({j.role})</span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               </div>
             );

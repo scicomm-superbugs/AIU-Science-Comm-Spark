@@ -315,68 +315,100 @@ export default function FTJudgeDashboard() {
                     📝 Stage Deliverables & Evaluation Forms:
                   </div>
 
-                  {deliverables.map((sf, idx) => {
-                    const evalUrl = sf.evalGoogleFormUrl || st.evalGoogleFormUrl || st.googleFormUrl;
-                    const targetFieldId = String(sf.id || idx || 'sub_def_1');
-                    const targetFieldName = String(sf.name || '').toLowerCase();
+                  {(() => {
+                    const isSuper = ['admin', 'master'].includes(userRole);
+                    const myIdentifiers = [userId, meDoc?.id, meDoc?.username, meDoc?.email, user?.id].filter(Boolean);
 
-                    const isCompleted = evaluations.some(e => {
-                      const matchStage = Number(e.stageId) === Number(st.stageId);
-                      const matchTrack = !e.track || e.track === st.track;
-                      const matchJudge = (e.judgeId === userId || e.judgeId === meDoc?.id || e.judgeId === user?.id);
+                    const visibleDeliverables = deliverables.filter(sf => {
+                      const subAssignedJudgeIds = sf.assignedJudgeIds || [];
+                      const stageAssignedJudgeIds = st.assignedJudgeIds || [];
 
-                      if (!matchStage || !matchTrack || !matchJudge) return false;
+                      if (isSuper) return true;
 
-                      if (e.fieldId) {
-                        return String(e.fieldId) === targetFieldId;
+                      // If judges are specifically assigned to this submission deliverable, check assignment!
+                      if (subAssignedJudgeIds.length > 0) {
+                        return subAssignedJudgeIds.some(id => myIdentifiers.includes(id));
                       }
-                      if (e.comments) {
-                        const commentLower = String(e.comments).toLowerCase();
-                        return targetFieldName && commentLower.includes(targetFieldName);
+
+                      // Fallback: If no judges are assigned specifically to this deliverable, check stage assignment
+                      if (stageAssignedJudgeIds.length > 0) {
+                        return stageAssignedJudgeIds.some(id => myIdentifiers.includes(id));
                       }
-                      return false;
+
+                      return true;
                     });
 
-                    return (
-                      <button
-                        key={sf.id || idx}
-                        type="button"
-                        className="ft-btn"
-                        onClick={() => {
-                          if (evalUrl) {
-                            setEvalVirtualBrowserUrl({
-                              rawUrl: evalUrl,
-                              title: `${st.title} - ${sf.name}`,
-                              stage: st,
-                              field: sf
-                            });
-                          } else {
-                            alert(`No evaluation Google Form URL has been configured for "${sf.name}" by Admin in Evaluation Management yet.`);
-                          }
-                        }}
-                        style={{
-                          width: '100%',
-                          background: isCompleted
-                            ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
-                            : (evalUrl ? 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)' : '#cbd5e1'),
-                          color: '#ffffff',
-                          border: 'none',
-                          fontSize: '0.85rem',
-                          fontWeight: 800,
-                          padding: '0.65rem 0.9rem',
-                          borderRadius: '12px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.45rem',
-                          boxShadow: isCompleted ? '0 4px 14px rgba(5,150,105,0.3)' : (evalUrl ? '0 4px 14px rgba(190, 18, 60, 0.25)' : 'none')
-                        }}
-                      >
-                        {isCompleted ? `✅ Evaluation Completed (${sf.name})` : `🏅 Open & Evaluate: ${sf.name} ↗`}
-                      </button>
-                    );
-                  })}
+                    if (visibleDeliverables.length === 0) {
+                      return (
+                        <div style={{ fontSize: '0.78rem', color: '#64748b', fontStyle: 'italic', background: '#f8fafc', padding: '0.6rem 0.85rem', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                          🔒 You are not assigned to evaluate specific submission deliverables in this stage.
+                        </div>
+                      );
+                    }
+
+                    return visibleDeliverables.map((sf, idx) => {
+                      const evalUrl = sf.evalGoogleFormUrl || st.evalGoogleFormUrl || st.googleFormUrl;
+                      const targetFieldId = String(sf.id || idx || 'sub_def_1');
+                      const targetFieldName = String(sf.name || '').toLowerCase();
+
+                      const isCompleted = evaluations.some(e => {
+                        const matchStage = Number(e.stageId) === Number(st.stageId);
+                        const matchTrack = !e.track || e.track === st.track;
+                        const matchJudge = (e.judgeId === userId || e.judgeId === meDoc?.id || e.judgeId === user?.id);
+
+                        if (!matchStage || !matchTrack || !matchJudge) return false;
+
+                        if (e.fieldId) {
+                          return String(e.fieldId) === targetFieldId;
+                        }
+                        if (e.comments) {
+                          const commentLower = String(e.comments).toLowerCase();
+                          return targetFieldName && commentLower.includes(targetFieldName);
+                        }
+                        return false;
+                      });
+
+                      return (
+                        <button
+                          key={sf.id || idx}
+                          type="button"
+                          className="ft-btn"
+                          onClick={() => {
+                            if (evalUrl) {
+                              setEvalVirtualBrowserUrl({
+                                rawUrl: evalUrl,
+                                title: `${st.title} - ${sf.name}`,
+                                stage: st,
+                                field: sf
+                              });
+                            } else {
+                              alert(`No evaluation Google Form URL has been configured for "${sf.name}" by Admin in Evaluation Management yet.`);
+                            }
+                          }}
+                          style={{
+                            width: '100%',
+                            background: isCompleted
+                              ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                              : (evalUrl ? 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)' : '#cbd5e1'),
+                            color: '#ffffff',
+                            border: 'none',
+                            fontSize: '0.85rem',
+                            fontWeight: 800,
+                            padding: '0.65rem 0.9rem',
+                            borderRadius: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.45rem',
+                            boxShadow: isCompleted ? '0 4px 14px rgba(5,150,105,0.3)' : (evalUrl ? '0 4px 14px rgba(190, 18, 60, 0.25)' : 'none')
+                          }}
+                        >
+                          {isCompleted ? `✅ Evaluation Completed (${sf.name})` : `🏅 Open & Evaluate: ${sf.name} ↗`}
+                        </button>
+                      );
+                    });
+                  })()}
                 </div>
 
               </div>
