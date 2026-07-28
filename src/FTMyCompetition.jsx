@@ -884,21 +884,39 @@ export default function FTMyCompetition() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '1rem' }} onClick={() => setConfirmCloseModal(true)}>
           <div className="ft-card ft-animate-in" style={{ width: '95vw', maxWidth: '1100px', height: '92vh', background: '#ffffff', borderRadius: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)', border: '1px solid #cbd5e1', position: 'relative' }} onClick={e => e.stopPropagation()}>
             
-            {/* Floating Close Button */}
-            <button
-              type="button"
-              onClick={() => setConfirmCloseModal(true)}
-              style={{
-                position: 'absolute', top: '14px', right: '18px', zIndex: 30,
-                background: '#ffffff', border: '1.5px solid #cbd5e1', color: '#0f172a',
-                width: '36px', height: '36px', borderRadius: '50%', fontWeight: 900,
-                fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-              }}
-              title="Close Form"
-            >
-              ✕
-            </button>
+            {/* Top Floating Helper Banner & Eye-Catching Close Button */}
+            <div style={{
+              position: 'absolute', top: '12px', right: '16px', zIndex: 30,
+              display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap'
+            }}>
+              <div style={{
+                background: 'rgba(15,23,42,0.92)', color: '#ffffff',
+                padding: '0.45rem 0.95rem', borderRadius: '12px',
+                fontSize: '0.82rem', fontWeight: 800,
+                boxShadow: '0 4px 14px rgba(0,0,0,0.2)', backdropFilter: 'blur(6px)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                display: 'flex', alignItems: 'center', gap: '0.45rem'
+              }}>
+                <span>💡</span> Click here when finished submitting form →
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setConfirmCloseModal(true)}
+                style={{
+                  background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                  color: '#ffffff', border: 'none',
+                  padding: '0.5rem 1.15rem', borderRadius: '12px', fontWeight: 900,
+                  fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                  gap: '0.5rem', boxShadow: '0 6px 18px rgba(37,99,235,0.35)',
+                  transition: 'transform 0.15s ease'
+                }}
+                title="Click to complete & save submission"
+              >
+                <span>💾 Save & Close</span>
+                <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '50%', width: '22px', height: '22px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem' }}>✕</span>
+              </button>
+            </div>
 
             {/* Embedded Iframe Container */}
             <div style={{ flex: 1, position: 'relative', width: '100%', height: '100%', background: '#ffffff', overflow: 'hidden' }}>
