@@ -524,10 +524,17 @@ export default function FTAdminCompetitors() {
         }
       }
       
+      // Synchronize team track if competitor belongs to a team
+      const myTeamDoc = teams.find(t => (t.members || []).some(m => m.userId === editingCompetitor.id || m.username === editingCompetitor.username));
+      if (myTeamDoc && editForm.registeredTrack !== myTeamDoc.track) {
+        await db.ft_teams.update(myTeamDoc.id, { track: editForm.registeredTrack });
+        setTeams(prev => prev.map(t => t.id === myTeamDoc.id ? { ...t, track: editForm.registeredTrack } : t));
+      }
+
       // Update local state
       setCompetitors(prev => prev.map(c => c.id === editingCompetitor.id ? { ...c, ...updates } : c));
       setEditingCompetitor(null);
-      setToast({ type: 'success', text: 'Competitor details & mode updated successfully!' });
+      setToast({ type: 'success', text: 'Competitor details, track & mode updated successfully!' });
       setTimeout(() => setToast(null), 3000);
     } catch (err) {
       alert('Failed to update competitor: ' + err.message);
@@ -575,6 +582,61 @@ export default function FTAdminCompetitors() {
       setTimeout(() => setToast(null), 3000);
     } catch (err) {
       alert('Failed to switch participation mode: ' + err.message);
+    }
+  };
+
+  const toggleTrack = async (itemOrDoc) => {
+    if (!itemOrDoc) return;
+
+    if (itemOrDoc.type === 'team') {
+      const currentTrack = itemOrDoc.track || 'pop_science';
+      const newTrack = currentTrack === 'pop_science' ? 'science_journalism' : 'pop_science';
+      const newTrackLabel = newTrack === 'pop_science' ? 'Pop Science Videos (Track 1)' : 'Science Journalism (Track 2)';
+
+      if (!window.confirm(`Switch team "${itemOrDoc.name}" and all its members to ${newTrackLabel}?`)) return;
+
+      try {
+        await db.ft_teams.update(itemOrDoc.id, { track: newTrack });
+
+        // Synchronize all member scientist docs to the new track
+        const memberIds = (itemOrDoc.members || []).map(m => m.userId).filter(Boolean);
+        for (const mId of memberIds) {
+          await db.scientists.update(mId, { registeredTrack: newTrack });
+        }
+
+        setTeams(prev => prev.map(t => t.id === itemOrDoc.id ? { ...t, track: newTrack } : t));
+        setCompetitors(prev => prev.map(c => memberIds.includes(c.id) ? { ...c, registeredTrack: newTrack } : c));
+        setToast({ type: 'success', text: `Switched team "${itemOrDoc.name}" to ${newTrackLabel}!` });
+        setTimeout(() => setToast(null), 3000);
+      } catch (err) {
+        alert('Failed to switch team track: ' + err.message);
+      }
+    } else {
+      const scientistDoc = itemOrDoc.rawDoc || itemOrDoc;
+      if (!scientistDoc || !scientistDoc.id) return;
+
+      const currentTrack = scientistDoc.registeredTrack || 'pop_science';
+      const newTrack = currentTrack === 'pop_science' ? 'science_journalism' : 'pop_science';
+      const newTrackLabel = newTrack === 'pop_science' ? 'Pop Science Videos (Track 1)' : 'Science Journalism (Track 2)';
+
+      if (!window.confirm(`Switch "${scientistDoc.name || scientistDoc.username}" track to ${newTrackLabel}?`)) return;
+
+      try {
+        await db.scientists.update(scientistDoc.id, { registeredTrack: newTrack });
+
+        // If competitor belongs to a team, synchronize the team's track as well
+        const myTeamDoc = teams.find(t => (t.members || []).some(m => m.userId === scientistDoc.id || m.username === scientistDoc.username));
+        if (myTeamDoc) {
+          await db.ft_teams.update(myTeamDoc.id, { track: newTrack });
+          setTeams(prev => prev.map(t => t.id === myTeamDoc.id ? { ...t, track: newTrack } : t));
+        }
+
+        setCompetitors(prev => prev.map(c => c.id === scientistDoc.id ? { ...c, registeredTrack: newTrack } : c));
+        setToast({ type: 'success', text: `Switched "${scientistDoc.name || scientistDoc.username}" to ${newTrackLabel}!` });
+        setTimeout(() => setToast(null), 3000);
+      } catch (err) {
+        alert('Failed to switch track: ' + err.message);
+      }
     }
   };
 
@@ -920,7 +982,20 @@ export default function FTAdminCompetitors() {
                                     </div>
                                   </div>
 
-                                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                                    <button
+                                      type="button"
+                                      className="ft-btn"
+                                      onClick={(e) => { e.stopPropagation(); toggleTrack(item); }}
+                                      style={{
+                                        background: '#f8fafc', border: '1.5px solid #cbd5e1', padding: '0.35rem 0.8rem',
+                                        borderRadius: '10px', fontSize: '0.82rem', color: '#0f172a', fontWeight: 800,
+                                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem'
+                                      }}
+                                    >
+                                      🔀 Change Track ({item.track === 'pop_science' ? 'Track 1: Pop Videos' : 'Track 2: Journalism'})
+                                    </button>
+
                                     <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', padding: '0.35rem 0.8rem', borderRadius: '10px', fontSize: '0.82rem', color: '#be123c', fontWeight: 800 }}>
                                       🏷️ Team ID: {item.displayId}
                                     </div>
@@ -1026,6 +1101,19 @@ export default function FTAdminCompetitors() {
                                   </div>
 
                                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                    <button
+                                      type="button"
+                                      className="ft-btn"
+                                      onClick={(e) => { e.stopPropagation(); toggleTrack(item.rawDoc); }}
+                                      style={{
+                                        background: '#f8fafc', border: '1.5px solid #cbd5e1', padding: '0.45rem 0.9rem',
+                                        borderRadius: '10px', fontSize: '0.82rem', color: '#0f172a', fontWeight: 800,
+                                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem'
+                                      }}
+                                    >
+                                      🔀 Switch Track ({item.track === 'pop_science' ? 'Track 1: Pop Videos' : 'Track 2: Journalism'})
+                                    </button>
+
                                     <button
                                       type="button"
                                       className="ft-btn"
