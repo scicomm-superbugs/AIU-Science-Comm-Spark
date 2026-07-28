@@ -37,11 +37,23 @@ export default function FTAdminSubmissionAssignments() {
     }
   };
 
-  // Get all judges from scientists collection
+  // Get all judges from scientists collection + include test judge accounts
   const allJudges = useMemo(() => {
-    return scientists.filter(s => 
+    const dbJudges = scientists.filter(s => 
       ['judge', 'academic_judge', 'scicomm_judge', 'trainer_judge', 'admin', 'master'].includes(s.role)
     );
+    const testJudges = [
+      { id: 'test_judge_academic', name: 'test-judge-academic', username: 'test_judge_academic', role: 'academic_judge', competitorCode: 'J-201', email: 'test-judge-academic@aiu.edu.eg' },
+      { id: 'test_judge_scicomm', name: 'test-judge-scicomm', username: 'test_judge_scicomm', role: 'scicomm_judge', competitorCode: 'J-301', email: 'test-judge-scicomm@aiu.edu.eg' },
+      { id: 'test_judge_trainer', name: 'test-judge-trainer', username: 'test_judge_trainer', role: 'trainer_judge', competitorCode: 'J-401', email: 'test-judge-trainer@aiu.edu.eg' }
+    ];
+    const combined = [...dbJudges];
+    testJudges.forEach(tj => {
+      if (!combined.some(j => j.id === tj.id || j.username === tj.username || j.name === tj.name)) {
+        combined.push(tj);
+      }
+    });
+    return combined;
   }, [scientists]);
 
   // Find judges explicitly assigned to this stage in timeline_config (or default to all judges)
