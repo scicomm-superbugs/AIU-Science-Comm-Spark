@@ -377,14 +377,24 @@ export default function FTMyCompetition() {
           const stageSub = mySubmissions.find(s => Number(s.stageId) === Number(st.stageId));
           const stageEvals = evaluations.filter(e => Number(e.stageId) === Number(st.stageId));
 
-          const isStageActive = Number(st.stageId) === 1 || st.status === 'Active Stage' || st.status === 'Active' || st.acceptSubmissions === true || Boolean(stageSub) || stageEvals.length > 0;
+          // Check if custom timeline config exists for this stage
+          const customStageDoc = timelineConfig.find(c => c.track === (st.trackKey || competitorTrack) && Number(c.stageId) === Number(st.stageId));
 
-          // Deliverables configured for this stage
-          const subFields = (st.submissions && st.submissions.length > 0)
-            ? st.submissions
-            : (competitorTrack === 'pop_science'
-                ? [{ id: 'sub_def_1', name: 'Short Pop Video URL', type: 'url', deadline: st.deadline, question: 'Paste your YouTube, TikTok, Instagram Reels, or Google Drive video URL:' }]
-                : [{ id: 'sub_def_2', name: 'Science Article PDF Document', type: 'file', deadline: st.deadline, question: 'Upload your formatted science article PDF document:' }]);
+          // Real deliverables configured by admin for this stage
+          const hasCustomSubs = Boolean(customStageDoc && Array.isArray(customStageDoc.submissions));
+          const subFields = (customStageDoc?.submissions && customStageDoc.submissions.length > 0)
+            ? customStageDoc.submissions
+            : (st.submissions && st.submissions.length > 0)
+              ? st.submissions
+              : (hasCustomSubs ? [] : (Number(st.stageId) === 1
+                  ? (competitorTrack === 'pop_science'
+                      ? [{ id: 'sub_def_1', name: 'Short Pop Video URL', type: 'url', deadline: st.deadline, question: 'Paste your YouTube, TikTok, Instagram Reels, or Google Drive video URL:' }]
+                      : [{ id: 'sub_def_2', name: 'Science Article PDF Document', type: 'file', deadline: st.deadline, question: 'Upload your formatted science article PDF document:' }])
+                  : []));
+
+          const isStageActive = subFields.length > 0 && st.acceptSubmissions !== false && (
+            Number(st.stageId) === 1 || st.status === 'Active Stage' || st.status === 'Active' || st.acceptSubmissions === true || Boolean(stageSub) || stageEvals.length > 0
+          );
 
           return (
             <div key={st.id} style={{
