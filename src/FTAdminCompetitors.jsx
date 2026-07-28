@@ -482,7 +482,8 @@ export default function FTAdminCompetitors() {
       nationalId: competitor.nationalId || '',
       institutionName: competitor.institutionName || '',
       isAlameinStudent: competitor.isAlameinStudent !== false,
-      competitorIdNumber: formattedId
+      competitorIdNumber: formattedId,
+      password: competitor.password || ''
     });
   };
 
@@ -514,6 +515,10 @@ export default function FTAdminCompetitors() {
         isAlameinStudent: editForm.isAlameinStudent,
         competitorIdNumber: updatedId
       };
+
+      if (editForm.password && editForm.password.trim()) {
+        updates.password = editForm.password.trim();
+      }
 
       await db.scientists.update(editingCompetitor.id, updates);
 
@@ -1321,6 +1326,17 @@ export default function FTAdminCompetitors() {
               <div className="ft-input-group">
                 <label className="ft-label">Email Address / البريد الإلكتروني *</label>
                 <input type="email" className="ft-input" required value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} />
+              </div>
+
+              <div className="ft-input-group">
+                <label className="ft-label">Password / كلمة السر (Set or Change Password)</label>
+                <input
+                  type="text"
+                  className="ft-input"
+                  placeholder="Enter new password (or leave blank to keep current password)"
+                  value={editForm.password || ''}
+                  onChange={e => setEditForm({ ...editForm, password: e.target.value })}
+                />
               </div>
 
               <div className="ft-input-group">
