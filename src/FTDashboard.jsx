@@ -846,7 +846,7 @@ export default function FTDashboard() {
 
             {/* CTA Button in HUD Header */}
             <div className="ft-timeline-hud-cta">
-              {activeStep.type === 'stage' ? (
+              {activeStep.type === 'stage' && !['judge', 'academic_judge', 'scicomm_judge', 'trainer_judge', 'trainer', 'admin', 'master'].includes(user?.role) ? (
                 <button
                   className="ft-btn"
                   onClick={() => navigate('/my-competition')}

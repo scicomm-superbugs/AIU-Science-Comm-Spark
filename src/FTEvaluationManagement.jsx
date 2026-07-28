@@ -565,6 +565,21 @@ export default function FTEvaluationManagement() {
       }
     });
 
+    // 3. Test Competitor accounts
+    const testCompetitorOptions = [
+      { targetId: 'test_comp_pop_team', targetType: 'competitor', code: 'C-901', name: 'test-comp-pop-team', displayText: '👤 C-901 - test-comp-pop-team (Test Competitor)', track: 'pop_science' },
+      { targetId: 'test_comp_pop_solo', targetType: 'competitor', code: 'C-902', name: 'test-comp-pop-solo', displayText: '👤 C-902 - test-comp-pop-solo (Test Competitor)', track: 'pop_science' },
+      { targetId: 'test_comp_jour_team', targetType: 'competitor', code: 'C-801', name: 'test-comp-jour-team', displayText: '📰 C-801 - test-comp-jour-team (Test Competitor)', track: 'science_journalism' },
+      { targetId: 'test_comp_jour_solo', targetType: 'competitor', code: 'C-802', name: 'test-comp-jour-solo', displayText: '📰 C-802 - test-comp-jour-solo (Test Competitor)', track: 'science_journalism' }
+    ];
+    testCompetitorOptions.forEach(tc => {
+      const trackMatch = selectedTrack === 'all' || tc.track === selectedTrack;
+      if (trackMatch && !addedIds.has(tc.targetId)) {
+        options.push(tc);
+        addedIds.add(tc.targetId);
+      }
+    });
+
     return options;
   }, [teams, scientists, selectedTrack]);
 
