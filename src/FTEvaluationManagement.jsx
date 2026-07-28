@@ -24,6 +24,44 @@ export default function FTEvaluationManagement() {
 
   const isStagePublished = Boolean(currentPubDoc?.isPublished);
 
+  const handleToggleSubPublish = async (subId, subName, isCurrentlyPublished) => {
+    const pubDocId = `pub_sub_${selectedStageId}_${selectedTrack}_${subId}`;
+    const newPublishState = !isCurrentlyPublished;
+    const actionLabel = newPublishState
+      ? `📢 Publish evaluation results for "${subName}" (Stage ${selectedStageId}) to all competitors? (Competitors will now see their points and feedback for this submission)`
+      : `🔒 Unpublish evaluation results for "${subName}" (Stage ${selectedStageId})? (Competitors will no longer see points or feedback for this submission until republished)`;
+
+    if (!window.confirm(actionLabel)) return;
+
+    try {
+      await db.published_results.set(pubDocId, {
+        id: pubDocId,
+        stageId: Number(selectedStageId),
+        track: selectedTrack,
+        subId: subId,
+        isPublished: newPublishState,
+        publishedAt: new Date().toISOString(),
+        publishedBy: 'Admin'
+      });
+
+      if (newPublishState) {
+        await db.ft_notifications.add({
+          targetRoles: ['competitor', 'user'],
+          type: 'evaluation',
+          title: `📢 "${subName}" Evaluation Results Published!`,
+          message: `Official evaluation scores and judge feedback for "${subName}" (Stage ${selectedStageId}) have been published by the Admin. Click to view!`,
+          link: '/dashboard/my-competition',
+          createdAt: new Date().toISOString(),
+          status: 'unread'
+        });
+      }
+
+      showToast(newPublishState ? `📢 Results for "${subName}" published live!` : `🔒 Results for "${subName}" set to private / draft.`);
+    } catch (err) {
+      alert('Failed to update submission publish status: ' + err.message);
+    }
+  };
+
   const handleTogglePublishResults = async () => {
     const pubDocId = `pub_stage_${selectedStageId}_${selectedTrack}`;
     const newPublishState = !isStagePublished;
@@ -763,10 +801,57 @@ export default function FTEvaluationManagement() {
 
             return (
               <div key={subField.id} style={{ background: '#ffffff', padding: '1.2rem 1.35rem', borderRadius: '16px', border: '1.5px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span>📝 Submission Title:</span>
-                  <strong style={{ color: '#be123c' }}>{subField.name}</strong>
-                </div>
+                {(() => {
+                  const subPubDoc = publishedResults.find(p => 
+                    Number(p.stageId) === Number(selectedStageId) && 
+                    (p.track === selectedTrack || p.track === 'all') &&
+                    (p.subId === subField.id || p.subId === 'all')
+                  );
+                  const isSubPublished = Boolean(subPubDoc?.isPublished || isStagePublished);
+
+                  return (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.65rem' }}>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span>📝 Submission Title:</span>
+                        <strong style={{ color: '#be123c' }}>{subField.name}</strong>
+                      </div>
+
+                      {/* Per-Submission Results Publish Button */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                        <span style={{
+                          fontSize: '0.78rem',
+                          fontWeight: 900,
+                          background: isSubPublished ? '#dcfce7' : '#fff1f2',
+                          color: isSubPublished ? '#15803d' : '#9f1239',
+                          padding: '0.25rem 0.65rem',
+                          borderRadius: '12px',
+                          border: `1px solid ${isSubPublished ? '#86efac' : '#fecdd3'}`
+                        }}>
+                          {isSubPublished ? '🟢 Published Live' : '🔒 Hidden / Draft'}
+                        </span>
+
+                        <button
+                          type="button"
+                          className="ft-btn"
+                          onClick={() => handleToggleSubPublish(subField.id, subField.name, isSubPublished)}
+                          style={{
+                            background: isSubPublished ? '#dc2626' : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '10px',
+                            padding: '0.45rem 0.85rem',
+                            fontSize: '0.8rem',
+                            fontWeight: 900,
+                            cursor: 'pointer',
+                            boxShadow: isSubPublished ? 'none' : '0 3px 10px rgba(5,150,105,0.25)'
+                          }}
+                        >
+                          {isSubPublished ? `🔒 Unpublish "${subField.name}"` : `📢 Publish "${subField.name}" Results`}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.6rem' }}>
                   <input

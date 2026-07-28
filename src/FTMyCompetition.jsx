@@ -500,7 +500,11 @@ export default function FTMyCompetition() {
                         e.stopPropagation();
                         if (isFieldSubmitted || isEvaluated) {
                           const userTrack = meDoc?.registeredTrack || 'pop_science';
-                          const stagePubDoc = publishedResults.find(p => Number(p.stageId) === Number(st.stageId) && (p.track === userTrack || p.track === 'all'));
+                          const stagePubDoc = publishedResults.find(p => 
+                            Number(p.stageId) === Number(st.stageId) && 
+                            (p.track === userTrack || p.track === 'all') &&
+                            (p.subId === sf.id || p.subId === 'all' || !p.subId)
+                          );
                           const isStagePublished = Boolean(stagePubDoc?.isPublished);
 
                           setOverviewModalData({

@@ -96,6 +96,27 @@ export default function FTOurTeam() {
     return formatSimpleCode(raw, false);
   }, [myTeam, meDoc, user]);
 
+  const publishedResults = useLiveCollection('published_results') || [];
+
+  // Helper to filter evaluations by published status per-submission / stage
+  const filterPublishedEvals = (evalsList) => {
+    if (!evalsList || evalsList.length === 0) return [];
+    return evalsList.filter(ev => {
+      const stId = Number(ev.stageId) || 1;
+      const trk = normalizeTrackKey(ev.track || ev.targetTrack) || 'pop_science';
+      const sbId = ev.subId || ev.submissionFieldId || 'sub_1';
+
+      // Check per-submission or stage-level published status
+      const pubDoc = publishedResults.find(p => 
+        Number(p.stageId) === stId && 
+        (p.track === trk || p.track === 'all') &&
+        (p.subId === sbId || p.subId === 'all' || !p.subId)
+      );
+
+      return Boolean(pubDoc?.isPublished);
+    });
+  };
+
   // Unified Leaderboard combining Teams + Solo Competitors
   const unifiedLeaderboard = useMemo(() => {
     // 1. Map Teams
@@ -112,7 +133,9 @@ export default function FTOurTeam() {
         ev.competitorCode === teamCode
       );
 
-      const totalPoints = calculateAveragedPoints(teamEvals);
+      // Only published evaluation points are calculated on leaderboard!
+      const publishedTeamEvals = filterPublishedEvals(teamEvals);
+      const totalPoints = calculateAveragedPoints(publishedTeamEvals);
 
       const teamSubmissions = allSubmissions.filter(sub => 
         memberUserIds.includes(sub.competitorId) || 
@@ -150,7 +173,10 @@ export default function FTOurTeam() {
         (ev.competitorName && (ev.competitorName === s.name || ev.competitorName === s.username)) ||
         (ev.competitorCode && ev.competitorCode === code)
       );
-      const totalPoints = calculateAveragedPoints(sEvals);
+
+      // Only published evaluation points are calculated on leaderboard!
+      const publishedSEvals = filterPublishedEvals(sEvals);
+      const totalPoints = calculateAveragedPoints(publishedSEvals);
       const sSubs = allSubmissions.filter(sub => sub.competitorId === s.id || sub.competitorUsername === s.username);
 
       return {
@@ -169,7 +195,7 @@ export default function FTOurTeam() {
 
     const combined = [...teamEntries, ...soloEntries];
     return combined.sort((a, b) => b.totalPoints - a.totalPoints);
-  }, [teams, allScientists, allEvaluations, allSubmissions]);
+  }, [teams, allScientists, allEvaluations, allSubmissions, publishedResults]);
 
   // Selected track for Leaderboard tab
   const [selectedLeaderboardTrack, setSelectedLeaderboardTrack] = useState('pop_science');
