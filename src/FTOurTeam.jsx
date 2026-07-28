@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from './context/AuthContext';
 import { useLiveCollection, db } from './db';
-import { calculateAveragedPoints } from './ftConstants';
+import { calculateAveragedPoints, normalizeTrackKey } from './ftConstants';
 import { Users, UserPlus, Trophy, Award, Copy, Check, Star, Shield, LogOut, Trash2, Plus, Sparkles, User, Layers } from 'lucide-react';
 import './scicommspark.css';
 
