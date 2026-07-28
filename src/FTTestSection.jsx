@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 export default function FTTestSection() {
   const [isLoading, setIsLoading] = useState(true);
 
-  // Target Google Form URL
-  const formUrl = "https://forms.gle/tzgEf9QxBj3nG43S9";
+  // Full Google Form embedded viewform URL to prevent X-Frame-Options DENY
+  const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSfbgcAi8mYiNdlWsIbzj8jgxOCFIrrwl1l-6b3akaZ9Dd2XDg/viewform?embedded=true";
 
   return (
     <div style={{ width: '100%', height: 'calc(100vh - 120px)', minHeight: '680px', display: 'flex', flexDirection: 'column' }}>
@@ -36,15 +36,15 @@ export default function FTTestSection() {
           >
             <div className="ft-spinner" style={{ width: '40px', height: '40px', borderWidth: '3px', marginBottom: '1rem' }} />
             <div style={{ fontWeight: 800, color: '#475569', fontSize: '0.95rem' }}>
-              Loading Form...
+              Loading Google Form...
             </div>
           </div>
         )}
 
-        {/* Embedded Virtual Browser / Frame */}
+        {/* Embedded Virtual Browser Viewport */}
         <iframe
           src={formUrl}
-          title="Google Form View"
+          title="Embedded Form View"
           onLoad={() => setIsLoading(false)}
           style={{
             width: '100%',
