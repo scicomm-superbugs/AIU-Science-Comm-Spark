@@ -159,7 +159,8 @@ export default function FTJudgeDashboard() {
 
   const handleMarkEvaluationCompleted = async (stage, field) => {
     try {
-      const fieldId = field?.id || 'sub_def_1';
+      const fieldId = String(field?.id || 'sub_def_1');
+      const fieldName = field?.name || stage.title;
       const myJudgeId = userId || meDoc?.id || user?.id || 'judge_user';
       const myJudgeName = meDoc?.name || meDoc?.username || user?.name || user?.username || 'Judge';
 
@@ -167,15 +168,16 @@ export default function FTJudgeDashboard() {
         stageId: Number(stage.stageId),
         track: stage.track || 'pop_science',
         fieldId: fieldId,
+        fieldName: fieldName,
         judgeId: myJudgeId,
         judgeName: myJudgeName,
         status: 'completed',
-        comments: 'Google Evaluation Form Submitted',
+        comments: `Google Evaluation Form Submitted for ${fieldName}`,
         evaluatedAt: new Date().toISOString()
       };
 
       await db.ft_evaluations.add(evalData);
-      setToast({ type: 'success', text: `Evaluation marked as completed for ${field?.name || stage.title}!` });
+      setToast({ type: 'success', text: `Evaluation marked as completed for ${fieldName}!` });
       setTimeout(() => setToast(null), 3500);
     } catch (err) {
       console.error('Failed to log evaluation completion:', err);
@@ -315,11 +317,25 @@ export default function FTJudgeDashboard() {
 
                   {deliverables.map((sf, idx) => {
                     const evalUrl = sf.evalGoogleFormUrl || st.evalGoogleFormUrl || st.googleFormUrl;
-                    const isCompleted = evaluations.some(e =>
-                      Number(e.stageId) === Number(st.stageId) &&
-                      (e.fieldId === sf.id || (e.comments && e.comments.includes('Evaluation Form Submitted'))) &&
-                      (e.judgeId === userId || e.judgeId === meDoc?.id || e.judgeId === user?.id)
-                    );
+                    const targetFieldId = String(sf.id || idx || 'sub_def_1');
+                    const targetFieldName = String(sf.name || '').toLowerCase();
+
+                    const isCompleted = evaluations.some(e => {
+                      const matchStage = Number(e.stageId) === Number(st.stageId);
+                      const matchTrack = !e.track || e.track === st.track;
+                      const matchJudge = (e.judgeId === userId || e.judgeId === meDoc?.id || e.judgeId === user?.id);
+
+                      if (!matchStage || !matchTrack || !matchJudge) return false;
+
+                      if (e.fieldId) {
+                        return String(e.fieldId) === targetFieldId;
+                      }
+                      if (e.comments) {
+                        const commentLower = String(e.comments).toLowerCase();
+                        return targetFieldName && commentLower.includes(targetFieldName);
+                      }
+                      return false;
+                    });
 
                     return (
                       <button
