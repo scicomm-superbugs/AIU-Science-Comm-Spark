@@ -203,44 +203,23 @@ export default function FTDashboard() {
     }));
   }, [selectedTrack, customConfig, dynamicWorkshops]);
 
-  // Automatically auto-select target event or stage running today or currently active
+  // Automatically select the first step in chronological order whose date has not passed yet
   useEffect(() => {
     if (steps && steps.length > 0) {
       const now = new Date();
-      const todayStr = now.toISOString().slice(0, 10);
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
-      // 1. Check if an event is running EXACTLY TODAY
-      const runningToday = steps.find(s => {
+      // Find first chronological step where date is today or in the future
+      const targetStep = steps.find(s => {
         if (!s._rawDate || isNaN(s._rawDate.getTime())) return false;
-        return s._rawDate.toISOString().slice(0, 10) === todayStr;
+        const stepDay = new Date(s._rawDate.getFullYear(), s._rawDate.getMonth(), s._rawDate.getDate(), 0, 0, 0, 0);
+        return stepDay >= todayStart;
       });
 
-      if (runningToday) {
-        setSelectedStepId(runningToday.id);
-        return;
-      }
-
-      // 2. Check for currently Active Stage (Submissions Open / Active Stage)
-      const activeStage = steps.find(s => {
-        const badge = String(s.badge || '').toLowerCase();
-        return badge.includes('active') || badge.includes('open') || s.status === 'Active Stage';
-      });
-
-      if (activeStage) {
-        setSelectedStepId(activeStage.id);
-        return;
-      }
-
-      // 3. Fallback to first upcoming event from today onwards
-      const upcoming = steps.find(s => {
-        if (!s._rawDate || isNaN(s._rawDate.getTime())) return false;
-        return s._rawDate >= todayStart;
-      });
-
-      if (upcoming) {
-        setSelectedStepId(upcoming.id);
+      if (targetStep) {
+        setSelectedStepId(targetStep.id);
       } else {
+        // If all dates have passed, select the last step
         setSelectedStepId(steps[steps.length - 1].id);
       }
     }
