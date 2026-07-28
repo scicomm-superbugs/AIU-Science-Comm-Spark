@@ -804,146 +804,167 @@ export default function FTOurTeam() {
         </div>
       )}
 
-      {/* SPLIT COMPETITION LEADERBOARDS (TRACK 1 & TRACK 2) */}
-      <div className="ft-card" style={{ padding: '2rem', background: '#ffffff', borderRadius: '24px', border: '1.5px solid #e2e8f0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem', borderBottom: '2px solid #f1f5f9', paddingBottom: '1rem' }}>
-          <div>
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Trophy size={24} style={{ color: '#f59e0b' }} /> Competition Rankings & Leaderboards
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
-              Separate track rankings for Track 1 (Pop Science Videos) & Track 2 (Science Journalism).
-            </p>
-          </div>
-
-          {/* Track Leaderboard Selector Tabs */}
-          <div style={{ display: 'flex', gap: '0.5rem', background: '#f8fafc', padding: '0.35rem', borderRadius: '14px', border: '1px solid #cbd5e1', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={() => setSelectedLeaderboardTrack('pop_science')}
-              className="ft-btn"
-              style={{
-                padding: '0.5rem 1.1rem', borderRadius: '10px', fontWeight: 900, fontSize: '0.83rem',
-                background: selectedLeaderboardTrack === 'pop_science' ? 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)' : 'transparent',
-                color: selectedLeaderboardTrack === 'pop_science' ? '#ffffff' : '#64748b',
-                border: 'none', boxShadow: selectedLeaderboardTrack === 'pop_science' ? '0 4px 12px rgba(190,18,60,0.25)' : 'none',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem'
-              }}
-            >
-              <span>🎥 Track 1: Pop Science</span>
-              <span style={{ fontSize: '0.72rem', opacity: 0.85, background: selectedLeaderboardTrack === 'pop_science' ? 'rgba(255,255,255,0.25)' : '#e2e8f0', padding: '0.1rem 0.45rem', borderRadius: '6px', color: selectedLeaderboardTrack === 'pop_science' ? '#ffffff' : '#475569' }}>
-                {popScienceLeaderboard.length}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedLeaderboardTrack('science_journalism')}
-              className="ft-btn"
-              style={{
-                padding: '0.5rem 1.1rem', borderRadius: '10px', fontWeight: 900, fontSize: '0.83rem',
-                background: selectedLeaderboardTrack === 'science_journalism' ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' : 'transparent',
-                color: selectedLeaderboardTrack === 'science_journalism' ? '#ffffff' : '#64748b',
-                border: 'none', boxShadow: selectedLeaderboardTrack === 'science_journalism' ? '0 4px 12px rgba(37,99,235,0.25)' : 'none',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem'
-              }}
-            >
-              <span>📰 Track 2: Journalism</span>
-              <span style={{ fontSize: '0.72rem', opacity: 0.85, background: selectedLeaderboardTrack === 'science_journalism' ? 'rgba(255,255,255,0.25)' : '#e2e8f0', padding: '0.1rem 0.45rem', borderRadius: '6px', color: selectedLeaderboardTrack === 'science_journalism' ? '#ffffff' : '#475569' }}>
-                {journalismLeaderboard.length}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedLeaderboardTrack('all')}
-              className="ft-btn"
-              style={{
-                padding: '0.5rem 1rem', borderRadius: '10px', fontWeight: 800, fontSize: '0.83rem',
-                background: selectedLeaderboardTrack === 'all' ? '#0f172a' : 'transparent',
-                color: selectedLeaderboardTrack === 'all' ? '#ffffff' : '#64748b',
-                border: 'none', cursor: 'pointer'
-              }}
-            >
-              <span>🌐 All Tracks</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Active Leaderboard Table Cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {activeLeaderboard.length === 0 ? (
-            <div style={{ padding: '2.5rem', textAlign: 'center', background: '#f8fafc', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
-              <div style={{ fontSize: '2.2rem', marginBottom: '0.4rem' }}>🏆</div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>No Ranked Competitors in this Track Yet</div>
-              <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '0.2rem' }}>
-                Scores will appear here as soon as judges evaluate submissions for this track.
-              </div>
+      {/* SIDE-BY-SIDE SPLIT COMPETITION LEADERBOARDS (TRACK 1 & TRACK 2) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.75rem', alignItems: 'start' }}>
+        
+        {/* LEFT COLUMN: TRACK 1 POP SCIENCE VIDEOS */}
+        <div className="ft-card" style={{ padding: '1.75rem', background: '#ffffff', borderRadius: '24px', border: '1.5px solid #fecdd3', boxShadow: '0 4px 16px rgba(190,18,60,0.04)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '2px solid #fff1f2', paddingBottom: '0.85rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#9f1239', margin: '0 0 0.2rem 0', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <Trophy size={20} style={{ color: '#f59e0b' }} /> 🎥 Track 1: Pop Science Videos
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>
+                Live rankings for short video content creators.
+              </p>
             </div>
-          ) : (
-            activeLeaderboard.map((item, idx) => {
-              const isMeOrMyTeam = myTeam ? item.id === myTeam.id : item.id === user.id;
-              const isPopTrack = item.track === 'pop_science' || item.track === 'Pop Science Videos' || !item.track;
+            <span style={{ fontSize: '0.78rem', fontWeight: 900, background: '#fff1f2', color: '#be123c', padding: '0.25rem 0.75rem', borderRadius: '20px', border: '1px solid #fecdd3' }}>
+              {popScienceLeaderboard.length} Ranked
+            </span>
+          </div>
 
-              return (
-                <div key={item.id} style={{
-                  padding: '1.1rem 1.25rem', borderRadius: '16px',
-                  background: isMeOrMyTeam ? '#fff1f2' : '#f8fafc',
-                  border: isMeOrMyTeam ? '2px solid #be123c' : '1px solid #e2e8f0',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem',
-                  boxShadow: isMeOrMyTeam ? '0 4px 16px rgba(190, 18, 60, 0.12)' : '0 2px 6px rgba(0,0,0,0.02)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <span style={{
-                      width: '38px', height: '38px', borderRadius: '50%',
-                      background: idx === 0 ? '#fef3c7' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#ffedd5' : '#f1f5f9',
-                      color: idx === 0 ? '#b45309' : idx === 1 ? '#475569' : idx === 2 ? '#c2410c' : '#64748b',
-                      fontWeight: 900, fontSize: '0.92rem', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                      #{idx + 1}
-                    </span>
-
-                    <div>
-                      <div style={{ fontWeight: 900, fontSize: '1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        {item.name} 
-                        {isMeOrMyTeam && <span style={{ color: '#be123c', fontSize: '0.8rem', fontWeight: 800 }}>(You)</span>}
-                        
-                        {/* Type Badge: Team vs Solo */}
-                        <span style={{
-                          fontSize: '0.7rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '6px',
-                          background: item.type === 'team' ? '#fff1f2' : '#eff6ff',
-                          color: item.type === 'team' ? '#be123c' : '#2563eb',
-                          border: `1px solid ${item.type === 'team' ? '#fecdd3' : '#bfdbfe'}`
-                        }}>
-                          {item.type === 'team' ? `👥 Team (${item.membersCount} members)` : '👤 Solo Competitor'}
-                        </span>
-                      </div>
-
-                      <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        <span style={{ background: isPopTrack ? '#fff1f2' : '#eff6ff', color: isPopTrack ? '#be123c' : '#2563eb', padding: '0.1rem 0.5rem', borderRadius: '6px', fontWeight: 800 }}>
-                          {isPopTrack ? '🎥 Track 1: Pop Science' : '📰 Track 2: Science Journalism'}
-                        </span>
-                        <span>·</span>
-                        <span style={{ background: '#ffffff', padding: '0.1rem 0.45rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontWeight: 800, color: '#334155' }}>
-                          🏷️ Code: {item.code}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 900, fontSize: '1.25rem', color: '#0f172a' }}>
-                      {item.totalPoints || 0} pts
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                      {item.submissionsCount} submission(s)
-                    </div>
-                  </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {popScienceLeaderboard.length === 0 ? (
+              <div style={{ padding: '2rem 1rem', textAlign: 'center', background: '#fff1f2', borderRadius: '16px', border: '1px dashed #fecdd3' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.3rem' }}>🎥</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#9f1239' }}>No Track 1 Entries Yet</div>
+                <div style={{ fontSize: '0.78rem', color: '#881337', marginTop: '0.15rem' }}>
+                  Pop science video scores will appear here as soon as judges evaluate submissions.
                 </div>
-              );
-            })
-          )}
+              </div>
+            ) : (
+              popScienceLeaderboard.map((item, idx) => {
+                const isMeOrMyTeam = myTeam ? item.id === myTeam.id : item.id === user.id;
+
+                return (
+                  <div key={item.id} style={{
+                    padding: '1rem 1.15rem', borderRadius: '16px',
+                    background: isMeOrMyTeam ? '#fff1f2' : '#f8fafc',
+                    border: isMeOrMyTeam ? '2px solid #be123c' : '1px solid #e2e8f0',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem',
+                    boxShadow: isMeOrMyTeam ? '0 4px 14px rgba(190, 18, 60, 0.12)' : '0 2px 6px rgba(0,0,0,0.02)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                      <span style={{
+                        width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
+                        background: idx === 0 ? '#fef3c7' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#ffedd5' : '#f1f5f9',
+                        color: idx === 0 ? '#b45309' : idx === 1 ? '#475569' : idx === 2 ? '#c2410c' : '#64748b',
+                        fontWeight: 900, fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}>
+                        #{idx + 1}
+                      </span>
+
+                      <div>
+                        <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          {item.name} 
+                          {isMeOrMyTeam && <span style={{ color: '#be123c', fontSize: '0.75rem', fontWeight: 800 }}>(You)</span>}
+                        </div>
+
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '0.1rem 0.4rem', borderRadius: '6px', background: item.type === 'team' ? '#fff1f2' : '#eff6ff', color: item.type === 'team' ? '#be123c' : '#2563eb', border: `1px solid ${item.type === 'team' ? '#fecdd3' : '#bfdbfe'}` }}>
+                            {item.type === 'team' ? `👥 Team (${item.membersCount})` : '👤 Solo'}
+                          </span>
+                          <span style={{ background: '#ffffff', padding: '0.05rem 0.35rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontWeight: 800, color: '#334155' }}>
+                            🏷️ {item.code}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: 900, fontSize: '1.15rem', color: '#0f172a' }}>
+                        {item.totalPoints || 0} pts
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                        {item.submissionsCount} sub(s)
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
+
+        {/* RIGHT COLUMN: TRACK 2 SCIENCE JOURNALISM */}
+        <div className="ft-card" style={{ padding: '1.75rem', background: '#ffffff', borderRadius: '24px', border: '1.5px solid #bfdbfe', boxShadow: '0 4px 16px rgba(37,99,235,0.04)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '2px solid #eff6ff', paddingBottom: '0.85rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#1d4ed8', margin: '0 0 0.2rem 0', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <Trophy size={20} style={{ color: '#f59e0b' }} /> 📰 Track 2: Science Journalism
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>
+                Live rankings for articles & written journalism.
+              </p>
+            </div>
+            <span style={{ fontSize: '0.78rem', fontWeight: 900, background: '#eff6ff', color: '#2563eb', padding: '0.25rem 0.75rem', borderRadius: '20px', border: '1px solid #bfdbfe' }}>
+              {journalismLeaderboard.length} Ranked
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {journalismLeaderboard.length === 0 ? (
+              <div style={{ padding: '2rem 1rem', textAlign: 'center', background: '#eff6ff', borderRadius: '16px', border: '1px dashed #bfdbfe' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.3rem' }}>📰</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1d4ed8' }}>No Track 2 Entries Yet</div>
+                <div style={{ fontSize: '0.78rem', color: '#1e40af', marginTop: '0.15rem' }}>
+                  Journalism scores will appear here as soon as judges evaluate submissions.
+                </div>
+              </div>
+            ) : (
+              journalismLeaderboard.map((item, idx) => {
+                const isMeOrMyTeam = myTeam ? item.id === myTeam.id : item.id === user.id;
+
+                return (
+                  <div key={item.id} style={{
+                    padding: '1rem 1.15rem', borderRadius: '16px',
+                    background: isMeOrMyTeam ? '#eff6ff' : '#f8fafc',
+                    border: isMeOrMyTeam ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem',
+                    boxShadow: isMeOrMyTeam ? '0 4px 14px rgba(37, 99, 235, 0.12)' : '0 2px 6px rgba(0,0,0,0.02)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                      <span style={{
+                        width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
+                        background: idx === 0 ? '#fef3c7' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#ffedd5' : '#f1f5f9',
+                        color: idx === 0 ? '#b45309' : idx === 1 ? '#475569' : idx === 2 ? '#c2410c' : '#64748b',
+                        fontWeight: 900, fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}>
+                        #{idx + 1}
+                      </span>
+
+                      <div>
+                        <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          {item.name} 
+                          {isMeOrMyTeam && <span style={{ color: '#2563eb', fontSize: '0.75rem', fontWeight: 800 }}>(You)</span>}
+                        </div>
+
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '0.1rem 0.4rem', borderRadius: '6px', background: item.type === 'team' ? '#fff1f2' : '#eff6ff', color: item.type === 'team' ? '#be123c' : '#2563eb', border: `1px solid ${item.type === 'team' ? '#fecdd3' : '#bfdbfe'}` }}>
+                            {item.type === 'team' ? `👥 Team (${item.membersCount})` : '👤 Solo'}
+                          </span>
+                          <span style={{ background: '#ffffff', padding: '0.05rem 0.35rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontWeight: 800, color: '#334155' }}>
+                            🏷️ {item.code}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: 900, fontSize: '1.15rem', color: '#0f172a' }}>
+                        {item.totalPoints || 0} pts
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                        {item.submissionsCount} sub(s)
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
       </div>
 
       {/* MODAL: SEARCH & ADD MEMBER TO TEAM (MAX 3) */}
