@@ -1054,7 +1054,7 @@ export default function FTAdminPlaces() {
       const user = scientists?.find(s => s.id === r.competitorId);
       const competitorName = user?.name || r.competitorName || '—';
       const competitorUniversityId = user?.universityId || r.competitorUniversityId || '—';
-      const competitorPhone = user?.phone || r.competitorPhone || '—';
+      const competitorPhone = user?.phone || user?.whatsapp || r.competitorPhone || '—';
       const competitorDepartment = user?.department || r.competitorDepartment || '—';
 
       const row = [

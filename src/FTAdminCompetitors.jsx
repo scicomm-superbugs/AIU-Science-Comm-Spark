@@ -95,6 +95,7 @@ export default function FTAdminCompetitors() {
       'Full Name',
       'Username',
       'Email',
+      'Phone / WhatsApp',
       'System Role',
       'Participation Mode',
       'Registered Track',
@@ -121,6 +122,7 @@ export default function FTAdminCompetitors() {
         u.name || u.username || 'Competitor',
         u.username || '',
         u.email || '',
+        u.phone || u.whatsapp || '',
         u.role || 'competitor',
         isTeam ? 'Team' : 'Individual',
         trackLabel,
@@ -146,6 +148,7 @@ export default function FTAdminCompetitors() {
       'Judge Full Name',
       'Username',
       'Email',
+      'Phone / WhatsApp',
       'System Role Key',
       'Role Title Label',
       'Track Expertise',
@@ -181,6 +184,7 @@ export default function FTAdminCompetitors() {
         j.name || j.username || 'Judge',
         j.username || '',
         j.email || '',
+        j.phone || j.whatsapp || '',
         j.role || '',
         roleLabel,
         j.registeredTrack ? (normalizeTrackKey(j.registeredTrack) === 'science_journalism' ? 'Science Journalism' : 'Pop Science') : 'All Competition Tracks',
@@ -205,6 +209,7 @@ export default function FTAdminCompetitors() {
       'Competitor Code',
       'Competitor / Team Name',
       'Competitor Email',
+      'Competitor Phone',
       'Submission Title',
       'Deliverable Type',
       'Video URL',
@@ -243,6 +248,7 @@ export default function FTAdminCompetitors() {
         displayCode,
         sub.teamName || sub.competitorName || compDoc?.name || 'Competitor',
         sub.competitorEmail || compDoc?.email || '',
+        compDoc?.phone || compDoc?.whatsapp || sub.competitorPhone || '',
         sub.title || 'Untitled Project',
         realTrack === 'science_journalism' ? 'Science Article PDF' : 'Pop Science Video',
         sub.videoUrl || '',
@@ -409,17 +415,28 @@ export default function FTAdminCompetitors() {
 
   // Export CSV
   const exportCSV = () => {
-    const headers = ['Type', 'ID Number', 'Name', 'Track', 'Department / Institution', 'Members Count'];
-    const rows = filteredList.map(i => [
-      i.type === 'team' ? 'Team' : 'Individual',
-      i.displayId,
-      i.name,
-      i.track === 'pop_science' ? 'Pop Videos' : 'Science Journalism',
-      i.department || i.institutionName || '',
-      i.type === 'team' ? (i.members || []).length : 1
-    ]);
-    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const headers = ['Type', 'ID Number', 'Name', 'Phone / WhatsApp', 'Track', 'Department / Institution', 'Members Count'];
+    const rows = filteredList.map(i => {
+      let phoneStr = '';
+      if (i.type === 'team') {
+        const memberPhones = (i.memberDocs || []).map(m => m.phone || m.whatsapp).filter(Boolean);
+        phoneStr = memberPhones.length > 0 ? memberPhones.join('; ') : '—';
+      } else {
+        phoneStr = i.phone || i.rawDoc?.phone || i.rawDoc?.whatsapp || '—';
+      }
+
+      return [
+        i.type === 'team' ? 'Team' : 'Individual',
+        `"${i.displayId || ''}"`,
+        `"${i.name || ''}"`,
+        `"${phoneStr}"`,
+        `"${i.track === 'pop_science' ? 'Pop Videos' : 'Science Journalism'}"`,
+        `"${i.department || i.institutionName || ''}"`,
+        i.type === 'team' ? (i.members || []).length : 1
+      ];
+    });
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
