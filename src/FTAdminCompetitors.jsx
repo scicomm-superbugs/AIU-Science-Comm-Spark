@@ -463,6 +463,7 @@ export default function FTAdminCompetitors() {
       universityId: competitor.universityId || '',
       title: competitor.title || '',
       role: competitor.role || 'competitor',
+      participationMode: competitor.participationMode || 'team',
       registeredTrack: competitor.registeredTrack || 'pop_science',
       department: competitor.department || '',
       avatarUrl: competitor.avatarUrl || competitor.avatar || '',
@@ -487,6 +488,7 @@ export default function FTAdminCompetitors() {
         universityId: editForm.universityId.trim(),
         title: editForm.title.trim(),
         role: editForm.role,
+        participationMode: editForm.participationMode,
         registeredTrack: editForm.registeredTrack,
         department: editForm.department,
         avatarUrl: editForm.avatarUrl,
@@ -497,14 +499,82 @@ export default function FTAdminCompetitors() {
       };
 
       await db.scientists.update(editingCompetitor.id, updates);
+
+      // If switched to individual mode, remove competitor from any existing team
+      if (editForm.participationMode === 'individual') {
+        const myTeamDoc = teams.find(t => (t.members || []).some(m => m.userId === editingCompetitor.id || m.username === editingCompetitor.username));
+        if (myTeamDoc) {
+          const updatedMembers = (myTeamDoc.members || []).filter(m => m.userId !== editingCompetitor.id && m.username !== editingCompetitor.username);
+          if (updatedMembers.length === 0) {
+            await db.ft_teams.delete(myTeamDoc.id);
+          } else {
+            let newLeaderId = myTeamDoc.leaderId;
+            let newLeaderUsername = myTeamDoc.leaderUsername;
+            if (myTeamDoc.leaderId === editingCompetitor.id && updatedMembers.length > 0) {
+              updatedMembers[0].role = 'Team Leader';
+              newLeaderId = updatedMembers[0].userId;
+              newLeaderUsername = updatedMembers[0].username;
+            }
+            await db.ft_teams.update(myTeamDoc.id, {
+              members: updatedMembers,
+              leaderId: newLeaderId,
+              leaderUsername: newLeaderUsername
+            });
+          }
+        }
+      }
       
       // Update local state
       setCompetitors(prev => prev.map(c => c.id === editingCompetitor.id ? { ...c, ...updates } : c));
       setEditingCompetitor(null);
-      setToast({ type: 'success', text: 'Competitor details updated successfully!' });
+      setToast({ type: 'success', text: 'Competitor details & mode updated successfully!' });
       setTimeout(() => setToast(null), 3000);
     } catch (err) {
       alert('Failed to update competitor: ' + err.message);
+    }
+  };
+
+  const toggleParticipationMode = async (scientistDoc) => {
+    if (!scientistDoc || !scientistDoc.id) return;
+    const currentMode = scientistDoc.participationMode || 'team';
+    const newMode = currentMode === 'team' ? 'individual' : 'team';
+    const actionLabel = newMode === 'individual'
+      ? `Switch "${scientistDoc.name || scientistDoc.username}" to Individual Mode? (They will be removed from any team)`
+      : `Switch "${scientistDoc.name || scientistDoc.username}" to Team Mode? (They will be able to create or join teams)`;
+
+    if (!window.confirm(actionLabel)) return;
+
+    try {
+      await db.scientists.update(scientistDoc.id, { participationMode: newMode });
+
+      if (newMode === 'individual') {
+        const myTeamDoc = teams.find(t => (t.members || []).some(m => m.userId === scientistDoc.id || m.username === scientistDoc.username));
+        if (myTeamDoc) {
+          const updatedMembers = (myTeamDoc.members || []).filter(m => m.userId !== scientistDoc.id && m.username !== scientistDoc.username);
+          if (updatedMembers.length === 0) {
+            await db.ft_teams.delete(myTeamDoc.id);
+          } else {
+            let newLeaderId = myTeamDoc.leaderId;
+            let newLeaderUsername = myTeamDoc.leaderUsername;
+            if (myTeamDoc.leaderId === scientistDoc.id && updatedMembers.length > 0) {
+              updatedMembers[0].role = 'Team Leader';
+              newLeaderId = updatedMembers[0].userId;
+              newLeaderUsername = updatedMembers[0].username;
+            }
+            await db.ft_teams.update(myTeamDoc.id, {
+              members: updatedMembers,
+              leaderId: newLeaderId,
+              leaderUsername: newLeaderUsername
+            });
+          }
+        }
+      }
+
+      setCompetitors(prev => prev.map(c => c.id === scientistDoc.id ? { ...c, participationMode: newMode } : c));
+      setToast({ type: 'success', text: `Switched "${scientistDoc.name || scientistDoc.username}" to ${newMode === 'team' ? 'Team' : 'Individual'} mode!` });
+      setTimeout(() => setToast(null), 3000);
+    } catch (err) {
+      alert('Failed to switch participation mode: ' + err.message);
     }
   };
 
@@ -955,8 +1025,23 @@ export default function FTAdminCompetitors() {
                                     </div>
                                   </div>
 
-                                  <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '0.45rem 1rem', borderRadius: '12px', fontSize: '0.9rem', color: '#2563eb', fontWeight: 900 }}>
-                                    🏷️ Competitor ID: {item.displayId}
+                                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                    <button
+                                      type="button"
+                                      className="ft-btn"
+                                      onClick={(e) => { e.stopPropagation(); toggleParticipationMode(item.rawDoc); }}
+                                      style={{
+                                        background: '#eff6ff', color: '#2563eb', border: '1.5px solid #bfdbfe',
+                                        borderRadius: '10px', fontSize: '0.82rem', fontWeight: 800, padding: '0.45rem 0.9rem',
+                                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem'
+                                      }}
+                                    >
+                                      🔄 Mode: Individual (Click to Switch to Team Mode 👥)
+                                    </button>
+
+                                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '0.45rem 1rem', borderRadius: '12px', fontSize: '0.9rem', color: '#2563eb', fontWeight: 900 }}>
+                                      🏷️ Competitor ID: {item.displayId}
+                                    </div>
                                   </div>
                                 </div>
 
@@ -1033,6 +1118,14 @@ export default function FTAdminCompetitors() {
               <div className="ft-input-group">
                 <label className="ft-label">Competitor ID / Code *</label>
                 <input type="text" className="ft-input" value={editForm.competitorIdNumber} onChange={e => setEditForm({ ...editForm, competitorIdNumber: e.target.value })} placeholder="e.g. C-101" />
+              </div>
+
+              <div className="ft-input-group">
+                <label className="ft-label">Participation Mode / وضع المشاركة *</label>
+                <select className="ft-select" value={editForm.participationMode} onChange={e => setEditForm({ ...editForm, participationMode: e.target.value })}>
+                  <option value="team">Team Mode 👥 (Can join or create teams)</option>
+                  <option value="individual">Individual Competitor 👤 (Solo participation)</option>
+                </select>
               </div>
 
               <div className="ft-input-group">
