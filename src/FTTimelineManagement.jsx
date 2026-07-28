@@ -33,36 +33,22 @@ export default function FTTimelineManagement() {
   const [newSubDeadline, setNewSubDeadline] = useState('');
   const [newSubQuestion, setNewSubQuestion] = useState('');
   const [newSubGoogleFormUrl, setNewSubGoogleFormUrl] = useState('');
-  const [subQuestionsList, setSubQuestionsList] = useState([]);
-  const [newQLabel, setNewQLabel] = useState('');
-  const [newQType, setNewQType] = useState('short_text');
-  const [newQDescription, setNewQDescription] = useState('');
   const [newSubIsOpen, setNewSubIsOpen] = useState(true);
 
   // Inline Editing for existing submissions
   const [editingSubFieldId, setEditingSubFieldId] = useState(null);
   const [editSubData, setEditSubData] = useState(null);
-  const [editSubQLabel, setEditSubQLabel] = useState('');
-  const [editSubQType, setEditSubQType] = useState('short_text');
-  const [editSubQDesc, setEditSubQDesc] = useState('');
 
   const handleAddSubmissionFieldToStage = () => {
     if (!newSubName.trim() || !editingStage) return;
 
-    // Ensure questions exist; if none added yet, auto-create a default field
-    const finalQuestions = subQuestionsList.length > 0 ? [...subQuestionsList] : [
-      { id: 'q_' + Date.now(), label: `Submit ${newSubName.trim()}`, type: 'file', description: 'Upload or provide required submission materials.' }
-    ];
-
     const newField = {
       id: 'sub_field_' + Date.now(),
       name: newSubName.trim(),
-      type: 'mixed',
+      type: 'url',
       openDate: newSubOpenDate || '',
       deadline: newSubDeadline || editingStage.deadline || '2026-09-01',
       description: newSubQuestion.trim() || `Please complete the required submission for ${newSubName.trim()}`,
-      question: newSubQuestion.trim() || `Please complete the required submission for ${newSubName.trim()}`,
-      questions: finalQuestions,
       googleFormUrl: newSubGoogleFormUrl.trim(),
       isOpen: newSubIsOpen !== false
     };
@@ -76,9 +62,6 @@ export default function FTTimelineManagement() {
     setNewSubGoogleFormUrl('');
     setNewSubOpenDate('');
     setNewSubDeadline('');
-    setSubQuestionsList([]);
-    setNewQLabel('');
-    setNewQDescription('');
     setNewSubIsOpen(true);
   };
 
@@ -131,18 +114,10 @@ export default function FTTimelineManagement() {
           {
             id: 'sub_jour_1',
             name: 'Pre-Interview Preparation',
-            type: 'mixed',
+            type: 'url',
             deadline: '2026-09-01',
-            description: 'Before the interview, each participant is required to submit a Pre-Interview Preparation document demonstrating their research, planning, and understanding of the interview topic.\n\nThe document must include:\n1. Interviewee Profile (Full name, position, affiliation, expertise, bio)\n2. Research Abstract (150-250 words)\n3. Interview Objective (Main purpose & story message)\n4. Interview Questions (8-10 open-ended questions)\n5. Audience Impact (Public relevance & expected takeaway)',
-            question: 'Complete all 5 required pre-interview preparation sections below:',
-            questions: [
-              { id: 'q_profile', label: '1. Interviewee Profile (Full Name, Position/Affiliation, Expertise & Bio)', type: 'textbox' },
-              { id: 'q_abstract', label: '2. Research Abstract (150–250 words summarizing interviewee research)', type: 'textbox' },
-              { id: 'q_objective', label: '3. Interview Objective (Main purpose & story message)', type: 'textbox' },
-              { id: 'q_questions', label: '4. Interview Questions (8–10 open-ended questions in logical sequence)', type: 'textbox' },
-              { id: 'q_impact', label: '5. Audience Impact (Public relevance & expected takeaway)', type: 'textbox' },
-              { id: 'q_pdf_doc', label: 'Upload Complete Preparation Document PDF (Optional / Attachment)', type: 'file' }
-            ]
+            description: 'Before the interview, each participant is required to submit a Pre-Interview Preparation document via Google Form demonstrating their research, planning, and understanding of the interview topic.',
+            googleFormUrl: 'https://forms.gle/tzgEf9QxBj3nG43S9'
           }
         ]
       },
@@ -647,94 +622,6 @@ export default function FTTimelineManagement() {
                       style={{ fontSize: '0.85rem' }}
                     />
                   </div>
-
-                  {/* Multi-Question / Requirements Builder */}
-                  <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '12px', border: '1px dashed #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <span>❓</span> Add Sub-Questions / Specific Fields (Optional Multiple Questions):
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr auto', gap: '0.5rem' }}>
-                      <input
-                        type="text"
-                        className="ft-input"
-                        style={{ fontSize: '0.82rem', padding: '0.4rem 0.6rem' }}
-                        placeholder="Question Prompt / Field Label (e.g. 1. Interviewee Profile)"
-                        value={newQLabel}
-                        onChange={e => setNewQLabel(e.target.value)}
-                      />
-                      <select
-                        className="ft-select"
-                        style={{ fontSize: '0.82rem', padding: '0.4rem 0.6rem' }}
-                        value={newQType}
-                        onChange={e => setNewQType(e.target.value)}
-                      >
-                        <option value="short_text">Short Text ✏️</option>
-                        <option value="textbox">Paragraph Text Box 📝</option>
-                        <option value="file">File Upload 📄</option>
-                        <option value="url">URL Link 🔗</option>
-                      </select>
-                      <button
-                        type="button"
-                        className="ft-btn ft-btn-outline"
-                        style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', background: '#ffffff' }}
-                        onClick={() => {
-                          if (!newQLabel.trim()) return;
-                          setSubQuestionsList(prev => [
-                            ...prev, 
-                            { 
-                              id: 'q_' + Date.now(), 
-                              label: newQLabel.trim(), 
-                              type: newQType,
-                              description: newQDescription.trim()
-                            }
-                          ]);
-                          setNewQLabel('');
-                          setNewQDescription('');
-                        }}
-                      >
-                        <Plus size={14} /> Add Sub-Question
-                      </button>
-                    </div>
-
-                    {/* Sub-Question Description Textarea */}
-                    <div>
-                      <textarea
-                        className="ft-textarea"
-                        rows={2}
-                        style={{ fontSize: '0.8rem', padding: '0.4rem 0.65rem' }}
-                        placeholder="Sub-Question Description & Guidelines (Optional - Supports Markdown bullets, bold, & text)..."
-                        value={newQDescription}
-                        onChange={e => setNewQDescription(e.target.value)}
-                      />
-                    </div>
-
-                    {subQuestionsList.length > 0 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.2rem' }}>
-                        {subQuestionsList.map((q, qIdx) => (
-                          <div key={q.id || qIdx} style={{ background: '#ffffff', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                              <span style={{ fontWeight: 800, color: '#0f172a' }}>
-                                <strong>Question {qIdx + 1}:</strong> {q.label} <em style={{ color: '#0284c7', fontWeight: 600 }}>({q.type === 'short_text' ? 'Short Text' : q.type === 'textbox' ? 'Paragraph' : q.type === 'file' ? 'File Upload' : 'URL Link'})</em>
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => setSubQuestionsList(prev => prev.filter(item => item.id !== q.id))}
-                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.1rem' }}
-                              >
-                                <X size={14} />
-                              </button>
-                            </div>
-                            {q.description && (
-                              <div style={{ color: '#475569', fontSize: '0.75rem', background: '#f8fafc', padding: '0.35rem 0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                                📝 {q.description}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
                 </div>
 
                 {/* Configured Submission Requirements List */}
@@ -843,100 +730,6 @@ export default function FTTimelineManagement() {
                               value={editSubData.googleFormUrl || ''}
                               onChange={e => setEditSubData({ ...editSubData, googleFormUrl: e.target.value })}
                             />
-                          </div>
-
-                          {/* Questions / Requirement Fields Manager */}
-                          <div style={{ background: '#ffffff', padding: '0.85rem 1rem', borderRadius: '12px', border: '1.5px solid #cbd5e1' }}>
-                            <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#0f172a', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                              <span>❓</span> Sub-Questions & Requirement Fields ({editSubData.questions?.length || 0}):
-                            </div>
-
-                            {/* Question List */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginBottom: '0.75rem' }}>
-                              {(editSubData.questions || []).map((q, qIdx) => (
-                                <div key={q.id || qIdx} style={{ background: '#f8fafc', padding: '0.55rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <span style={{ fontWeight: 800, color: '#0f172a' }}>
-                                      <strong>Question {qIdx + 1}:</strong> {q.label} <em style={{ color: '#0284c7', fontWeight: 600 }}>({q.type})</em>
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const updatedQuestions = (editSubData.questions || []).filter((_, idx) => idx !== qIdx);
-                                        setEditSubData({ ...editSubData, questions: updatedQuestions });
-                                      }}
-                                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.1rem' }}
-                                      title="Remove question"
-                                    >
-                                      <X size={14} />
-                                    </button>
-                                  </div>
-                                  {q.description && (
-                                    <div style={{ color: '#475569', fontSize: '0.74rem', background: '#ffffff', padding: '0.3rem 0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                                      📝 {q.description}
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-
-                            {/* Add Question to Existing Deliverable Form */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', background: '#f1f5f9', padding: '0.65rem 0.75rem', borderRadius: '10px' }}>
-                              <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#334155' }}>
-                                ➕ Add New Sub-Question to this deliverable:
-                              </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr auto', gap: '0.4rem' }}>
-                                <input
-                                  type="text"
-                                  className="ft-input"
-                                  style={{ fontSize: '0.78rem', padding: '0.35rem 0.55rem' }}
-                                  placeholder="Question Label (e.g. 1. Interviewee Profile)"
-                                  value={editSubQLabel}
-                                  onChange={e => setEditSubQLabel(e.target.value)}
-                                />
-                                <select
-                                  className="ft-select"
-                                  style={{ fontSize: '0.78rem', padding: '0.35rem 0.55rem' }}
-                                  value={editSubQType}
-                                  onChange={e => setEditSubQType(e.target.value)}
-                                >
-                                  <option value="short_text">Short Text ✏️</option>
-                                  <option value="textbox">Paragraph Text Box 📝</option>
-                                  <option value="file">File Upload 📄</option>
-                                  <option value="url">URL Link 🔗</option>
-                                </select>
-                                <button
-                                  type="button"
-                                  className="ft-btn ft-btn-outline"
-                                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', background: '#ffffff' }}
-                                  onClick={() => {
-                                    if (!editSubQLabel.trim()) return;
-                                    const newQ = {
-                                      id: 'q_' + Date.now(),
-                                      label: editSubQLabel.trim(),
-                                      type: editSubQType,
-                                      description: editSubQDesc.trim()
-                                    };
-                                    setEditSubData({
-                                      ...editSubData,
-                                      questions: [...(editSubData.questions || []), newQ]
-                                    });
-                                    setEditSubQLabel('');
-                                    setEditSubQDesc('');
-                                  }}
-                                >
-                                  <Plus size={14} /> Add Q
-                                </button>
-                              </div>
-                              <textarea
-                                className="ft-textarea"
-                                rows={2}
-                                style={{ fontSize: '0.78rem', padding: '0.35rem 0.55rem' }}
-                                placeholder="Sub-Question Description & Guidelines (Optional - Supports Markdown)..."
-                                value={editSubQDesc}
-                                onChange={e => setEditSubQDesc(e.target.value)}
-                              />
-                            </div>
                           </div>
 
                           {/* Save / Cancel buttons */}

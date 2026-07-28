@@ -46,48 +46,10 @@ export const DEFAULT_STAGES = {
         {
           id: 'sub_jour_1',
           name: 'Pre-Interview Preparation',
-          type: 'mixed',
+          type: 'url',
           deadline: '2026-09-01',
-          description: 'Before the interview, each participant is required to submit a Pre-Interview Preparation document demonstrating their research, planning, and understanding of the interview topic.\n\nThe document must include:\n1. Interviewee Profile (Full name, position, affiliation, expertise, bio)\n2. Research Abstract (150-250 words)\n3. Interview Objective (Main purpose & story message)\n4. Interview Questions (8-10 open-ended questions)\n5. Audience Impact (Public relevance & expected takeaway)',
-          question: 'Complete all 5 required pre-interview preparation sections below:',
-          questions: [
-            {
-              id: 'q_profile',
-              label: '1. Interviewee Profile',
-              type: 'textbox',
-              description: 'Provide a brief introduction to the selected interviewee, including:\n* Full name\n* Current position and affiliation\n* Field of expertise\n* A short professional biography (**50–100 words**)'
-            },
-            {
-              id: 'q_abstract',
-              label: '2. Research Abstract',
-              type: 'textbox',
-              description: "Write a clear and concise abstract (**150–250 words**) summarizing the interviewee's research, project, or area of expertise. The abstract should explain the significance of the work in language that is understandable to a general audience."
-            },
-            {
-              id: 'q_objective',
-              label: '3. Interview Objective',
-              type: 'textbox',
-              description: 'In one short paragraph, explain the main purpose of the interview and the story or scientific message you intend to communicate to the audience.'
-            },
-            {
-              id: 'q_questions',
-              label: '4. Interview Questions',
-              type: 'textbox',
-              description: 'Prepare **8–10 open-ended questions** arranged in a logical sequence. The questions should demonstrate thorough background research and encourage meaningful discussion rather than simple yes/no responses.'
-            },
-            {
-              id: 'q_impact',
-              label: '5. Audience Impact',
-              type: 'textbox',
-              description: 'Briefly explain why this topic is relevant to the public and what key takeaway you expect the audience to gain from the interview.'
-            },
-            {
-              id: 'q_pdf_doc',
-              label: 'Upload Preparation Document PDF (Optional / Attachment)',
-              type: 'file',
-              description: 'Attach your single combined preparation document in PDF format if preferred.'
-            }
-          ]
+          description: 'Before the interview, each participant is required to submit a Pre-Interview Preparation document via Google Form demonstrating their research, planning, and understanding of the interview topic.',
+          googleFormUrl: 'https://forms.gle/tzgEf9QxBj3nG43S9'
         }
       ]
     },
@@ -894,14 +856,14 @@ export default function FTMyCompetition() {
       )}
 
       {/* VIRTUAL BROWSER GOOGLE FORM EMBEDDED MODAL */}
-      {virtualBrowserForm && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000, padding: '1rem' }}>
-          <div className="ft-card ft-animate-in" style={{ width: '100%', maxWidth: '1050px', height: '92vh', background: '#ffffff', borderRadius: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)' }}>
+      {virtualBrowserForm && createPortal(
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '1rem' }}>
+          <div className="ft-card ft-animate-in" style={{ width: '95vw', maxWidth: '1100px', height: '92vh', background: '#ffffff', borderRadius: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)', border: '1px solid #cbd5e1' }}>
             
             {/* Top Virtual Browser Header Bar */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem', background: '#0f172a', color: '#ffffff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 1.5rem', background: '#0f172a', color: '#ffffff', zIndex: 10, flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ background: '#2563eb', color: '#ffffff', padding: '0.4rem 0.8rem', borderRadius: '10px', fontWeight: 900, fontSize: '0.82rem' }}>
+                <div style={{ background: '#2563eb', color: '#ffffff', padding: '0.4rem 0.8rem', borderRadius: '10px', fontWeight: 900, fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   🌐 Virtual Browser
                 </div>
                 <div>
@@ -926,7 +888,7 @@ export default function FTMyCompetition() {
                 <button
                   type="button"
                   onClick={() => setVirtualBrowserForm(null)}
-                  style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#ffffff', width: '32px', height: '32px', borderRadius: '50%', fontWeight: 800, cursor: 'pointer' }}
+                  style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#ffffff', width: '32px', height: '32px', borderRadius: '50%', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
                   ✕
                 </button>
@@ -934,7 +896,7 @@ export default function FTMyCompetition() {
             </div>
 
             {/* Embedded Iframe Container */}
-            <div style={{ flex: 1, position: 'relative', width: '100%', height: '100%', background: '#f8fafc' }}>
+            <div style={{ flex: 1, position: 'relative', width: '100%', height: '100%', background: '#ffffff', overflow: 'hidden' }}>
               <iframe
                 src={getEmbedUrl(virtualBrowserForm.rawUrl)}
                 title="Google Form View"
@@ -944,7 +906,8 @@ export default function FTMyCompetition() {
               />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
