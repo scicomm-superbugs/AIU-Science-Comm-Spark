@@ -652,41 +652,7 @@ export default function FTEvaluationManagement() {
           </div>
         </div>
 
-        {/* Judge Assignment Checkbox Chips */}
-        <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1.5px solid #e2e8f0', marginBottom: '1.5rem' }}>
-          <label style={{ fontSize: '0.88rem', fontWeight: 900, color: '#0f172a', display: 'block', marginBottom: '0.65rem' }}>
-            👨‍⚖️ Assign Judges to Stage {selectedStageId} ({assignedJudgeIds.length} Assigned):
-          </label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
-            {allJudges.length === 0 ? (
-              <span style={{ fontSize: '0.82rem', color: '#64748b', fontStyle: 'italic' }}>
-                No registered judges found. Add users with Judge or Faculty roles in Users & Roles.
-              </span>
-            ) : (
-              allJudges.map(j => {
-                const isAssigned = assignedJudgeIds.includes(j.id) || assignedJudgeIds.includes(j.username) || assignedJudgeIds.includes(j.email);
-                return (
-                  <button
-                    key={j.id}
-                    type="button"
-                    onClick={() => handleToggleJudgeAssignment(j.id)}
-                    style={{
-                      padding: '0.45rem 0.85rem', borderRadius: '10px', fontWeight: 800, fontSize: '0.82rem',
-                      background: isAssigned ? '#f0fdf4' : '#ffffff',
-                      color: isAssigned ? '#16a34a' : '#475569',
-                      border: isAssigned ? '1.5px solid #86efac' : '1.5px solid #cbd5e1',
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <span>{isAssigned ? '✅' : '➕'}</span>
-                    <span>{j.name || j.username}</span>
-                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>({j.role})</span>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
+        {/* Per-Submission Evaluation Google Form URL Inputs & Per-Submission Judge Assignments */}
 
         {/* Per-Submission Evaluation Google Form URL Inputs */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
