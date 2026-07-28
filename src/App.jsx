@@ -13,6 +13,7 @@ import FTAdminSubmissionAssignments from './FTAdminSubmissionAssignments';
 import FTJudgeDashboard from './FTJudgeDashboard';
 import FTProtectedRoute from './FTProtectedRoute';
 import FTTimelineManagement from './FTTimelineManagement';
+import FTTestSection from './FTTestSection';
 import Login from './Login';
 import Register from './Register';
 import Landing from './Landing';
@@ -102,6 +103,7 @@ function App() {
                 <Route path="timeline-manage" element={<FTTimelineManagement />} />
                 <Route path="submission-assignments" element={<FTAdminSubmissionAssignments />} />
                 <Route path="admin/submission-assignments" element={<FTAdminSubmissionAssignments />} />
+                <Route path="test" element={<FTTestSection />} />
               </Route>
 
               {/* Judge evaluating list */}

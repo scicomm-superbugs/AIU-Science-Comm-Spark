@@ -4,7 +4,7 @@ import { useAuth } from './context/AuthContext';
 import { db, firestore, getCollectionName, useLiveCollection, getFirebaseAuth, uploadFile } from './db';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { MapPin, BookOpen, Users, Settings, ClipboardCheck, LayoutDashboard, LogOut, Moon, Sun, Menu, X, ChevronDown, GraduationCap, Bell, AlertTriangle, Calendar, FileText, Globe, Camera } from 'lucide-react';
+import { MapPin, BookOpen, Users, Settings, ClipboardCheck, LayoutDashboard, LogOut, Moon, Sun, Menu, X, ChevronDown, GraduationCap, Bell, AlertTriangle, Calendar, FileText, Globe, Camera, TestTube } from 'lucide-react';
 import { FT_FACULTY, FT_ROLE_LABELS, FT_ROLE_COLORS, isFacultyRole, isJudgeRole, isCompetitorRole, FT_DEFAULT_REQUIRED_HOURS } from './ftConstants';
 import { getUserConflicts } from './ftConflictUtils';
 import bcrypt from 'bcryptjs';
@@ -579,6 +579,7 @@ export default function FTLayout() {
       { path: '/dashboard/timeline-manage', icon: <Calendar size={20} />, label: 'Timeline Management', roles: ['master', 'admin'] },
       { path: '/dashboard/settings', icon: <Settings size={20} />, label: 'Settings', roles: ['master', 'admin'] },
       { path: '/landing', icon: <Globe size={20} />, label: 'Public Landing Page', roles: ['master', 'admin'] },
+      { path: '/dashboard/test', icon: <TestTube size={20} />, label: 'Test', roles: ['master', 'admin'] },
     ];
     return items.filter(item => {
       if (item.roles === 'all') return true;
