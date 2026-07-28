@@ -1018,8 +1018,8 @@ export default function FTDashboard() {
                       (activeStep.assignedJudgeIds || []).map(judgeId => {
                         const judge = scientists.find(u => u.id === judgeId);
                         if (!judge) return null;
-                        const roleColor = (judge.role === 'trainer_judge' || judge.role === 'trainer') ? '#c084fc' : '#38bdf8';
-                        const roleLabel = (judge.role === 'trainer_judge' || judge.role === 'trainer') ? 'Trainer & Judge 🎓' : 'Judge ⚖️';
+                        const roleColor = '#c084fc';
+                        const roleLabel = 'Judge';
                         const avatarUrl = judge.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${judge.username || judge.name}`;
 
                         return (

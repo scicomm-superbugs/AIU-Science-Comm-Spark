@@ -100,9 +100,8 @@ export default function FTJudgeDashboard() {
 
   // Judge Role Label
   const judgeRoleTitle = useMemo(() => {
-    if (userRole === 'trainer_judge' || userRole === 'trainer') return 'Trainer & Judge (Dual) 🎓';
     if (userRole === 'admin' || userRole === 'master') return 'Master Evaluation Administrator 🛡️';
-    return 'Judge ⚖️';
+    return 'Judge';
   }, [userRole]);
 
   // Compute Real Assigned Stages for this judge (configured by admin in Timeline Management / Evaluation Management)

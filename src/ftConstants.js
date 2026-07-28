@@ -52,11 +52,11 @@ export const FT_ROLES = {
 export const FT_ROLE_LABELS = {
   master: 'System Administrator 👑',
   admin: 'Administrator 🛡️',
-  trainer_judge: 'Trainer & Judge (Dual) 🎓',
-  trainer: 'Trainer & Judge (Dual) 🎓',
-  judge: 'Judge ⚖️',
-  academic_judge: 'Judge ⚖️',
-  scicomm_judge: 'Judge ⚖️',
+  trainer_judge: 'Judge',
+  trainer: 'Judge',
+  judge: 'Judge',
+  academic_judge: 'Judge',
+  scicomm_judge: 'Judge',
   competitor: 'Competitor',
   user: 'Competitor'
 };
