@@ -500,11 +500,16 @@ export default function FTMyCompetition() {
                         e.stopPropagation();
                         if (isFieldSubmitted || isEvaluated) {
                           const userTrack = meDoc?.registeredTrack || 'pop_science';
-                          const stagePubDoc = publishedResults.find(p => 
-                            Number(p.stageId) === Number(st.stageId) && 
-                            (p.track === userTrack || p.track === 'all') &&
-                            (p.subId === sf.id || p.subId === 'all' || !p.subId)
-                          );
+                          const normUserTrack = String(userTrack).toLowerCase();
+                          const stagePubDoc = publishedResults.find(p => {
+                            const stageMatch = Number(p.stageId) === Number(st.stageId);
+                            const subMatch = p.subId === sf.id || p.subId === 'all' || !p.subId;
+                            const trackMatch = !p.track || p.track === 'all' || p.track === userTrack || 
+                              String(p.track).toLowerCase() === normUserTrack ||
+                              (String(p.track).includes('pop') && normUserTrack.includes('pop')) ||
+                              (String(p.track).includes('journal') && normUserTrack.includes('journal'));
+                            return stageMatch && subMatch && trackMatch;
+                          });
                           const isStagePublished = Boolean(stagePubDoc?.isPublished);
 
                           setOverviewModalData({
@@ -568,11 +573,16 @@ export default function FTMyCompetition() {
                         </>
                       ) : isEvaluated ? (() => {
                         const userTrack = meDoc?.registeredTrack || 'pop_science';
-                        const pubDoc = publishedResults.find(p => 
-                          Number(p.stageId) === Number(st.stageId) && 
-                          (p.track === userTrack || p.track === 'all') &&
-                          (p.subId === sf.id || p.subId === 'all' || !p.subId)
-                        );
+                        const normUserTrack = String(userTrack).toLowerCase();
+                        const pubDoc = publishedResults.find(p => {
+                          const stageMatch = Number(p.stageId) === Number(st.stageId);
+                          const subMatch = p.subId === sf.id || p.subId === 'all' || !p.subId;
+                          const trackMatch = !p.track || p.track === 'all' || p.track === userTrack ||
+                            String(p.track).toLowerCase() === normUserTrack ||
+                            (String(p.track).includes('pop') && normUserTrack.includes('pop')) ||
+                            (String(p.track).includes('journal') && normUserTrack.includes('journal'));
+                          return stageMatch && subMatch && trackMatch;
+                        });
                         const isPublished = Boolean(pubDoc?.isPublished) || isAdminOrStaff;
                         return isPublished ? (
                           <>
@@ -1099,7 +1109,21 @@ export default function FTMyCompetition() {
             </div>
 
             {/* Grade Summary Box & Judge Comments (Only visible if published by Admin or if user is Admin/Judge) */}
-            {!overviewModalData.isStagePublished && !isAdminOrStaff ? (
+            {(() => {
+              const userTrack = meDoc?.registeredTrack || 'pop_science';
+              const normUserTrack = String(userTrack).toLowerCase();
+              const livePubDoc = publishedResults.find(p => {
+                const stageMatch = Number(p.stageId) === Number(overviewModalData.stage.stageId);
+                const subMatch = p.subId === overviewModalData.field.id || p.subId === 'all' || !p.subId;
+                const trackMatch = !p.track || p.track === 'all' || p.track === userTrack ||
+                  String(p.track).toLowerCase() === normUserTrack ||
+                  (String(p.track).includes('pop') && normUserTrack.includes('pop')) ||
+                  (String(p.track).includes('journal') && normUserTrack.includes('journal'));
+                return stageMatch && subMatch && trackMatch;
+              });
+              const isPublished = Boolean(livePubDoc?.isPublished) || overviewModalData.isStagePublished;
+              return !isPublished && !isAdminOrStaff;
+            })() ? (
               <div style={{ background: '#fff1f2', padding: '1.65rem 1.5rem', borderRadius: '20px', border: '1.5px solid #fecdd3', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.65rem' }}>
                 <div style={{ fontSize: '2.8rem', lineHeight: 1 }}>🔒</div>
                 <h4 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#9f1239', margin: 0, fontFamily: "'Outfit', sans-serif" }}>
