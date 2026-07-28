@@ -175,6 +175,59 @@ export default function FTMyCompetition() {
   const [editingSubId, setEditingSubId] = useState(null);
   const [subItems, setSubItems] = useState({});
   const [submitFieldId, setSubmitFieldId] = useState(null);
+  const [virtualBrowserForm, setVirtualBrowserForm] = useState(null);
+
+  const getEmbedUrl = (rawUrl) => {
+    if (!rawUrl) return 'https://docs.google.com/forms/d/e/1FAIpQLSfbgcAi8mYiNdlWsIbzj8jgxOCFIrrwl1l-6b3akaZ9Dd2XDg/viewform?embedded=true';
+    let url = rawUrl.trim();
+    if (url.includes('forms.gle/tzgEf9QxBj3nG43S9')) {
+      return 'https://docs.google.com/forms/d/e/1FAIpQLSfbgcAi8mYiNdlWsIbzj8jgxOCFIrrwl1l-6b3akaZ9Dd2XDg/viewform?embedded=true';
+    }
+    if (url.includes('/viewform') && !url.includes('embedded=true')) {
+      url += (url.includes('?') ? '&' : '?') + 'embedded=true';
+    }
+    return url;
+  };
+
+  const handleMarkGoogleFormSubmitted = async (stage, field) => {
+    try {
+      const fieldId = field?.id || 'sub_def_1';
+      const existingSub = mySubmissions.find(s => Number(s.stageId) === Number(stage.stageId));
+
+      const updatedItems = {
+        ...(existingSub?.submittedItems || {}),
+        [fieldId]: {
+          name: field?.name || `Submission ${stage.stageId}`,
+          type: 'url',
+          value: field?.googleFormUrl || stage?.googleFormUrl || 'Google Form Completed',
+          submittedAt: new Date().toISOString()
+        }
+      };
+
+      const data = {
+        competitorId: user?.id || 'guest',
+        competitorName: user?.name || user?.username || 'Competitor',
+        competitorEmail: user?.email || '',
+        teamName: user?.teamName || '',
+        track: competitorTrack,
+        stageId: Number(stage.stageId),
+        title: `${field?.name || stage.title} (Google Form)`,
+        submittedItems: updatedItems,
+        status: 'pending',
+        submittedAt: new Date().toISOString()
+      };
+
+      if (existingSub) {
+        await db.submissions.update(existingSub.id, data);
+      } else {
+        await db.submissions.add(data);
+      }
+
+      setVirtualBrowserForm(null);
+    } catch (err) {
+      alert('Failed to log submission: ' + err.message);
+    }
+  };
 
   const handleOpenSubmitModal = (stage, existingSub = null, targetFieldId = null) => {
     setSubmitStage(stage);
@@ -399,7 +452,12 @@ export default function FTMyCompetition() {
                       onClick={(e) => {
                         e.stopPropagation();
                         if (isDisabled) return;
-                        handleOpenSubmitModal(st, stageSub, sf.id);
+                        const targetUrl = sf.googleFormUrl || st.googleFormUrl || 'https://forms.gle/tzgEf9QxBj3nG43S9';
+                        setVirtualBrowserForm({
+                          stage: st,
+                          field: sf,
+                          rawUrl: targetUrl
+                        });
                       }}
                       className="ft-btn"
                       disabled={isDisabled}
@@ -833,6 +891,60 @@ export default function FTMyCompetition() {
           </div>
         </div>,
         document.body
+      )}
+
+      {/* VIRTUAL BROWSER GOOGLE FORM EMBEDDED MODAL */}
+      {virtualBrowserForm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000, padding: '1rem' }}>
+          <div className="ft-card ft-animate-in" style={{ width: '100%', maxWidth: '1050px', height: '92vh', background: '#ffffff', borderRadius: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)' }}>
+            
+            {/* Top Virtual Browser Header Bar */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem', background: '#0f172a', color: '#ffffff' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ background: '#2563eb', color: '#ffffff', padding: '0.4rem 0.8rem', borderRadius: '10px', fontWeight: 900, fontSize: '0.82rem' }}>
+                  🌐 Virtual Browser
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#ffffff', margin: 0 }}>
+                    {virtualBrowserForm.field?.name || virtualBrowserForm.stage?.title}
+                  </h3>
+                  <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.1rem 0 0 0' }}>
+                    Official Google Form Submission View
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  className="ft-btn"
+                  onClick={() => handleMarkGoogleFormSubmitted(virtualBrowserForm.stage, virtualBrowserForm.field)}
+                  style={{ background: '#10b981', color: '#ffffff', border: 'none', padding: '0.55rem 1.1rem', borderRadius: '10px', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  ✅ Mark Submission as Completed
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVirtualBrowserForm(null)}
+                  style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#ffffff', width: '32px', height: '32px', borderRadius: '50%', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Embedded Iframe Container */}
+            <div style={{ flex: 1, position: 'relative', width: '100%', height: '100%', background: '#f8fafc' }}>
+              <iframe
+                src={getEmbedUrl(virtualBrowserForm.rawUrl)}
+                title="Google Form View"
+                style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

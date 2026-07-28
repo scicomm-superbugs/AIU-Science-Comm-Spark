@@ -32,6 +32,7 @@ export default function FTTimelineManagement() {
   const [newSubOpenDate, setNewSubOpenDate] = useState('');
   const [newSubDeadline, setNewSubDeadline] = useState('');
   const [newSubQuestion, setNewSubQuestion] = useState('');
+  const [newSubGoogleFormUrl, setNewSubGoogleFormUrl] = useState('');
   const [subQuestionsList, setSubQuestionsList] = useState([]);
   const [newQLabel, setNewQLabel] = useState('');
   const [newQType, setNewQType] = useState('short_text');
@@ -62,6 +63,7 @@ export default function FTTimelineManagement() {
       description: newSubQuestion.trim() || `Please complete the required submission for ${newSubName.trim()}`,
       question: newSubQuestion.trim() || `Please complete the required submission for ${newSubName.trim()}`,
       questions: finalQuestions,
+      googleFormUrl: newSubGoogleFormUrl.trim(),
       isOpen: newSubIsOpen !== false
     };
     const currentList = editingStage.submissions || [];
@@ -71,6 +73,7 @@ export default function FTTimelineManagement() {
     });
     setNewSubName('');
     setNewSubQuestion('');
+    setNewSubGoogleFormUrl('');
     setNewSubOpenDate('');
     setNewSubDeadline('');
     setSubQuestionsList([]);
@@ -615,6 +618,21 @@ export default function FTTimelineManagement() {
                     </label>
                   </div>
 
+                  {/* Google Form Link for this Deliverable */}
+                  <div>
+                    <label className="ft-label" style={{ fontSize: '0.82rem', color: '#be123c', fontWeight: 800, margin: '0 0 0.3rem 0' }}>
+                      🔗 Google Form URL for this Submission * (Embedded Virtual Browser Form):
+                    </label>
+                    <input
+                      type="url"
+                      className="ft-input"
+                      placeholder="e.g. https://forms.gle/tzgEf9QxBj3nG43S9 or https://docs.google.com/forms/d/e/.../viewform"
+                      value={newSubGoogleFormUrl}
+                      onChange={e => setNewSubGoogleFormUrl(e.target.value)}
+                      style={{ fontSize: '0.85rem' }}
+                    />
+                  </div>
+
                   {/* Multi-Line Description & Requirements Box */}
                   <div>
                     <label className="ft-label" style={{ fontSize: '0.82rem', color: '#334155', fontWeight: 800, margin: '0 0 0.3rem 0' }}>
@@ -810,6 +828,20 @@ export default function FTTimelineManagement() {
                               style={{ fontSize: '0.85rem' }}
                               value={editSubData.description || editSubData.question || ''}
                               onChange={e => setEditSubData({ ...editSubData, description: e.target.value, question: e.target.value })}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem', color: '#be123c', fontWeight: 800 }}>
+                              🔗 Google Form URL for this Submission (Embedded Virtual Browser Form):
+                            </label>
+                            <input
+                              type="url"
+                              className="ft-input"
+                              style={{ fontSize: '0.85rem' }}
+                              placeholder="e.g. https://forms.gle/tzgEf9QxBj3nG43S9 or https://docs.google.com/forms/d/e/.../viewform"
+                              value={editSubData.googleFormUrl || ''}
+                              onChange={e => setEditSubData({ ...editSubData, googleFormUrl: e.target.value })}
                             />
                           </div>
 
