@@ -818,9 +818,6 @@ export default function FTOurTeam() {
                 Live rankings for visual, video & multimedia science communication competitors.
               </p>
             </div>
-            <span style={{ fontSize: '0.78rem', fontWeight: 900, background: '#fff1f2', color: '#be123c', padding: '0.25rem 0.75rem', borderRadius: '20px', border: '1px solid #fecdd3' }}>
-              {popScienceLeaderboard.length} Ranked
-            </span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -897,9 +894,6 @@ export default function FTOurTeam() {
                 Live rankings for science journalism, investigation & written media competitors.
               </p>
             </div>
-            <span style={{ fontSize: '0.78rem', fontWeight: 900, background: '#eff6ff', color: '#2563eb', padding: '0.25rem 0.75rem', borderRadius: '20px', border: '1px solid #bfdbfe' }}>
-              {journalismLeaderboard.length} Ranked
-            </span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
