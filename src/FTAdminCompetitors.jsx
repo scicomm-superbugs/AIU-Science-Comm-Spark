@@ -1095,19 +1095,6 @@ export default function FTAdminCompetitors() {
                                   </div>
 
                                   <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                                    <button
-                                      type="button"
-                                      className="ft-btn"
-                                      onClick={(e) => { e.stopPropagation(); toggleTrack(item); }}
-                                      style={{
-                                        background: '#f8fafc', border: '1.5px solid #cbd5e1', padding: '0.35rem 0.8rem',
-                                        borderRadius: '10px', fontSize: '0.82rem', color: '#0f172a', fontWeight: 800,
-                                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem'
-                                      }}
-                                    >
-                                      🔀 Change Track ({item.track === 'pop_science' ? 'Track 1: Pop Videos' : 'Track 2: Journalism'})
-                                    </button>
-
                                     <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', padding: '0.35rem 0.8rem', borderRadius: '10px', fontSize: '0.82rem', color: '#be123c', fontWeight: 800 }}>
                                       🏷️ Team ID: {item.displayId}
                                     </div>
@@ -1245,32 +1232,6 @@ export default function FTAdminCompetitors() {
                                   </div>
 
                                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                                    <button
-                                      type="button"
-                                      className="ft-btn"
-                                      onClick={(e) => { e.stopPropagation(); toggleTrack(item.rawDoc); }}
-                                      style={{
-                                        background: '#f8fafc', border: '1.5px solid #cbd5e1', padding: '0.45rem 0.9rem',
-                                        borderRadius: '10px', fontSize: '0.82rem', color: '#0f172a', fontWeight: 800,
-                                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem'
-                                      }}
-                                    >
-                                      🔀 Switch Track ({item.track === 'pop_science' ? 'Track 1: Pop Videos' : 'Track 2: Journalism'})
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      className="ft-btn"
-                                      onClick={(e) => { e.stopPropagation(); toggleParticipationMode(item.rawDoc); }}
-                                      style={{
-                                        background: '#eff6ff', color: '#2563eb', border: '1.5px solid #bfdbfe',
-                                        borderRadius: '10px', fontSize: '0.82rem', fontWeight: 800, padding: '0.45rem 0.9rem',
-                                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem'
-                                      }}
-                                    >
-                                      🔄 Mode: Individual (Click to Switch to Team Mode 👥)
-                                    </button>
-
                                     <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '0.45rem 1rem', borderRadius: '12px', fontSize: '0.9rem', color: '#2563eb', fontWeight: 900 }}>
                                       🏷️ Competitor ID: {item.displayId}
                                     </div>
