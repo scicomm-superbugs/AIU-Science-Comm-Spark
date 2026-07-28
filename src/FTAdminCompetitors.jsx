@@ -377,15 +377,19 @@ export default function FTAdminCompetitors() {
 
       let cat = 'competitor';
       let roleLabel = '👤 Competitor';
+      const isCompetitorRole = !c.role || c.role === 'competitor' || c.role === 'user';
       if (c.role === 'academic_judge') {
         cat = 'judge';
-        roleLabel = '🎓 Academic Judge';
+        roleLabel = '⚖️ Judge';
       } else if (c.role === 'scicomm_judge') {
         cat = 'judge';
-        roleLabel = '🎙️ SciComm Judge';
-      } else if (c.role === 'judge' || c.role === 'trainer_judge') {
+        roleLabel = '⚖️ Judge';
+      } else if (c.role === 'judge') {
         cat = 'judge';
-        roleLabel = '⚖️ Competition Judge';
+        roleLabel = '⚖️ Judge';
+      } else if (c.role === 'trainer_judge') {
+        cat = 'judge';
+        roleLabel = '🎓 Trainer & Judge (Dual)';
       } else if (c.role === 'admin' || c.role === 'master' || c.role === 'system_administrator') {
         cat = 'admin';
         roleLabel = '👑 Master Admin';
@@ -402,6 +406,7 @@ export default function FTAdminCompetitors() {
         type: isTeamMember ? 'team_member' : 'individual',
         category: cat,
         roleLabel,
+        isCompetitorRole,
         displayId,
         name: c.name || c.username || 'User',
         email: c.email || '',
@@ -409,11 +414,12 @@ export default function FTAdminCompetitors() {
         username: c.username,
         role: c.role || 'competitor',
         avatar: c.avatarUrl || c.avatar,
-        track: c.registeredTrack || 'pop_science',
+        track: isCompetitorRole ? (c.registeredTrack || 'pop_science') : (c.registeredTrack || null),
         department: c.department || 'Computer Science & AI',
         institutionName: c.institutionName || (c.isAlameinStudent !== false ? 'Alamein International University' : '—'),
         nationalId: c.nationalId || '—',
         isAlameinStudent: c.isAlameinStudent !== false,
+        participationMode: isCompetitorRole ? (c.participationMode || (isTeamMember ? 'team' : 'individual')) : null,
         myTeam,
         rawDoc: c
       };
@@ -1088,24 +1094,44 @@ export default function FTAdminCompetitors() {
 
                       {/* Participation Mode */}
                       <td style={{ width: '140px' }}>
-                        <span style={{
-                          fontSize: '0.75rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '6px',
-                          background: item.type === 'team' ? '#fff1f2' : '#eff6ff',
-                          color: item.type === 'team' ? '#be123c' : '#2563eb',
-                          border: `1px solid ${item.type === 'team' ? '#fecdd3' : '#bfdbfe'}`
-                        }}>
-                          {item.type === 'team' ? `👥 Team (${(item.members || []).length} members)` : '👤 Individual'}
-                        </span>
+                        {item.type === 'team' ? (
+                          <span style={{
+                            fontSize: '0.75rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '6px',
+                            background: '#fff1f2', color: '#be123c', border: '1px solid #fecdd3'
+                          }}>
+                            👥 Team ({(item.members || []).length} members)
+                          </span>
+                        ) : item.isCompetitorRole ? (
+                          <span style={{
+                            fontSize: '0.75rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '6px',
+                            background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe'
+                          }}>
+                            👤 Individual
+                          </span>
+                        ) : (
+                          <span style={{
+                            fontSize: '0.75rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '6px',
+                            background: item.category === 'admin' ? '#fef3c7' : '#f0fdf4',
+                            color: item.category === 'admin' ? '#92400e' : '#15803d',
+                            border: `1px solid ${item.category === 'admin' ? '#fde68a' : '#86efac'}`
+                          }}>
+                            {item.roleLabel}
+                          </span>
+                        )}
                       </td>
 
                       {/* Competition Track */}
                       <td style={{ width: '180px' }}>
-                        <span style={{
-                          fontSize: '0.78rem', fontWeight: 800, color: item.track === 'pop_science' ? '#be123c' : '#2563eb',
-                          display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: '#f8fafc', padding: '0.25rem 0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1'
-                        }}>
-                          {item.track === 'pop_science' ? '🎥 Track 1: Pop Videos' : '📰 Track 2: Journalism'}
-                        </span>
+                        {item.track ? (
+                          <span style={{
+                            fontSize: '0.78rem', fontWeight: 800, color: item.track === 'pop_science' ? '#be123c' : '#2563eb',
+                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: '#f8fafc', padding: '0.25rem 0.6rem', borderRadius: '8px', border: '1px solid #cbd5e1'
+                          }}>
+                            {item.track === 'pop_science' ? '🎥 Track 1: Pop Videos' : '📰 Track 2: Journalism'}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#94a3b8' }}>—</span>
+                        )}
                       </td>
 
                       {/* Institution / Department */}
