@@ -493,30 +493,29 @@ export default function FTMyCompetition() {
                   // Days until open
                   const daysUntilOpen = isBeforeOpen ? Math.ceil((new Date(sf.openDate) - now) / 86400000) : 0;
 
+                  // Published status check for this submission
+                  const pubDoc = publishedResults.find(p => {
+                    const stageMatch = Number(p.stageId) === Number(st.stageId);
+                    const subMatch = p.subId === sf.id || p.subId === 'all' || !p.subId;
+                    return stageMatch && subMatch && p.isPublished === true;
+                  });
+                  const isSubPublished = Boolean(pubDoc) || isAdminOrStaff;
+                  const isShowEvaluated = isEvaluated && isSubPublished;
+                  const isShowUnderEvaluation = (isFieldSubmitted || isEvaluated) && !isShowEvaluated;
+
                   return (
                     <button
                       key={sf.id || idx}
                       onClick={(e) => {
                         e.stopPropagation();
                         if (isFieldSubmitted || isEvaluated) {
-                          // Find ANY published_results doc matching this stage + submission
-                          console.log('[PUBLISH DEBUG] sf.id:', sf.id, '| st.stageId:', st.stageId, '| publishedResults:', JSON.stringify(publishedResults.map(p => ({id: p.id, stageId: p.stageId, subId: p.subId, track: p.track, isPublished: p.isPublished}))));
-                          const stagePubDoc = publishedResults.find(p => {
-                            const stageMatch = Number(p.stageId) === Number(st.stageId);
-                            const subMatch = p.subId === sf.id || p.subId === 'all' || !p.subId;
-                            console.log('[PUBLISH DEBUG] checking pub doc:', p.id, '| stageMatch:', stageMatch, '| subMatch:', subMatch, '(p.subId:', p.subId, 'vs sf.id:', sf.id, ')| p.isPublished:', p.isPublished);
-                            return stageMatch && subMatch && p.isPublished === true;
-                          });
-                          const isStagePublished = Boolean(stagePubDoc);
-                          console.log('[PUBLISH DEBUG] result: isStagePublished=', isStagePublished, '| matched doc:', stagePubDoc?.id);
-
                           setOverviewModalData({
                             stage: st,
                             field: sf,
                             fieldEvals,
                             totalScore,
                             stageSub,
-                            isStagePublished
+                            isStagePublished: isSubPublished
                           });
                           return;
                         }
@@ -531,24 +530,24 @@ export default function FTMyCompetition() {
                       className="ft-btn"
                       disabled={isDisabled}
                       style={{
-                        background: isEvaluated
+                        background: isShowEvaluated
                           ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
-                          : isFieldSubmitted
+                          : isShowUnderEvaluation
                             ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
                             : isDisabled
                               ? isBeforeOpen ? '#fffbeb' : '#fff1f2'
                               : '#f1f5f9',
-                        color: (isEvaluated || isFieldSubmitted) ? '#ffffff' : (isDisabled ? (isBeforeOpen ? '#92400e' : '#be123c') : '#334155'),
+                        color: (isShowEvaluated || isShowUnderEvaluation) ? '#ffffff' : (isDisabled ? (isBeforeOpen ? '#92400e' : '#be123c') : '#334155'),
                         fontWeight: 800,
                         padding: '0.55rem 1.15rem',
                         borderRadius: '12px',
                         fontSize: '0.85rem',
-                        border: (isEvaluated || isFieldSubmitted)
+                        border: (isShowEvaluated || isShowUnderEvaluation)
                           ? 'none'
                           : isDisabled
                             ? isBeforeOpen ? '1.5px solid #fde68a' : '1.5px solid #fecdd3'
                             : '1.5px solid #cbd5e1',
-                        boxShadow: isEvaluated ? '0 4px 14px rgba(5, 150, 105, 0.3)' : (isFieldSubmitted ? '0 4px 14px rgba(2, 132, 199, 0.3)' : 'none'),
+                        boxShadow: isShowEvaluated ? '0 4px 14px rgba(5, 150, 105, 0.3)' : (isShowUnderEvaluation ? '0 4px 14px rgba(2, 132, 199, 0.3)' : 'none'),
                         cursor: isDisabled ? 'not-allowed' : 'pointer',
                         opacity: isDisabled ? 0.9 : 1,
                         display: 'inline-flex',
@@ -569,23 +568,11 @@ export default function FTMyCompetition() {
                         <>
                           <span>🛑 Window Closed:</span> {sf.name || `Stage ${st.stageId}`}
                         </>
-                      ) : isEvaluated ? (() => {
-                        const pubDoc = publishedResults.find(p => {
-                          const stageMatch = Number(p.stageId) === Number(st.stageId);
-                          const subMatch = p.subId === sf.id || p.subId === 'all' || !p.subId;
-                          return stageMatch && subMatch && p.isPublished === true;
-                        });
-                        const isPublished = Boolean(pubDoc) || isAdminOrStaff;
-                        return isPublished ? (
-                          <>
-                            <span>⭐ Evaluated:</span> {sf.name || `Stage ${st.stageId}`} ↗
-                          </>
-                        ) : (
-                          <>
-                            <span>⏳ Under Evaluation:</span> {sf.name || `Stage ${st.stageId}`} ↗
-                          </>
-                        );
-                      })() : isFieldSubmitted ? (
+                      ) : isShowEvaluated ? (
+                        <>
+                          <span>⭐ Evaluated:</span> {sf.name || `Stage ${st.stageId}`} ↗
+                        </>
+                      ) : isShowUnderEvaluation ? (
                         <>
                           <span>⏳ Under Evaluation:</span> {sf.name || `Stage ${st.stageId}`} ↗
                         </>
@@ -596,8 +583,8 @@ export default function FTMyCompetition() {
                       )}
                       <span style={{
                         fontSize: '0.72rem',
-                        background: isFieldSubmitted ? 'rgba(255,255,255,0.2)' : (isDisabled ? (isBeforeOpen ? 'rgba(146,64,14,0.1)' : 'rgba(190,18,60,0.1)') : '#e2e8f0'),
-                        color: isFieldSubmitted ? '#ffffff' : (isDisabled ? (isBeforeOpen ? '#92400e' : '#be123c') : '#475569'),
+                        background: (isShowEvaluated || isShowUnderEvaluation) ? 'rgba(255,255,255,0.2)' : (isDisabled ? (isBeforeOpen ? 'rgba(146,64,14,0.1)' : 'rgba(190,18,60,0.1)') : '#e2e8f0'),
+                        color: (isShowEvaluated || isShowUnderEvaluation) ? '#ffffff' : (isDisabled ? (isBeforeOpen ? '#92400e' : '#be123c') : '#475569'),
                         padding: '0.15rem 0.5rem',
                         borderRadius: '6px',
                         marginLeft: '0.2rem',
