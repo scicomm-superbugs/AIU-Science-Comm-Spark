@@ -79,6 +79,7 @@ export default function FTMyCompetition() {
   const { user } = useAuth();
   const liveEvaluations = useLiveCollection('ft_evaluations') || [];
   const timelineConfig = useLiveCollection('timeline_config') || [];
+  const publishedResults = useLiveCollection('published_results') || [];
   const scientists = useLiveCollection('scientists') || [];
   const teams = useLiveCollection('ft_teams') || [];
   const submissions = useLiveCollection('submissions') || [];
@@ -498,12 +499,17 @@ export default function FTMyCompetition() {
                       onClick={(e) => {
                         e.stopPropagation();
                         if (isFieldSubmitted || isEvaluated) {
+                          const userTrack = meDoc?.registeredTrack || 'pop_science';
+                          const stagePubDoc = publishedResults.find(p => Number(p.stageId) === Number(st.stageId) && (p.track === userTrack || p.track === 'all'));
+                          const isStagePublished = Boolean(stagePubDoc?.isPublished);
+
                           setOverviewModalData({
                             stage: st,
                             field: sf,
                             fieldEvals,
                             totalScore,
-                            stageSub
+                            stageSub,
+                            isStagePublished
                           });
                           return;
                         }
@@ -1075,34 +1081,50 @@ export default function FTMyCompetition() {
               </button>
             </div>
 
-            {/* Grade Summary Box */}
-            <div style={{ background: overviewModalData.fieldEvals.length > 0 ? '#f0fdf4' : '#fffbeb', padding: '1.25rem', borderRadius: '16px', border: overviewModalData.fieldEvals.length > 0 ? '1.5px solid #86efac' : '1.5px solid #fde68a', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-              <div>
-                <div style={{ fontSize: '0.78rem', fontWeight: 900, color: overviewModalData.fieldEvals.length > 0 ? '#166534' : '#92400e', textTransform: 'uppercase' }}>
-                  {overviewModalData.fieldEvals.length > 0 ? '✅ Final Grade Awarded' : '⏳ Status'}
-                </div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: overviewModalData.fieldEvals.length > 0 ? '#15803d' : '#b45309', margin: '0.1rem 0 0 0' }}>
-                  {overviewModalData.fieldEvals.length > 0 ? `${overviewModalData.totalScore} pts` : 'Under Evaluation'}
+            {/* Grade Summary Box & Judge Comments (Only visible if published by Admin or if user is Admin/Judge) */}
+            {!overviewModalData.isStagePublished && !isAdminOrStaff ? (
+              <div style={{ background: '#fff1f2', padding: '1.65rem 1.5rem', borderRadius: '20px', border: '1.5px solid #fecdd3', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ fontSize: '2.8rem', lineHeight: 1 }}>🔒</div>
+                <h4 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#9f1239', margin: 0, fontFamily: "'Outfit', sans-serif" }}>
+                  Stage {overviewModalData.stage.stageId} Evaluation Results Pending Publication
+                </h4>
+                <p style={{ fontSize: '0.86rem', color: '#881337', lineHeight: 1.55, margin: 0, maxWidth: '420px' }}>
+                  Evaluation scores and judge feedback for Stage {overviewModalData.stage.stageId} are currently under review by the judging panel and admin team.
+                </p>
+                <div style={{ background: '#ffffff', padding: '0.4rem 0.95rem', borderRadius: '12px', border: '1px solid #fecdd3', fontWeight: 800, fontSize: '0.8rem', color: '#be123c', marginTop: '0.25rem', boxShadow: '0 2px 6px rgba(0,0,0,0.03)' }}>
+                  ⏳ Final scores & judge comments will be released once officially published by the Admin.
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 800, padding: '0.35rem 0.85rem', borderRadius: '20px', background: overviewModalData.fieldEvals.length > 0 ? '#dcfce7' : '#fef3c7', color: overviewModalData.fieldEvals.length > 0 ? '#15803d' : '#92400e', border: overviewModalData.fieldEvals.length > 0 ? '1px solid #86efac' : '1px solid #fde68a' }}>
-                  {overviewModalData.fieldEvals.length > 0 ? 'Graded & Verified' : 'In Review by Judges'}
-                </span>
-              </div>
-            </div>
+            ) : (
+              <>
+                {/* Grade Summary Box */}
+                <div style={{ background: overviewModalData.fieldEvals.length > 0 ? '#f0fdf4' : '#fffbeb', padding: '1.25rem', borderRadius: '16px', border: overviewModalData.fieldEvals.length > 0 ? '1.5px solid #86efac' : '1.5px solid #fde68a', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 900, color: overviewModalData.fieldEvals.length > 0 ? '#166534' : '#92400e', textTransform: 'uppercase' }}>
+                      {overviewModalData.fieldEvals.length > 0 ? '✅ Final Grade Awarded' : '⏳ Status'}
+                    </div>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 900, color: overviewModalData.fieldEvals.length > 0 ? '#15803d' : '#b45309', margin: '0.1rem 0 0 0' }}>
+                      {overviewModalData.fieldEvals.length > 0 ? `${overviewModalData.totalScore} pts` : 'Under Evaluation'}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 800, padding: '0.35rem 0.85rem', borderRadius: '20px', background: overviewModalData.fieldEvals.length > 0 ? '#dcfce7' : '#fef3c7', color: overviewModalData.fieldEvals.length > 0 ? '#15803d' : '#92400e', border: overviewModalData.fieldEvals.length > 0 ? '1px solid #86efac' : '1px solid #fde68a' }}>
+                      {overviewModalData.fieldEvals.length > 0 ? 'Graded & Verified' : 'In Review by Judges'}
+                    </span>
+                  </div>
+                </div>
 
-            {/* Judge Feedback Comments Section */}
-            <div>
-              <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.65rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <span>💬</span> Judge Comments & Evaluation Feedback:
-              </div>
+                {/* Judge Feedback Comments Section */}
+                <div>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a', marginBottom: '0.65rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span>💬</span> Judge Comments & Evaluation Feedback:
+                  </div>
 
-              {overviewModalData.fieldEvals.length === 0 ? (
-                <div style={{ padding: '1rem 1.25rem', background: '#f8fafc', borderRadius: '14px', border: '1px dashed #cbd5e1', color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic', textAlign: 'center' }}>
-                  There are no comments or evaluation scores recorded yet. Your submission is currently under review.
-                </div>
-              ) : (
+                  {overviewModalData.fieldEvals.length === 0 ? (
+                    <div style={{ padding: '1rem 1.25rem', background: '#f8fafc', borderRadius: '14px', border: '1px dashed #cbd5e1', color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic', textAlign: 'center' }}>
+                      There are no comments or evaluation scores recorded yet. Your submission is currently under review.
+                    </div>
+                  ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {overviewModalData.fieldEvals.map((ev, idx) => {
                     const hasComment = Boolean(ev.comments && ev.comments.trim());
@@ -1132,6 +1154,8 @@ export default function FTMyCompetition() {
                 </div>
               )}
             </div>
+            </>
+            )}
 
             {/* Modal Actions */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>

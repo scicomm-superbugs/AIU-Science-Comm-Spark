@@ -357,6 +357,23 @@ const rawDb = {
       const d = await getDoc(doc(firestore, getCollectionName('submission_assignments'), String(id)));
       return d.exists() ? { id: d.id, ...d.data() } : null;
     }
+  },
+
+  published_results: {
+    add: async (data) => {
+      const docId = data.id || `pub_stage_${data.stageId}_${data.track}`;
+      await setDoc(doc(firestore, getCollectionName('published_results'), String(docId)), data, { merge: true });
+      return docId;
+    },
+    update: async (id, data) => {
+      await setDoc(doc(firestore, getCollectionName('published_results'), String(id)), data, { merge: true });
+    },
+    set: async (id, data) => {
+      await setDoc(doc(firestore, getCollectionName('published_results'), String(id)), data, { merge: true });
+    },
+    delete: async (id) => {
+      await deleteDoc(doc(firestore, getCollectionName('published_results'), String(id)));
+    }
   }
 };
 

@@ -405,53 +405,53 @@ export const AuthProvider = ({ children }) => {
 
       if (viewAsMode === 'student_pop_team' || viewAsMode === 'student_pop') {
         impId = 'test_comp_pop_team';
-        impName = 'Braa Ehab';
-        impUsername = 'braa_ehab';
-        impEmail = 'braa.ehab@aiu.edu.eg';
+        impName = 'test-comp-pop-team';
+        impUsername = 'test_comp_pop_team';
+        impEmail = 'test-comp-pop-team@aiu.edu.eg';
         modeRole = 'competitor';
         modeTrack = 'pop_science';
         modePart = 'team';
-        impCode = 'C-941';
+        impCode = 'C-901';
       } else if (viewAsMode === 'student_pop_ind') {
-        impId = 'test_comp_pop_ind';
-        impName = 'Ramy Zahran';
-        impUsername = 'ramy_zahran';
-        impEmail = 'ramy.zahran@aiu.edu.eg';
+        impId = 'test_comp_pop_solo';
+        impName = 'test-comp-pop-solo';
+        impUsername = 'test_comp_pop_solo';
+        impEmail = 'test-comp-pop-solo@aiu.edu.eg';
         modeRole = 'competitor';
         modeTrack = 'pop_science';
         modePart = 'individual';
-        impCode = 'C-946';
+        impCode = 'C-902';
       } else if (viewAsMode === 'student_jour_team' || viewAsMode === 'student_jour') {
         impId = 'test_comp_jour_team';
-        impName = 'Nour El-Din';
-        impUsername = 'nour_eldin';
-        impEmail = 'nour.eldin@aiu.edu.eg';
+        impName = 'test-comp-jour-team';
+        impUsername = 'test_comp_jour_team';
+        impEmail = 'test-comp-jour-team@aiu.edu.eg';
         modeRole = 'competitor';
         modeTrack = 'science_journalism';
         modePart = 'team';
-        impCode = 'C-812';
+        impCode = 'C-801';
       } else if (viewAsMode === 'student_jour_ind') {
-        impId = 'test_comp_jour_ind';
-        impName = 'Yasmin Ali';
-        impUsername = 'yasmin_ali';
-        impEmail = 'yasmin.ali@aiu.edu.eg';
+        impId = 'test_comp_jour_solo';
+        impName = 'test-comp-jour-solo';
+        impUsername = 'test_comp_jour_solo';
+        impEmail = 'test-comp-jour-solo@aiu.edu.eg';
         modeRole = 'competitor';
         modeTrack = 'science_journalism';
         modePart = 'individual';
-        impCode = 'C-819';
+        impCode = 'C-802';
       } else if (viewAsMode === 'judge_scicomm') {
         impId = 'test_judge_scicomm';
-        impName = 'Prof. Omar Farooq';
-        impUsername = 'prof_omar_farooq';
-        impEmail = 'omar.farooq@aiu.edu.eg';
+        impName = 'test-judge-scicomm';
+        impUsername = 'test_judge_scicomm';
+        impEmail = 'test-judge-scicomm@aiu.edu.eg';
         modeRole = 'scicomm_judge';
         modeTrack = '';
-        impCode = 'J-305';
+        impCode = 'J-301';
       } else if (viewAsMode === 'judge_academic') {
         impId = 'test_judge_academic';
-        impName = 'Dr. Sarah Ahmed';
-        impUsername = 'dr_sarah_ahmed';
-        impEmail = 'sarah.ahmed@aiu.edu.eg';
+        impName = 'test-judge-academic';
+        impUsername = 'test_judge_academic';
+        impEmail = 'test-judge-academic@aiu.edu.eg';
         modeRole = 'academic_judge';
         modeTrack = '';
         impCode = 'J-201';
