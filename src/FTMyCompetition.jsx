@@ -408,7 +408,7 @@ export default function FTMyCompetition() {
                   const isAfterClose = hasCloseDate && todayStr > effDeadline;
                   const isWindowBlocked = (isBeforeOpen || isAfterClose) && !isAdminOrStaff;
                   const isManuallyClosed = sf.isOpen === false;
-                  const isDisabled = isManuallyClosed || isWindowBlocked;
+                  const isDisabled = isManuallyClosed || isWindowBlocked || isFieldSubmitted;
 
                   // Days until open
                   const daysUntilOpen = isBeforeOpen ? Math.ceil((new Date(sf.openDate) - now) / 86400000) : 0;
@@ -429,24 +429,24 @@ export default function FTMyCompetition() {
                       className="ft-btn"
                       disabled={isDisabled}
                       style={{
-                        background: isDisabled
-                          ? isBeforeOpen ? '#fffbeb' : '#fff1f2'
-                          : isFieldSubmitted
-                            ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                        background: isFieldSubmitted
+                          ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
+                          : isDisabled
+                            ? isBeforeOpen ? '#fffbeb' : '#fff1f2'
                             : '#f1f5f9',
-                        color: isDisabled
-                          ? isBeforeOpen ? '#92400e' : '#be123c'
-                          : isFieldSubmitted ? '#ffffff' : '#334155',
+                        color: isFieldSubmitted ? '#ffffff' : (isDisabled ? (isBeforeOpen ? '#92400e' : '#be123c') : '#334155'),
                         fontWeight: 800,
                         padding: '0.55rem 1.15rem',
                         borderRadius: '12px',
                         fontSize: '0.85rem',
-                        border: isDisabled
-                          ? isBeforeOpen ? '1.5px solid #fde68a' : '1.5px solid #fecdd3'
-                          : isFieldSubmitted ? 'none' : '1.5px solid #cbd5e1',
-                        boxShadow: isFieldSubmitted && !isDisabled ? '0 4px 14px rgba(5, 150, 105, 0.3)' : 'none',
+                        border: isFieldSubmitted
+                          ? 'none'
+                          : isDisabled
+                            ? isBeforeOpen ? '1.5px solid #fde68a' : '1.5px solid #fecdd3'
+                            : '1.5px solid #cbd5e1',
+                        boxShadow: isFieldSubmitted ? '0 4px 14px rgba(2, 132, 199, 0.3)' : 'none',
                         cursor: isDisabled ? 'not-allowed' : 'pointer',
-                        opacity: isDisabled ? 0.85 : 1,
+                        opacity: isDisabled ? 0.9 : 1,
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '0.45rem',
@@ -467,7 +467,7 @@ export default function FTMyCompetition() {
                         </>
                       ) : isFieldSubmitted ? (
                         <>
-                          <span>✅ Submitted:</span> {sf.name || `Stage ${st.stageId}`}
+                          <span>⏳ Under Evaluation:</span> {sf.name || `Stage ${st.stageId}`}
                         </>
                       ) : (
                         <>
@@ -476,8 +476,8 @@ export default function FTMyCompetition() {
                       )}
                       <span style={{
                         fontSize: '0.72rem',
-                        background: isDisabled ? (isBeforeOpen ? 'rgba(146,64,14,0.1)' : 'rgba(190,18,60,0.1)') : isFieldSubmitted ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
-                        color: isDisabled ? (isBeforeOpen ? '#92400e' : '#be123c') : isFieldSubmitted ? '#ffffff' : '#475569',
+                        background: isFieldSubmitted ? 'rgba(255,255,255,0.2)' : (isDisabled ? (isBeforeOpen ? 'rgba(146,64,14,0.1)' : 'rgba(190,18,60,0.1)') : '#e2e8f0'),
+                        color: isFieldSubmitted ? '#ffffff' : (isDisabled ? (isBeforeOpen ? '#92400e' : '#be123c') : '#475569'),
                         padding: '0.15rem 0.5rem',
                         borderRadius: '6px',
                         marginLeft: '0.2rem',
