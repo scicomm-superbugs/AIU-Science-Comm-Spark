@@ -23,9 +23,13 @@ export default function FTEvaluationManagement() {
 
   // Single evaluation entry form state
   const [selectedTargetId, setSelectedTargetId] = useState('');
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState('');
   const [newJudgeId, setNewJudgeId] = useState('');
   const [newScore, setNewScore] = useState('');
   const [newComment, setNewComment] = useState('');
+
+  // History filter by submission
+  const [selectedHistorySubId, setSelectedHistorySubId] = useState('all');
 
   // Controlled evaluation form URLs state per submission deliverable
   const [evalUrls, setEvalUrls] = useState({}); // { [subFieldId]: url }
@@ -57,6 +61,14 @@ export default function FTEvaluationManagement() {
     if (!currentStageConfig || !currentStageConfig.criteria || currentStageConfig.criteria.length === 0) return 50;
     const sum = currentStageConfig.criteria.reduce((acc, c) => acc + Number(c.maxPoints || c.points || 0), 0);
     return sum > 0 ? sum : 50;
+  }, [currentStageConfig]);
+
+  // Submissions for the current stage set by admin
+  const stageSubmissions = useMemo(() => {
+    if (currentStageConfig?.submissions && currentStageConfig.submissions.length > 0) {
+      return currentStageConfig.submissions;
+    }
+    return [{ id: 'sub_1', name: 'Submission Deliverable 1' }];
   }, [currentStageConfig]);
 
   // Assigned judges list for current stage
@@ -376,11 +388,14 @@ export default function FTEvaluationManagement() {
     const targetObj = competitorOptions.find(o => o.targetId === selectedTargetId);
     const selJudgeObj = allJudges.find(j => j.id === newJudgeId);
     const judgeName = selJudgeObj ? (selJudgeObj.name || selJudgeObj.username) : 'Official Judge Panel';
+    const selSubObj = stageSubmissions.find(s => s.id === selectedSubmissionId);
 
     try {
       const evalData = {
         stageId: Number(selectedStageId),
         track: selectedTrack,
+        submissionId: selectedSubmissionId || (stageSubmissions[0]?.id || 'sub_1'),
+        submissionName: selSubObj ? selSubObj.name : (stageSubmissions[0]?.name || 'Submission Deliverable 1'),
         targetId: selectedTargetId,
         targetType: targetObj?.targetType || 'competitor',
         competitorId: selectedTargetId,
@@ -415,7 +430,10 @@ export default function FTEvaluationManagement() {
       const normTrack = String(ev.track || '').toLowerCase();
       const isTrackMatch = selectedTrack === 'all' ||
         (selectedTrack === 'science_journalism' ? normTrack.includes('journal') : (!normTrack || normTrack.includes('pop')));
-      return isStageMatch && isTrackMatch;
+      const isSubMatch = selectedHistorySubId === 'all' ||
+        ev.submissionId === selectedHistorySubId ||
+        ev.submissionName === selectedHistorySubId;
+      return isStageMatch && isTrackMatch && isSubMatch;
     });
 
     if (searchQuery.trim()) {
@@ -424,12 +442,13 @@ export default function FTEvaluationManagement() {
         String(ev.competitorName || '').toLowerCase().includes(q) ||
         String(ev.competitorCode || '').toLowerCase().includes(q) ||
         String(ev.judgeName || '').toLowerCase().includes(q) ||
+        String(ev.submissionName || '').toLowerCase().includes(q) ||
         String(ev.comments || '').toLowerCase().includes(q)
       );
     }
 
     return list.sort((a, b) => new Date(b.evaluatedAt || 0) - new Date(a.evaluatedAt || 0));
-  }, [evaluations, selectedStageId, selectedTrack, searchQuery]);
+  }, [evaluations, selectedStageId, selectedTrack, selectedHistorySubId, searchQuery]);
 
   return (
     <div className="ft-animate-in" style={{ paddingBottom: '3rem' }}>
@@ -638,7 +657,7 @@ export default function FTEvaluationManagement() {
             Add Grade Score & Feedback Entry (Stage {selectedStageId}):
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.85rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
             {/* Competitor / Team Selector by Code */}
             <div>
               <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem', fontWeight: 800 }}>
@@ -654,6 +673,26 @@ export default function FTEvaluationManagement() {
                 {competitorOptions.map(opt => (
                   <option key={opt.targetId} value={opt.targetId}>
                     {opt.displayText}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Submission Deliverable Dropdown */}
+            <div>
+              <label className="ft-label" style={{ fontSize: '0.78rem', marginBottom: '0.25rem', fontWeight: 800 }}>
+                📝 Select Submission Task / Deliverable
+              </label>
+              <select
+                className="ft-select"
+                style={{ fontSize: '0.85rem' }}
+                value={selectedSubmissionId}
+                onChange={e => setSelectedSubmissionId(e.target.value)}
+              >
+                <option value="">-- Select Stage Submission Deliverable --</option>
+                {stageSubmissions.map(sub => (
+                  <option key={sub.id} value={sub.id}>
+                    {sub.name}
                   </option>
                 ))}
               </select>
@@ -737,8 +776,24 @@ export default function FTEvaluationManagement() {
               Grading & Feedback History Log ({historyList.length} Entries)
             </div>
 
-            {/* Search Input for History Log */}
-            <div style={{ position: 'relative', minWidth: '280px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+              {/* Submission Filter Dropdown */}
+              <select
+                className="ft-select"
+                style={{ fontSize: '0.82rem', padding: '0.4rem 0.75rem', width: 'auto', background: '#f8fafc' }}
+                value={selectedHistorySubId}
+                onChange={e => setSelectedHistorySubId(e.target.value)}
+              >
+                <option value="all">📂 Filter: All Submissions ({stageSubmissions.length} Tasks)</option>
+                {stageSubmissions.map(sub => (
+                  <option key={sub.id} value={sub.id}>
+                    📝 {sub.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Search Input for History Log */}
+              <div style={{ position: 'relative', minWidth: '240px' }}>
               <Search size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
                 type="text"
@@ -750,6 +805,7 @@ export default function FTEvaluationManagement() {
               />
             </div>
           </div>
+        </div>
 
           {historyList.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '2.5rem 1.5rem', background: '#f8fafc', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
