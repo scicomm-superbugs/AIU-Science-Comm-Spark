@@ -203,19 +203,43 @@ export default function FTDashboard() {
     }));
   }, [selectedTrack, customConfig, dynamicWorkshops]);
 
-  // Automatically select the first upcoming event (or first active milestone) when steps load or change
+  // Automatically auto-select target event or stage running today or currently active
   useEffect(() => {
     if (steps && steps.length > 0) {
       const now = new Date();
+      const todayStr = now.toISOString().slice(0, 10);
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-      const firstUpcoming = steps.find(s => {
+      // 1. Check if an event is running EXACTLY TODAY
+      const runningToday = steps.find(s => {
+        if (!s._rawDate || isNaN(s._rawDate.getTime())) return false;
+        return s._rawDate.toISOString().slice(0, 10) === todayStr;
+      });
+
+      if (runningToday) {
+        setSelectedStepId(runningToday.id);
+        return;
+      }
+
+      // 2. Check for currently Active Stage (Submissions Open / Active Stage)
+      const activeStage = steps.find(s => {
+        const badge = String(s.badge || '').toLowerCase();
+        return badge.includes('active') || badge.includes('open') || s.status === 'Active Stage';
+      });
+
+      if (activeStage) {
+        setSelectedStepId(activeStage.id);
+        return;
+      }
+
+      // 3. Fallback to first upcoming event from today onwards
+      const upcoming = steps.find(s => {
         if (!s._rawDate || isNaN(s._rawDate.getTime())) return false;
         return s._rawDate >= todayStart;
       });
 
-      if (firstUpcoming) {
-        setSelectedStepId(firstUpcoming.id);
+      if (upcoming) {
+        setSelectedStepId(upcoming.id);
       } else {
         setSelectedStepId(steps[steps.length - 1].id);
       }
