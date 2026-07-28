@@ -17,6 +17,9 @@ export default function FTEvaluationManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState('');
 
+  // Controlled evaluation form URLs state per submission deliverable
+  const [evalUrls, setEvalUrls] = useState({}); // { [subFieldId]: url }
+
   // Per-competitor evaluation draft state
   const [evalForm, setEvalForm] = useState({}); // { [targetId]: { judgeName: '', judgeId: '', score: '', comment: '' } }
 
@@ -45,19 +48,44 @@ export default function FTEvaluationManagement() {
   // Toggle judge assignment for current stage
   const handleToggleJudgeAssignment = async (judgeId) => {
     try {
-      const currentIds = [...assignedJudgeIds];
+      const existingDoc = timelineConfig.find(c => c.track === selectedTrack && Number(c.stageId) === Number(selectedStageId));
+      const targetDocId = existingDoc?.id || `${selectedTrack}_stage_${selectedStageId}`;
+      const currentIds = existingDoc?.assignedJudgeIds || currentStageConfig?.assignedJudgeIds || [];
       const newIds = currentIds.includes(judgeId)
         ? currentIds.filter(id => id !== judgeId)
         : [...currentIds, judgeId];
 
-      const configId = `${selectedTrack}_stage_${selectedStageId}`;
-      await db.timeline_config.set(configId, {
-        id: configId,
-        track: selectedTrack,
+      const dataToSave = {
+        id: String(targetDocId),
+        track: String(selectedTrack === 'all' ? (existingDoc?.track || 'pop_science') : selectedTrack),
         stageId: Number(selectedStageId),
-        assignedJudgeIds: newIds
-      });
+        title: String(existingDoc?.title || currentStageConfig?.title || `Stage ${selectedStageId}`),
+        sub: String(existingDoc?.sub || currentStageConfig?.sub || ''),
+        deadline: String(existingDoc?.deadline || currentStageConfig?.deadline || 'TBD'),
+        isTbd: Boolean(existingDoc?.isTbd || currentStageConfig?.isTbd),
+        status: String(existingDoc?.status || currentStageConfig?.status || 'Active Stage'),
+        details: String(existingDoc?.details || currentStageConfig?.details || ''),
+        criteria: existingDoc?.criteria || currentStageConfig?.criteria || [],
+        submissions: (existingDoc?.submissions || currentStageConfig?.submissions || []).map(s => {
+          const cleaned = {
+            id: String(s.id || ''),
+            name: String(s.name || ''),
+            type: String(s.type || 'url'),
+            openDate: String(s.openDate || ''),
+            deadline: String(s.deadline || ''),
+            isOpen: Boolean(s.isOpen !== false)
+          };
+          if (s.googleFormUrl) cleaned.googleFormUrl = String(s.googleFormUrl);
+          if (s.evalGoogleFormUrl) cleaned.evalGoogleFormUrl = String(s.evalGoogleFormUrl);
+          return cleaned;
+        }),
+        assignedJudgeIds: newIds.map(id => String(id)),
+        acceptSubmissions: Boolean(existingDoc?.acceptSubmissions !== false),
+        googleFormUrl: String(existingDoc?.googleFormUrl || currentStageConfig?.googleFormUrl || ''),
+        updatedAt: new Date().toISOString()
+      };
 
+      await db.timeline_config.set(targetDocId, dataToSave);
       showToast(newIds.includes(judgeId) ? '✅ Judge assigned to stage!' : 'ℹ️ Judge unassigned from stage.');
     } catch (err) {
       alert('Failed to update judge assignment: ' + err.message);
@@ -67,20 +95,46 @@ export default function FTEvaluationManagement() {
   // Handle saving evaluation Google Form URL per submission deliverable
   const handleSaveEvalGoogleFormUrl = async (subFieldId, evalUrl) => {
     try {
-      const currentSubs = currentStageConfig?.submissions || [];
+      const existingDoc = timelineConfig.find(c => c.track === selectedTrack && Number(c.stageId) === Number(selectedStageId));
+      const targetDocId = existingDoc?.id || `${selectedTrack}_stage_${selectedStageId}`;
+      const currentSubs = existingDoc?.submissions || currentStageConfig?.submissions || [];
+
       const updatedSubs = currentSubs.map(sf =>
         sf.id === subFieldId ? { ...sf, evalGoogleFormUrl: evalUrl.trim() } : sf
       );
 
-      const configId = `${selectedTrack}_stage_${selectedStageId}`;
-      await db.timeline_config.set(configId, {
-        id: configId,
-        track: selectedTrack,
+      const dataToSave = {
+        id: String(targetDocId),
+        track: String(selectedTrack === 'all' ? (existingDoc?.track || 'pop_science') : selectedTrack),
         stageId: Number(selectedStageId),
-        submissions: updatedSubs
-      });
+        title: String(existingDoc?.title || currentStageConfig?.title || `Stage ${selectedStageId}`),
+        sub: String(existingDoc?.sub || currentStageConfig?.sub || ''),
+        deadline: String(existingDoc?.deadline || currentStageConfig?.deadline || 'TBD'),
+        isTbd: Boolean(existingDoc?.isTbd || currentStageConfig?.isTbd),
+        status: String(existingDoc?.status || currentStageConfig?.status || 'Active Stage'),
+        details: String(existingDoc?.details || currentStageConfig?.details || ''),
+        criteria: existingDoc?.criteria || currentStageConfig?.criteria || [],
+        submissions: updatedSubs.map(s => {
+          const cleaned = {
+            id: String(s.id || ''),
+            name: String(s.name || ''),
+            type: String(s.type || 'url'),
+            openDate: String(s.openDate || ''),
+            deadline: String(s.deadline || ''),
+            isOpen: Boolean(s.isOpen !== false)
+          };
+          if (s.googleFormUrl) cleaned.googleFormUrl = String(s.googleFormUrl);
+          if (s.evalGoogleFormUrl) cleaned.evalGoogleFormUrl = String(s.evalGoogleFormUrl);
+          return cleaned;
+        }),
+        assignedJudgeIds: (existingDoc?.assignedJudgeIds || currentStageConfig?.assignedJudgeIds || []).map(id => String(id)),
+        acceptSubmissions: Boolean(existingDoc?.acceptSubmissions !== false),
+        googleFormUrl: String(existingDoc?.googleFormUrl || currentStageConfig?.googleFormUrl || ''),
+        updatedAt: new Date().toISOString()
+      };
 
-      showToast('✅ Evaluation Google Form URL saved!');
+      await db.timeline_config.set(targetDocId, dataToSave);
+      showToast('✅ Evaluation Google Form URL saved successfully!');
     } catch (err) {
       alert('Failed to save evaluation form URL: ' + err.message);
     }
@@ -152,7 +206,7 @@ export default function FTEvaluationManagement() {
     return result;
   }, [submissions, teams, scientists, evaluations, selectedStageId, selectedTrack, searchQuery]);
 
-  // Handle saving score and comment for a competitor/team
+  // Handle saving evaluation score and comment for a competitor/team
   const handleSaveEvaluation = async (targetItem) => {
     const draft = evalForm[targetItem.targetId] || {};
     const judgeName = draft.judgeName?.trim() || 'Official Judge Panel';
@@ -342,35 +396,41 @@ export default function FTEvaluationManagement() {
 
           {((currentStageConfig?.submissions && currentStageConfig.submissions.length > 0) ? currentStageConfig.submissions : [
             { id: 'sub_def_1', name: 'Submission Deliverable 1' }
-          ]).map((subField) => (
-            <div key={subField.id} style={{ background: '#ffffff', padding: '1rem 1.25rem', borderRadius: '14px', border: '1.5px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <span>📝 Submission Title:</span>
-                <strong style={{ color: '#be123c' }}>{subField.name}</strong>
+          ]).map((subField) => {
+            const currentEvalUrlVal = evalUrls[subField.id] !== undefined
+              ? evalUrls[subField.id]
+              : (subField.evalGoogleFormUrl || '');
+
+            return (
+              <div key={subField.id} style={{ background: '#ffffff', padding: '1rem 1.25rem', borderRadius: '14px', border: '1.5px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span>📝 Submission Title:</span>
+                  <strong style={{ color: '#be123c' }}>{subField.name}</strong>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.6rem' }}>
+                  <input
+                    type="url"
+                    className="ft-input"
+                    placeholder={`Evaluation Google Form URL for "${subField.name}" (e.g. https://forms.gle/...)`}
+                    value={currentEvalUrlVal}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEvalUrls(prev => ({ ...prev, [subField.id]: val }));
+                    }}
+                    style={{ fontSize: '0.85rem' }}
+                  />
+                  <button
+                    type="button"
+                    className="ft-btn ft-btn-primary"
+                    onClick={() => handleSaveEvalGoogleFormUrl(subField.id, currentEvalUrlVal)}
+                    style={{ fontWeight: 800, fontSize: '0.82rem' }}
+                  >
+                    <Save size={15} /> Save Form URL
+                  </button>
+                </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.6rem' }}>
-                <input
-                  type="url"
-                  className="ft-input"
-                  placeholder={`Evaluation Google Form URL for "${subField.name}" (e.g. https://forms.gle/...)`}
-                  defaultValue={subField.evalGoogleFormUrl || ''}
-                  id={`eval_url_${subField.id}`}
-                  style={{ fontSize: '0.85rem' }}
-                />
-                <button
-                  type="button"
-                  className="ft-btn ft-btn-primary"
-                  onClick={() => {
-                    const inputEl = document.getElementById(`eval_url_${subField.id}`);
-                    handleSaveEvalGoogleFormUrl(subField.id, inputEl ? inputEl.value : '');
-                  }}
-                  style={{ fontWeight: 800, fontSize: '0.82rem' }}
-                >
-                  <Save size={15} /> Save Form URL
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
