@@ -72,7 +72,9 @@ export default function FTJudgeDashboard() {
 
   const [activeTab, setActiveTab] = useState('stages'); // 'stages', 'workshops'
   const [evalVirtualBrowserUrl, setEvalVirtualBrowserUrl] = useState(null);
+  const [toast, setToast] = useState(null);
 
+  const evaluations = useLiveCollection('ft_evaluations') || [];
   const workshops = useLiveCollection('workshops') || [];
   const timelineConfig = useLiveCollection('timeline_config') || [];
 
