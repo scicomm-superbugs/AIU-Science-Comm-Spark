@@ -718,53 +718,25 @@ export default function FTEvaluationManagement() {
         </div>
       </div>
 
-      {/* Stage Selector Tabs & Stage Publish Status Controls */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          {[1, 2, 3].map(stId => (
-            <button
-              key={stId}
-              onClick={() => setSelectedStageId(stId)}
-              className="ft-btn"
-              style={{
-                padding: '0.65rem 1.4rem', borderRadius: '14px', fontWeight: 900, fontSize: '0.9rem',
-                background: selectedStageId === stId ? 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)' : '#ffffff',
-                color: selectedStageId === stId ? '#ffffff' : '#334155',
-                border: selectedStageId === stId ? 'none' : '1.5px solid #cbd5e1',
-                boxShadow: selectedStageId === stId ? '0 4px 14px rgba(190,18,60,0.3)' : 'none',
-                cursor: 'pointer'
-              }}
-            >
-              🏆 Stage {stId}
-            </button>
-          ))}
-        </div>
-
-        {/* Publish Stage Evaluation Results Control */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: isStagePublished ? '#f0fdf4' : '#fff1f2', padding: '0.5rem 1rem', borderRadius: '14px', border: `1.5px solid ${isStagePublished ? '#86efac' : '#fecdd3'}` }}>
-          <div style={{ fontSize: '0.82rem', fontWeight: 900, color: isStagePublished ? '#15803d' : '#9f1239' }}>
-            {isStagePublished ? `🟢 Stage ${selectedStageId} Results Published Live` : `🔒 Stage ${selectedStageId} Results Hidden / Draft Mode`}
-          </div>
-
+      {/* Stage Selector Tabs */}
+      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+        {[1, 2, 3].map(stId => (
           <button
-            type="button"
+            key={stId}
+            onClick={() => setSelectedStageId(stId)}
             className="ft-btn"
-            onClick={handleTogglePublishResults}
             style={{
-              background: isStagePublished ? '#dc2626' : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '10px',
-              padding: '0.5rem 1rem',
-              fontSize: '0.82rem',
-              fontWeight: 900,
-              cursor: 'pointer',
-              boxShadow: isStagePublished ? 'none' : '0 4px 14px rgba(5,150,105,0.3)'
+              padding: '0.65rem 1.4rem', borderRadius: '14px', fontWeight: 900, fontSize: '0.9rem',
+              background: selectedStageId === stId ? 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)' : '#ffffff',
+              color: selectedStageId === stId ? '#ffffff' : '#334155',
+              border: selectedStageId === stId ? 'none' : '1.5px solid #cbd5e1',
+              boxShadow: selectedStageId === stId ? '0 4px 14px rgba(190,18,60,0.3)' : 'none',
+              cursor: 'pointer'
             }}
           >
-            {isStagePublished ? `🔒 Unpublish Stage ${selectedStageId} Results` : `📢 Publish Stage ${selectedStageId} Results to Competitors`}
+            🏆 Stage {stId}
           </button>
-        </div>
+        ))}
       </div>
 
       {/* SECTION 1: STAGE JUDGE ASSIGNMENT & EVALUATION GOOGLE FORM URLS */}
