@@ -1009,7 +1009,7 @@ export default function FTDashboard() {
               {activeStep.type === 'stage' && (
                 <div>
                   <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#ffffff', marginBottom: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1rem' }}>👥</span> ASSIGNED EVALUATION PANEL:
+                    <span style={{ fontSize: '1rem' }}>👥</span> EVALUATION PANEL:
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {(activeStep.assignedJudgeIds || []).length === 0 ? (
