@@ -536,18 +536,22 @@ export default function FTMyCompetition() {
                             ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
                             : isDisabled
                               ? isBeforeOpen ? '#fffbeb' : '#fff1f2'
-                              : '#f1f5f9',
-                        color: (isShowEvaluated || isShowUnderEvaluation) ? '#ffffff' : (isDisabled ? (isBeforeOpen ? '#92400e' : '#be123c') : '#334155'),
+                              : 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)',
+                        color: (isShowEvaluated || isShowUnderEvaluation || !isDisabled) ? '#ffffff' : (isBeforeOpen ? '#92400e' : '#be123c'),
                         fontWeight: 800,
                         padding: '0.55rem 1.15rem',
                         borderRadius: '12px',
                         fontSize: '0.85rem',
-                        border: (isShowEvaluated || isShowUnderEvaluation)
+                        border: (isShowEvaluated || isShowUnderEvaluation || !isDisabled)
                           ? 'none'
-                          : isDisabled
-                            ? isBeforeOpen ? '1.5px solid #fde68a' : '1.5px solid #fecdd3'
-                            : '1.5px solid #cbd5e1',
-                        boxShadow: isShowEvaluated ? '0 4px 14px rgba(5, 150, 105, 0.3)' : (isShowUnderEvaluation ? '0 4px 14px rgba(2, 132, 199, 0.3)' : 'none'),
+                          : (isBeforeOpen ? '1.5px solid #fde68a' : '1.5px solid #fecdd3'),
+                        boxShadow: isShowEvaluated
+                          ? '0 4px 14px rgba(5, 150, 105, 0.3)'
+                          : isShowUnderEvaluation
+                            ? '0 4px 14px rgba(2, 132, 199, 0.3)'
+                            : isDisabled
+                              ? 'none'
+                              : '0 4px 14px rgba(225, 29, 72, 0.35)',
                         cursor: isDisabled ? 'not-allowed' : 'pointer',
                         opacity: isDisabled ? 0.9 : 1,
                         display: 'inline-flex',
@@ -578,13 +582,13 @@ export default function FTMyCompetition() {
                         </>
                       ) : (
                         <>
-                          <Send size={15} style={{ color: 'var(--ft-primary)' }} /> Submit {sf.name || `Stage ${st.stageId}`}
+                          <Send size={15} style={{ color: '#ffffff' }} /> Submit {sf.name || `Stage ${st.stageId}`}
                         </>
                       )}
                       <span style={{
                         fontSize: '0.72rem',
-                        background: (isShowEvaluated || isShowUnderEvaluation) ? 'rgba(255,255,255,0.2)' : (isDisabled ? (isBeforeOpen ? 'rgba(146,64,14,0.1)' : 'rgba(190,18,60,0.1)') : '#e2e8f0'),
-                        color: (isShowEvaluated || isShowUnderEvaluation) ? '#ffffff' : (isDisabled ? (isBeforeOpen ? '#92400e' : '#be123c') : '#475569'),
+                        background: (isShowEvaluated || isShowUnderEvaluation || !isDisabled) ? 'rgba(255,255,255,0.22)' : (isBeforeOpen ? 'rgba(146,64,14,0.1)' : 'rgba(190,18,60,0.1)'),
+                        color: (isShowEvaluated || isShowUnderEvaluation || !isDisabled) ? '#ffffff' : (isBeforeOpen ? '#92400e' : '#be123c'),
                         padding: '0.15rem 0.5rem',
                         borderRadius: '6px',
                         marginLeft: '0.2rem',
