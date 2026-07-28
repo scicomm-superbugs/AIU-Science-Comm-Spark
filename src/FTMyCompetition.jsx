@@ -401,7 +401,7 @@ export default function FTMyCompetition() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', marginBottom: '2.5rem' }}>
         {stages.map((st) => {
           const stageSub = mySubmissions.find(s => Number(s.stageId) === Number(st.stageId));
-          const stageEvals = evaluations.filter(e => Number(e.stageId) === Number(st.stageId));
+          const stageEvals = myEvaluations.filter(e => Number(e.stageId) === Number(st.stageId));
 
           // Check if custom timeline config exists for this stage
           const customStageDoc = timelineConfig.find(c => c.track === (st.trackKey || competitorTrack) && Number(c.stageId) === Number(st.stageId));
