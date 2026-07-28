@@ -60,10 +60,33 @@ export default function FTOurTeam() {
     if (!rawCode) return isTeam ? 'T-101' : 'C-101';
     if (/^(T-|C-)\d{3,4}$/.test(rawCode)) return rawCode;
     let hash = 0;
-    for (let i = 0; i < rawCode.length; i++) {
-      hash = (hash + rawCode.charCodeAt(i)) % 900;
+    for (let i = 0; i < String(rawCode).length; i++) {
+      hash = (hash + String(rawCode).charCodeAt(i)) % 900;
     }
     return (isTeam ? 'T-' : 'C-') + (100 + hash);
+  };
+
+  // Generate simple 3-digit team code / Team ID (e.g. T-808)
+  const generateTeamCode = () => {
+    return 'T-' + Math.floor(100 + Math.random() * 900);
+  };
+
+  // Generate custom invitation code (e.g. SPARK-789X)
+  const generateInviteCode = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let randStr = '';
+    for (let i = 0; i < 4; i++) {
+      randStr += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `SPARK-${randStr}`;
+  };
+
+  // Get Team Invite Code with fallback for legacy team records
+  const getTeamInviteCode = (t) => {
+    if (!t) return '';
+    if (t.inviteCode) return t.inviteCode;
+    const numStr = String(t.code || t.id || '101').replace(/\D/g, '') || '101';
+    return `SPARK-${numStr}X`;
   };
 
   // Personal competitor code for individual competitor
