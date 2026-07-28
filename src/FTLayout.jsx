@@ -677,13 +677,17 @@ export default function FTLayout() {
                   outline: 'none'
                 }}
               >
-                <option value="normal">👑 Back to Admin</option>
-                <option value="student_pop_team">🎙️ Competitor (Pop Science Track) (team)</option>
-                <option value="student_pop_ind">🎙️ Competitor (Pop Science Track) (individual)</option>
-                <option value="student_jour_team">📰 Competitor (Science Journalism Track) (team)</option>
-                <option value="student_jour_ind">📰 Competitor (Science Journalism Track) (individual)</option>
-                <option value="judge_academic">🎓 Judge (Academic)</option>
-                <option value="judge_scicomm">🎙️ Judge (SciComm)</option>
+                <option value="normal">👑 Back to Admin (Full Access)</option>
+                <optgroup label="👤 Real Test Competitor Accounts">
+                  <option value="student_pop_team">👤 Braa Ehab (ID: C-941) — Pop Science (Team Lead)</option>
+                  <option value="student_pop_ind">👤 Ramy Zahran (ID: C-946) — Pop Science (Solo)</option>
+                  <option value="student_jour_team">📰 Nour El-Din (ID: C-812) — Journalism (Team Lead)</option>
+                  <option value="student_jour_ind">📰 Yasmin Ali (ID: C-819) — Journalism (Solo)</option>
+                </optgroup>
+                <optgroup label="⚖️ Real Test Judge Accounts">
+                  <option value="judge_academic">🎓 Dr. Sarah Ahmed (ID: J-201) — Academic Judge</option>
+                  <option value="judge_scicomm">🎙️ Prof. Omar Farooq (ID: J-305) — SciComm Judge</option>
+                </optgroup>
               </select>
             </div>
           </div>
@@ -817,42 +821,42 @@ export default function FTLayout() {
                         style={{ background: (user?.viewAsMode === 'student_pop_team' || user?.viewAsMode === 'student_pop') ? '#f0fdf4' : 'transparent', fontWeight: 700 }}
                         onClick={() => { setViewAsMode('student_pop_team'); setUserMenuOpen(false); navigate('/dashboard/my-competition'); }}
                       >
-                        🎙️ Competitor (Pop Science Track) (team)
+                        👤 Braa Ehab (C-941) — Pop Science (Team Lead)
                       </button>
                       <button
                         className="ft-user-dropdown-item"
                         style={{ background: user?.viewAsMode === 'student_pop_ind' ? '#f0fdf4' : 'transparent', fontWeight: 700 }}
                         onClick={() => { setViewAsMode('student_pop_ind'); setUserMenuOpen(false); navigate('/dashboard/my-competition'); }}
                       >
-                        🎙️ Competitor (Pop Science Track) (individual)
+                        👤 Ramy Zahran (C-946) — Pop Science (Solo)
                       </button>
                       <button
                         className="ft-user-dropdown-item"
                         style={{ background: (user?.viewAsMode === 'student_jour_team' || user?.viewAsMode === 'student_jour') ? '#eff6ff' : 'transparent', fontWeight: 700 }}
                         onClick={() => { setViewAsMode('student_jour_team'); setUserMenuOpen(false); navigate('/dashboard/my-competition'); }}
                       >
-                        📰 Competitor (Science Journalism Track) (team)
+                        📰 Nour El-Din (C-812) — Journalism (Team Lead)
                       </button>
                       <button
                         className="ft-user-dropdown-item"
                         style={{ background: user?.viewAsMode === 'student_jour_ind' ? '#eff6ff' : 'transparent', fontWeight: 700 }}
                         onClick={() => { setViewAsMode('student_jour_ind'); setUserMenuOpen(false); navigate('/dashboard/my-competition'); }}
                       >
-                        📰 Competitor (Science Journalism Track) (individual)
+                        📰 Yasmin Ali (C-819) — Journalism (Solo)
                       </button>
                       <button
                         className="ft-user-dropdown-item"
                         style={{ background: user?.viewAsMode === 'judge_academic' ? '#f0f9ff' : 'transparent', fontWeight: 700 }}
                         onClick={() => { setViewAsMode('judge_academic'); setUserMenuOpen(false); navigate('/dashboard/judge'); }}
                       >
-                        🎓 Judge (Academic)
+                        🎓 Dr. Sarah Ahmed (J-201) — Academic Judge
                       </button>
                       <button
                         className="ft-user-dropdown-item"
                         style={{ background: user?.viewAsMode === 'judge_scicomm' ? '#fff1f2' : 'transparent', fontWeight: 700 }}
                         onClick={() => { setViewAsMode('judge_scicomm'); setUserMenuOpen(false); navigate('/dashboard/judge'); }}
                       >
-                        🎙️ Judge (SciComm)
+                        🎙️ Prof. Omar Farooq (J-305) — SciComm Judge
                       </button>
                       {user?.isImpersonating && (
                         <button

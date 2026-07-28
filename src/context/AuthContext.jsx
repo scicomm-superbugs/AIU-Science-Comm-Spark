@@ -397,33 +397,74 @@ export const AuthProvider = ({ children }) => {
       let modeRole = realRole;
       let modeTrack = user.registeredTrack || 'pop_science';
       let modePart = user.participationMode || 'team';
+      let impId = user.id;
+      let impName = user.name;
+      let impUsername = user.username;
+      let impEmail = user.email;
+      let impCode = user.competitorCode;
 
       if (viewAsMode === 'student_pop_team' || viewAsMode === 'student_pop') {
+        impId = 'test_comp_pop_team';
+        impName = 'Braa Ehab';
+        impUsername = 'braa_ehab';
+        impEmail = 'braa.ehab@aiu.edu.eg';
         modeRole = 'competitor';
         modeTrack = 'pop_science';
         modePart = 'team';
+        impCode = 'C-941';
       } else if (viewAsMode === 'student_pop_ind') {
+        impId = 'test_comp_pop_ind';
+        impName = 'Ramy Zahran';
+        impUsername = 'ramy_zahran';
+        impEmail = 'ramy.zahran@aiu.edu.eg';
         modeRole = 'competitor';
         modeTrack = 'pop_science';
         modePart = 'individual';
+        impCode = 'C-946';
       } else if (viewAsMode === 'student_jour_team' || viewAsMode === 'student_jour') {
+        impId = 'test_comp_jour_team';
+        impName = 'Nour El-Din';
+        impUsername = 'nour_eldin';
+        impEmail = 'nour.eldin@aiu.edu.eg';
         modeRole = 'competitor';
         modeTrack = 'science_journalism';
         modePart = 'team';
+        impCode = 'C-812';
       } else if (viewAsMode === 'student_jour_ind') {
+        impId = 'test_comp_jour_ind';
+        impName = 'Yasmin Ali';
+        impUsername = 'yasmin_ali';
+        impEmail = 'yasmin.ali@aiu.edu.eg';
         modeRole = 'competitor';
         modeTrack = 'science_journalism';
         modePart = 'individual';
+        impCode = 'C-819';
       } else if (viewAsMode === 'judge_scicomm') {
+        impId = 'test_judge_scicomm';
+        impName = 'Prof. Omar Farooq';
+        impUsername = 'prof_omar_farooq';
+        impEmail = 'omar.farooq@aiu.edu.eg';
         modeRole = 'scicomm_judge';
         modeTrack = '';
+        impCode = 'J-305';
       } else if (viewAsMode === 'judge_academic') {
+        impId = 'test_judge_academic';
+        impName = 'Dr. Sarah Ahmed';
+        impUsername = 'dr_sarah_ahmed';
+        impEmail = 'sarah.ahmed@aiu.edu.eg';
         modeRole = 'academic_judge';
         modeTrack = '';
+        impCode = 'J-201';
       }
 
       return {
         ...user,
+        id: impId,
+        name: impName,
+        username: impUsername,
+        email: impEmail,
+        competitorCode: impCode,
+        code: impCode,
         realRole,
         role: modeRole,
         registeredTrack: modeTrack,
