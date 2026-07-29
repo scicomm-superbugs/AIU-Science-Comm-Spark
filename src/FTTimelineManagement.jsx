@@ -181,6 +181,25 @@ export default function FTTimelineManagement() {
     });
   };
 
+  const handleUpdateCriteriaPointsInStage = (critId, newPoints) => {
+    if (!editingStage) return;
+    const currentList = editingStage.criteria || [];
+    const ptsNum = Math.max(1, Number(newPoints) || 0);
+    setEditingStage({
+      ...editingStage,
+      criteria: currentList.map(c => c.id === critId ? { ...c, maxPoints: ptsNum, points: ptsNum } : c)
+    });
+  };
+
+  const handleUpdateCriteriaNameInStage = (critId, newName) => {
+    if (!editingStage) return;
+    const currentList = editingStage.criteria || [];
+    setEditingStage({
+      ...editingStage,
+      criteria: currentList.map(c => c.id === critId ? { ...c, name: newName } : c)
+    });
+  };
+
   const handleDeleteSubmissionFieldFromStage = (fieldId) => {
     if (!editingStage) return;
     const currentList = editingStage.submissions || [];
@@ -208,7 +227,8 @@ export default function FTTimelineManagement() {
           id: String(c.id || ''),
           name: String(c.name || ''),
           category: String(c.category || 'academic'),
-          points: Number(c.points || 0)
+          maxPoints: Number(c.maxPoints || c.points || 25),
+          points: Number(c.maxPoints || c.points || 25)
         })),
         submissions: (stage.submissions || []).map(s => {
           const cleaned = {
@@ -900,28 +920,51 @@ export default function FTTimelineManagement() {
                 </div>
 
                 {/* Active Stage Criteria List */}
-                <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-                  {(editingStage.criteria || []).map(c => (
-                    <div key={c.id} style={{
-                      padding: '0.5rem 0.8rem', borderRadius: '10px', background: '#ffffff',
-                      border: `1.5px solid ${c.category === 'academic' ? '#0284c7' : '#e11d48'}`,
-                      display: 'flex', alignItems: 'center', gap: '0.6rem'
-                    }}>
-                      <div>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 800, color: c.category === 'academic' ? '#0284c7' : '#e11d48' }}>
-                          {c.category === 'academic' ? 'Academic 🎓' : 'SciComm 🎙️'}
-                        </span>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>{c.name} ({c.maxPoints} pts)</div>
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  {(editingStage.criteria || []).map(c => {
+                    const currentPts = Number(c.maxPoints || c.points || 25);
+                    return (
+                      <div key={c.id} style={{
+                        padding: '0.65rem 0.9rem', borderRadius: '12px', background: '#ffffff',
+                        border: `1.5px solid ${c.category === 'academic' ? '#0284c7' : '#e11d48'}`,
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                      }}>
+                        <div>
+                          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: c.category === 'academic' ? '#0284c7' : '#e11d48' }}>
+                            {c.category === 'academic' ? 'Academic 🎓' : 'SciComm 🎙️'}
+                          </span>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', margin: '0.1rem 0' }}>{c.name}</div>
+                        </div>
+
+                        {/* Inline Editable Points Number Box */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: '#fef3c7', padding: '0.25rem 0.5rem', borderRadius: '8px', border: '1px solid #fde68a' }}>
+                          <input
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={currentPts}
+                            onChange={(e) => handleUpdateCriteriaPointsInStage(c.id, e.target.value)}
+                            style={{
+                              width: '48px', padding: '0.15rem 0.3rem', fontSize: '0.85rem', fontWeight: 900,
+                              color: '#92400e', background: '#ffffff', border: '1px solid #f59e0b', borderRadius: '6px',
+                              textAlign: 'center'
+                            }}
+                          />
+                          <span style={{ fontSize: '0.78rem', fontWeight: 900, color: '#92400e' }}>pts</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCriteriaFromStage(c.id)}
+                          title="Delete Criterion"
+                          style={{ background: '#fff1f2', border: '1px solid #fecdd3', color: '#ef4444', borderRadius: '8px', cursor: 'pointer', padding: '0.35rem 0.45rem', display: 'flex', alignItems: 'center' }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteCriteriaFromStage(c.id)}
-                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.2rem' }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
