@@ -499,63 +499,70 @@ export default function FTDashboard() {
           </div>
         </div>
 
-        {/* DESKTOP HORIZONTAL LASER TRACK — ONLY VISIBLE ON DESKTOP MODE */}
-        <div className="ft-desktop-timeline" style={{ position: 'relative', margin: '1.5rem 0 2.5rem 0', overflowX: 'auto', padding: '0.75rem 0' }}>
-          <div style={{ position: 'relative', minWidth: `${steps.length * 180}px`, width: '100%' }}>
-            {/* Connecting Progress Ribbon Line */}
-            <div style={{
-              position: 'absolute', top: '30px',
-              left: `calc((100% - (${steps.length - 1} * 1.25rem)) / (${steps.length} * 2))`,
-              right: `calc((100% - (${steps.length - 1} * 1.25rem)) / (${steps.length} * 2))`,
-              height: '8px',
-              background: '#e2e8f0',
-              borderRadius: '10px', zIndex: 1,
-              boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
-            }}>
-              {/* Filled laser portion stopping precisely at the targeted section */}
-              <div style={{
-                height: '100%',
-                width: `${targetedProgressPercent}%`,
-                background: selectedTrack === 'pop_science'
-                  ? 'linear-gradient(90deg, #be123c 0%, #e11d48 60%, #f43f5e 100%)'
-                  : 'linear-gradient(90deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)',
-                borderRadius: '10px',
-                boxShadow: `0 0 16px ${trackThemeColor}80, 0 0 30px ${trackThemeColor}40`,
-                transition: 'width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                position: 'relative'
-              }} />
-              
-              {/* HUD Target Radar Pointer at the tip */}
-              {targetedProgressPercent > 0 && (
-                <div style={{
-                  position: 'absolute', top: '-6px',
-                  left: `calc(${targetedProgressPercent}% - 10px)`,
-                  width: '20px', height: '20px', borderRadius: '50%',
-                  background: '#ffffff',
-                  border: `4px solid ${trackThemeColor}`,
-                  boxShadow: `0 0 0 4px ${trackThemeColor}30, 0 0 20px ${trackThemeColor}`,
-                  animation: 'ftTodayPulse 2s ease-in-out infinite',
-                  zIndex: 3, transition: 'left 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
-                }} />
-              )}
-            </div>
+        {/* DESKTOP HORIZONTAL LASER TRACK — STRETCHES DYNAMICALLY TO ANY NUMBER OF EVENTS */}
+        <div className="ft-desktop-timeline" style={{ position: 'relative', margin: '1.5rem 0 2.5rem 0', overflowX: 'auto', padding: '0.75rem 0 1.5rem 0' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${steps.length}, minmax(180px, 1fr))`, gap: '1.25rem', position: 'relative', minWidth: `${steps.length * 180}px`, width: '100%' }}>
+            {steps.map((st, idx) => {
+              const isSelected = String(selectedStepId).toLowerCase().trim() === String(st.id).toLowerCase().trim();
+              const hasNext = idx < steps.length - 1;
+              const isSegmentActive = selectedStepIndex > idx;
+              const isTipSegment = selectedStepIndex === idx + 1;
 
-            {/* Steps Track Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${steps.length}, minmax(180px, 1fr))`, gap: '1.25rem', position: 'relative', zIndex: 5, width: '100%' }}>
-              {steps.map((st, idx) => {
-                const isSelected = String(selectedStepId).toLowerCase().trim() === String(st.id).toLowerCase().trim();
+              return (
+                <div
+                  key={st.id}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    cursor: 'pointer', textAlign: 'center', position: 'relative'
+                  }}
+                >
+                  {/* Horizontal Connector Line Segment to Next Node (Center of current col to Center of next col) */}
+                  {hasNext && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '30px',
+                      left: '50%',
+                      width: 'calc(100% + 1.25rem)',
+                      height: '8px',
+                      background: '#e2e8f0',
+                      borderRadius: '10px',
+                      zIndex: 1,
+                      boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
+                    }}>
+                      {/* Laser Fill Segment */}
+                      <div style={{
+                        height: '100%',
+                        width: isSegmentActive ? '100%' : '0%',
+                        background: selectedTrack === 'pop_science'
+                          ? 'linear-gradient(90deg, #be123c 0%, #e11d48 60%, #f43f5e 100%)'
+                          : 'linear-gradient(90deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)',
+                        borderRadius: '10px',
+                        boxShadow: isSegmentActive ? `0 0 16px ${trackThemeColor}80, 0 0 25px ${trackThemeColor}40` : 'none',
+                        transition: 'width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                        position: 'relative'
+                      }} />
 
-                return (
+                      {/* Laser Radar Tip Pointer when this segment is the active tip */}
+                      {isTipSegment && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '-6px',
+                          right: '-10px',
+                          width: '20px', height: '20px', borderRadius: '50%',
+                          background: '#ffffff',
+                          border: `4px solid ${trackThemeColor}`,
+                          boxShadow: `0 0 0 4px ${trackThemeColor}30, 0 0 20px ${trackThemeColor}`,
+                          animation: 'ftTodayPulse 2s ease-in-out infinite',
+                          zIndex: 3
+                        }} />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Step Node Icon Circle */}
                   <div
-                    key={st.id}
                     onClick={() => setSelectedStepId(st.id)}
                     style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center',
-                      cursor: 'pointer', textAlign: 'center'
-                    }}
-                  >
-                    {/* Step Node Icon Circle */}
-                    <div style={{
                       width: '68px', height: '68px', borderRadius: '50%',
                       background: isSelected
                         ? `linear-gradient(135deg, ${st.color} 0%, #0f172a 100%)`
@@ -569,13 +576,16 @@ export default function FTDashboard() {
                       fontSize: '1.25rem', fontWeight: 900, fontFamily: "'Outfit', sans-serif",
                       transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
                       transform: isSelected ? 'scale(1.12) translateY(-2px)' : 'scale(1)',
-                      position: 'relative'
-                    }}>
-                      {st.stepNumber}
-                    </div>
+                      position: 'relative', zIndex: 5
+                    }}
+                  >
+                    {st.stepNumber}
+                  </div>
 
-                    {/* Glassmorphic Step Title Card */}
-                    <div style={{
+                  {/* Glassmorphic Step Title Card */}
+                  <div
+                    onClick={() => setSelectedStepId(st.id)}
+                    style={{
                       marginTop: '1.25rem', padding: '0.9rem 0.85rem', borderRadius: '16px',
                       background: isSelected
                         ? `linear-gradient(135deg, ${st.bgColor} 0%, #ffffff 100%)`
@@ -584,35 +594,36 @@ export default function FTDashboard() {
                       width: '100%',
                       boxShadow: isSelected ? `0 8px 20px ${st.color}20` : 'none',
                       transition: 'all 0.25s ease',
-                      transform: isSelected ? 'translateY(-2px)' : 'none'
+                      transform: isSelected ? 'translateY(-2px)' : 'none',
+                      zIndex: 5
+                    }}
+                  >
+                    <div style={{
+                      fontSize: '0.7rem', fontWeight: 800, color: st.color,
+                      textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.25rem',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem'
                     }}>
-                      <div style={{
-                        fontSize: '0.7rem', fontWeight: 800, color: st.color,
-                        textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.25rem',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem'
-                      }}>
-                        <span>
-                          {st.type === 'stage' ? '🏆 Milestone'
-                            : st.badge === 'Orientation' ? '🚀 Orientation'
-                            : st.badge === 'Lecture' ? '🎙️ Lecture'
-                            : st.badge === 'Office Hours' ? '💬 Office Hours'
-                            : `📚 ${st.badge || 'Workshop'}`}
-                        </span>
-                        <span>· {st.stepNumber}</span>
-                      </div>
+                      <span>
+                        {st.type === 'stage' ? '🏆 Milestone'
+                          : st.badge === 'Orientation' ? '🚀 Orientation'
+                          : st.badge === 'Lecture' ? '🎙️ Lecture'
+                          : st.badge === 'Office Hours' ? '💬 Office Hours'
+                          : `📚 ${st.badge || 'Workshop'}`}
+                      </span>
+                      <span>· {st.stepNumber}</span>
+                    </div>
 
-                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a', lineHeight: 1.35, marginBottom: '0.4rem' }}>
-                        {st.title}
-                      </div>
+                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a', lineHeight: 1.35, marginBottom: '0.4rem' }}>
+                      {st.title}
+                    </div>
 
-                      <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
-                        <Calendar size={12} style={{ color: st.color }} /> {st.deadline}
-                      </div>
+                    <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                      <Calendar size={12} style={{ color: st.color }} /> {st.deadline}
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
