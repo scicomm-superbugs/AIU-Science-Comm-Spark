@@ -1445,8 +1445,35 @@ export default function FTAdminCompetitors() {
               </div>
 
               <div className="ft-input-group">
-                <label className="ft-label">Institution / Institution Name *</label>
-                <input type="text" className="ft-input" value={editForm.institutionName} onChange={e => setEditForm({ ...editForm, institutionName: e.target.value })} />
+                <label className="ft-label">Academic Title / اللقب والمسمى الوظيفي (e.g. Associate Professor, Science Journalist, Evaluator)</label>
+                <input
+                  type="text"
+                  className="ft-input"
+                  value={editForm.title || ''}
+                  onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                  placeholder="e.g. Associate Professor, Science Journalist, Research Fellow"
+                />
+              </div>
+
+              <div className="ft-input-group">
+                <label className="ft-label">Institution / University Name (اسم الجامعة أو المؤسسة) *</label>
+                <input
+                  type="text"
+                  className="ft-input"
+                  value={editForm.institutionName || ''}
+                  onChange={e => setEditForm({ ...editForm, institutionName: e.target.value })}
+                  placeholder="e.g. Cairo University, Alexandria University, AIU, Al-Ahram"
+                />
+              </div>
+
+              <div className="ft-input-group">
+                <label className="ft-label">System Role / دور المستخدم *</label>
+                <select className="ft-select" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}>
+                  <option value="judge">Judge ⚖️</option>
+                  <option value="trainer">Trainer 🎙️</option>
+                  <option value="competitor">Competitor 👤</option>
+                  <option value="admin">Admin 🛡️</option>
+                </select>
               </div>
 
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
@@ -1541,12 +1568,17 @@ export default function FTAdminCompetitors() {
                   <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: 0, fontFamily: "'Outfit', sans-serif" }}>
                     {overviewModalDoc.name}
                   </h3>
+                  {overviewModalDoc.title && (
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#be123c', marginTop: '0.1rem' }}>
+                      🎓 {getCleanAcademicTitle(overviewModalDoc)}
+                    </div>
+                  )}
                   <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <span style={{ fontWeight: 800, background: '#f1f5f9', padding: '0.15rem 0.55rem', borderRadius: '8px', color: '#334155' }}>
                       ID: {overviewModalDoc.displayId}
                     </span>
                     <span>·</span>
-                    <span style={{ fontWeight: 800, color: '#be123c' }}>
+                    <span style={{ fontWeight: 800, color: '#2563eb' }}>
                       {overviewModalDoc.roleLabel || overviewModalDoc.role}
                     </span>
                   </div>

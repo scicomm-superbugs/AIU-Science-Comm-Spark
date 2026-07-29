@@ -235,7 +235,7 @@ export default function Register() {
         email: formData.email ? formData.email.trim() : '',
         department: formData.department,
         universityId: isJudge ? '' : (formData.isAlameinStudent ? formData.universityId.trim() : ''),
-        title: isFirstUser ? 'Master Admin' : (isJudge ? (formData.title ? formData.title.trim() : 'Judge') : ''),
+        title: isFirstUser ? 'Master Admin' : (formData.title ? formData.title.trim() : (isJudge ? 'Judge' : 'Competitor')),
         role: userRole,
         registeredTrack: isJudge ? '' : formData.registeredTrack,
         participationMode: isJudge ? 'individual' : (formData.participationMode || 'team'),
@@ -244,7 +244,7 @@ export default function Register() {
         employeeId: generatedId,
         avatarUrl: avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + formData.username,
         nationalId: formData.nationalId.trim(),
-        institutionName: formData.isAlameinStudent ? 'Alamein International University' : formData.institutionName.trim(),
+        institutionName: formData.isAlameinStudent ? 'Alamein International University' : (formData.institutionName ? formData.institutionName.trim() : ''),
         isAlameinStudent: !!formData.isAlameinStudent,
         competitorIdNumber: isJudge ? '' : 'C-' + Math.floor(100 + Math.random() * 900),
         profileViews: 0,
@@ -807,9 +807,15 @@ export default function Register() {
                   )}
                 </>
               ) : (
-                <div className="ft-input-group">
-                  <label className="ft-label">Title / اللقب أو المسمى الوظيفي *</label>
-                  <input type="text" className="ft-input" name="title" required value={formData.title} onChange={handleChange} placeholder="e.g. Teaching Assistant, Professor, Doctor" />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div className="ft-input-group" style={{ margin: 0 }}>
+                    <label className="ft-label">Title / اللقب أو المسمى الوظيفي (e.g. Associate Professor, Science Journalist, Evaluator) *</label>
+                    <input type="text" className="ft-input" name="title" required value={formData.title} onChange={handleChange} placeholder="e.g. Associate Professor, Science Journalist, Doctor" />
+                  </div>
+                  <div className="ft-input-group" style={{ margin: 0 }}>
+                    <label className="ft-label">Institution / University Name (اسم الجامعة أو المؤسسة) *</label>
+                    <input type="text" className="ft-input" name="institutionName" required value={formData.institutionName} onChange={handleChange} placeholder="e.g. Cairo University, Alexandria University, AIU, Al-Ahram" />
+                  </div>
                 </div>
               )}
             </div>

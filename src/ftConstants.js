@@ -11,23 +11,31 @@ export const formatUnifiedDate = (dateStr) => {
 };
 
 export const getCleanAcademicTitle = (account) => {
-  if (!account) return 'Teaching Assistant at Alamein International University';
+  if (!account) return '';
   
   const rawTitle = (account.title || '').trim();
-  // Filter out internal system role strings
-  if (!rawTitle || rawTitle.includes('System Administrator') || rawTitle.includes('Master') || rawTitle === 'admin') {
-    const inst = account.institutionName || 'Alamein International University';
-    if (['academic_judge', 'scicomm_judge', 'judge', 'trainer_judge'].includes(account.role)) {
-      return `Academic Evaluator & Researcher at ${inst}`;
+  const inst = (account.institutionName || '').trim();
+
+  // If explicit custom title is set and valid
+  if (rawTitle && rawTitle !== 'Judge' && rawTitle !== 'Competitor' && rawTitle !== 'User') {
+    if (inst && !rawTitle.toLowerCase().includes('at ') && !rawTitle.toLowerCase().includes(inst.toLowerCase())) {
+      return `${rawTitle} at ${inst}`;
     }
-    return `Teaching Assistant at ${inst}`;
+    return rawTitle;
   }
 
-  const inst = account.institutionName || 'Alamein International University';
-  if (rawTitle && !rawTitle.toLowerCase().includes('university') && !rawTitle.toLowerCase().includes('at ') && inst) {
-    return `${rawTitle} at ${inst}`;
+  // If only institution name is set
+  if (inst) {
+    if (['academic_judge', 'scicomm_judge', 'judge', 'trainer_judge'].includes(account.role)) {
+      return `Judge / Evaluator at ${inst}`;
+    }
+    return `Researcher at ${inst}`;
   }
-  return rawTitle;
+
+  if (['academic_judge', 'scicomm_judge', 'judge', 'trainer_judge'].includes(account.role)) {
+    return 'Judge';
+  }
+  return 'Competitor';
 };
 
 export const FT_DEPARTMENTS = [
