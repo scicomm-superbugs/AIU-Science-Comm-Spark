@@ -39,6 +39,13 @@ export default function FTDashboard() {
   const [selectedTrack, setSelectedTrack] = useState(isCompetitorUser ? userTrack : 'pop_science');
   const [selectedStepId, setSelectedStepId] = useState(1);
   const [openMobileCardId, setOpenMobileCardId] = useState(null);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Sync track when competitor doc loads
   useEffect(() => {
@@ -251,6 +258,13 @@ export default function FTDashboard() {
       department: 'Science Communication'
     };
   };
+
+  // Dynamic columns for single-page responsive Zigzag Timeline
+  const COLUMNS = useMemo(() => {
+    if (windowWidth < 640) return 2;
+    if (windowWidth < 1024) return 4;
+    return steps.length <= 6 ? steps.length : 6;
+  }, [windowWidth, steps.length]);
 
   // Find index of currently selected/targeted step node dynamically
   const selectedStepIndex = useMemo(() => {
@@ -499,12 +513,28 @@ export default function FTDashboard() {
           </div>
         </div>
 
-        {/* DESKTOP HORIZONTAL LASER TRACK — STRETCHES DYNAMICALLY TO ANY NUMBER OF EVENTS */}
-        <div className="ft-desktop-timeline" style={{ position: 'relative', margin: '1.5rem 0 2.5rem 0', overflowX: 'auto', padding: '0.75rem 0 1.5rem 0' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${steps.length}, minmax(180px, 1fr))`, gap: '1.25rem', position: 'relative', minWidth: `${steps.length * 180}px`, width: '100%' }}>
+        {/* ZIGZAG SNAKE TIMELINE ROAD MAP — FITS ALL STEPS ON ONE PAGE WITHOUT HORIZONTAL SCROLL */}
+        <div className="ft-desktop-timeline" style={{ position: 'relative', margin: '1.5rem 0 2.5rem 0', width: '100%' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${COLUMNS}, 1fr)`,
+            gap: '2.75rem 1.25rem',
+            position: 'relative',
+            width: '100%'
+          }}>
             {steps.map((st, idx) => {
               const isSelected = String(selectedStepId).toLowerCase().trim() === String(st.id).toLowerCase().trim();
+              const rowIndex = Math.floor(idx / COLUMNS);
+              const isEvenRow = rowIndex % 2 === 0;
+              const colInRow = idx % COLUMNS;
+              const colPosition = isEvenRow ? colInRow : (COLUMNS - 1 - colInRow);
+              const gridColumn = colPosition + 1;
+              const gridRow = rowIndex + 1;
+
               const hasNext = idx < steps.length - 1;
+              const isSameRowAsNext = hasNext && Math.floor((idx + 1) / COLUMNS) === rowIndex;
+              const isTurnToNext = hasNext && Math.floor((idx + 1) / COLUMNS) !== rowIndex;
+
               const isSegmentActive = selectedStepIndex > idx;
               const isTipSegment = selectedStepIndex === idx + 1;
 
@@ -512,17 +542,24 @@ export default function FTDashboard() {
                 <div
                   key={st.id}
                   style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    cursor: 'pointer', textAlign: 'center', position: 'relative'
+                    gridColumn: gridColumn,
+                    gridRow: gridRow,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    textAlign: 'center',
+                    position: 'relative'
                   }}
                 >
-                  {/* Horizontal Connector Line Segment to Next Node (Center of current col to Center of next col) */}
-                  {hasNext && (
+                  {/* A. Horizontal Connector Segment (to next node in same row) */}
+                  {isSameRowAsNext && (
                     <div style={{
                       position: 'absolute',
                       top: '30px',
-                      left: '50%',
-                      width: 'calc(100% + 1.25rem)',
+                      ...(isEvenRow
+                        ? { left: '50%', width: 'calc(100% + 1.25rem)' }
+                        : { right: '50%', width: 'calc(100% + 1.25rem)' }
+                      ),
                       height: '8px',
                       background: '#e2e8f0',
                       borderRadius: '10px',
@@ -542,12 +579,55 @@ export default function FTDashboard() {
                         position: 'relative'
                       }} />
 
-                      {/* Laser Radar Tip Pointer when this segment is the active tip */}
+                      {/* Radar Tip Pointer on active tip */}
                       {isTipSegment && (
                         <div style={{
                           position: 'absolute',
                           top: '-6px',
-                          right: '-10px',
+                          ...(isEvenRow ? { right: '-10px' } : { left: '-10px' }),
+                          width: '20px', height: '20px', borderRadius: '50%',
+                          background: '#ffffff',
+                          border: `4px solid ${trackThemeColor}`,
+                          boxShadow: `0 0 0 4px ${trackThemeColor}30, 0 0 20px ${trackThemeColor}`,
+                          animation: 'ftTodayPulse 2s ease-in-out infinite',
+                          zIndex: 3
+                        }} />
+                      )}
+                    </div>
+                  )}
+
+                  {/* B. Vertical Turn Connector Segment (from end of row down to next row) */}
+                  {isTurnToNext && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '30px',
+                      left: 'calc(50% - 4px)',
+                      width: '8px',
+                      height: 'calc(100% + 2.75rem)',
+                      background: '#e2e8f0',
+                      borderRadius: '10px',
+                      zIndex: 1,
+                      boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
+                    }}>
+                      {/* Laser Fill Segment */}
+                      <div style={{
+                        width: '100%',
+                        height: isSegmentActive ? '100%' : '0%',
+                        background: selectedTrack === 'pop_science'
+                          ? 'linear-gradient(180deg, #be123c 0%, #e11d48 60%, #f43f5e 100%)'
+                          : 'linear-gradient(180deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)',
+                        borderRadius: '10px',
+                        boxShadow: isSegmentActive ? `0 0 16px ${trackThemeColor}80, 0 0 25px ${trackThemeColor}40` : 'none',
+                        transition: 'height 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                        position: 'relative'
+                      }} />
+
+                      {/* Radar Tip Pointer on active vertical tip */}
+                      {isTipSegment && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '-10px',
+                          left: '-6px',
                           width: '20px', height: '20px', borderRadius: '50%',
                           background: '#ffffff',
                           border: `4px solid ${trackThemeColor}`,
@@ -576,7 +656,7 @@ export default function FTDashboard() {
                       fontSize: '1.25rem', fontWeight: 900, fontFamily: "'Outfit', sans-serif",
                       transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
                       transform: isSelected ? 'scale(1.12) translateY(-2px)' : 'scale(1)',
-                      position: 'relative', zIndex: 5
+                      position: 'relative', zIndex: 5, cursor: 'pointer'
                     }}
                   >
                     {st.stepNumber}
@@ -595,7 +675,7 @@ export default function FTDashboard() {
                       boxShadow: isSelected ? `0 8px 20px ${st.color}20` : 'none',
                       transition: 'all 0.25s ease',
                       transform: isSelected ? 'translateY(-2px)' : 'none',
-                      zIndex: 5
+                      zIndex: 5, cursor: 'pointer'
                     }}
                   >
                     <div style={{
