@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Video, Newspaper, Calendar, Clock, ArrowRight, Award, CheckCircle2, Play, BookOpen, Layers, GitCommit, Zap, Mic, Users, Globe, Mail, ChevronRight, FileText, Check, Radio, ExternalLink, Pencil } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
@@ -278,6 +278,32 @@ export default function FTDashboard() {
     return idx >= 0 ? idx : 0;
   }, [steps, selectedStepId]);
 
+  // Track previous step index for continuous sequential laser wave animations
+  const prevStepIndexRef = useRef(selectedStepIndex);
+
+  useEffect(() => {
+    prevStepIndexRef.current = selectedStepIndex;
+  }, [selectedStepIndex]);
+
+  // Calculate staggered transition delay per segment for continuous sequential fill/rewind
+  const getSegmentTransitionDelay = (segmentIndex) => {
+    const prevIdx = prevStepIndexRef.current;
+    const currIdx = selectedStepIndex;
+
+    if (currIdx > prevIdx) {
+      if (segmentIndex >= prevIdx && segmentIndex < currIdx) {
+        const offset = segmentIndex - prevIdx;
+        return `${offset * 0.12}s`;
+      }
+    } else if (currIdx < prevIdx) {
+      if (segmentIndex >= currIdx && segmentIndex < prevIdx) {
+        const offset = (prevIdx - 1) - segmentIndex;
+        return `${offset * 0.12}s`;
+      }
+    }
+    return '0s';
+  };
+
   // Calculate progress percentage to stop exactly on the targeted step node
   const targetedProgressPercent = useMemo(() => {
     if (steps.length <= 1) return 0;
@@ -537,6 +563,7 @@ export default function FTDashboard() {
 
               const isSegmentActive = selectedStepIndex > idx;
               const isTipSegment = selectedStepIndex === idx + 1;
+              const segDelay = getSegmentTransitionDelay(idx);
 
               return (
                 <div
@@ -581,7 +608,7 @@ export default function FTDashboard() {
                             ),
                         borderRadius: '10px',
                         boxShadow: isSegmentActive ? `0 0 16px ${trackThemeColor}80, 0 0 25px ${trackThemeColor}40` : 'none',
-                        transition: 'width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                        transition: `width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${segDelay}`,
                         position: 'relative',
                         float: isEvenRow ? 'left' : 'right'
                       }} />
@@ -597,7 +624,8 @@ export default function FTDashboard() {
                           border: `4px solid ${trackThemeColor}`,
                           boxShadow: `0 0 0 4px ${trackThemeColor}30, 0 0 20px ${trackThemeColor}`,
                           animation: 'ftTodayPulse 2s ease-in-out infinite',
-                          zIndex: 3
+                          zIndex: 3,
+                          transition: `all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${segDelay}`
                         }} />
                       )}
                     </div>
@@ -625,7 +653,7 @@ export default function FTDashboard() {
                           : 'linear-gradient(180deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)',
                         borderRadius: '10px',
                         boxShadow: isSegmentActive ? `0 0 16px ${trackThemeColor}80, 0 0 25px ${trackThemeColor}40` : 'none',
-                        transition: 'height 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                        transition: `height 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${segDelay}`,
                         position: 'relative'
                       }} />
 
@@ -640,7 +668,8 @@ export default function FTDashboard() {
                           border: `4px solid ${trackThemeColor}`,
                           boxShadow: `0 0 0 4px ${trackThemeColor}30, 0 0 20px ${trackThemeColor}`,
                           animation: 'ftTodayPulse 2s ease-in-out infinite',
-                          zIndex: 3
+                          zIndex: 3,
+                          transition: `all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${segDelay}`
                         }} />
                       )}
                     </div>
