@@ -533,9 +533,6 @@ export default function FTDashboard() {
             <span className="ft-timeline-legend-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#be123c', background: '#fff1f2', padding: '0.3rem 0.75rem', borderRadius: '20px', border: '1px solid #fecdd3' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#be123c', boxShadow: '0 0 8px #be123c' }} /> Stage Milestone
             </span>
-            <span className="ft-timeline-legend-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#7c3aed', background: '#f3e8ff', padding: '0.3rem 0.75rem', borderRadius: '20px', border: '1px solid #ddd6fe' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#7c3aed', boxShadow: '0 0 8px #7c3aed' }} /> 📥 Stage Submissions
-            </span>
             <span className="ft-timeline-legend-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#059669', background: '#ecfdf5', padding: '0.3rem 0.75rem', borderRadius: '20px', border: '1px solid #a7f3d0' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#059669', boxShadow: '0 0 8px #059669' }} /> Training / Sessions
             </span>
@@ -567,7 +564,6 @@ export default function FTDashboard() {
               const isSegmentActive = selectedStepIndex > idx;
               const isTipSegment = selectedStepIndex === idx + 1;
               const segDelay = getSegmentTransitionDelay(idx);
-              const isNextStepStage = hasNext && steps[idx + 1].type !== 'workshop';
 
               return (
                 <div
@@ -617,41 +613,6 @@ export default function FTDashboard() {
                         float: isEvenRow ? 'left' : 'right'
                       }} />
 
-                      {/* Floating Callout Badge for Stage Submissions */}
-                      {isNextStepStage && (
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedStepId(steps[idx + 1].id);
-                          }}
-                          style={{
-                            position: 'absolute',
-                            top: '-24px',
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            background: 'linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)',
-                            color: '#ffffff',
-                            fontSize: '0.68rem',
-                            fontWeight: 900,
-                            padding: '0.22rem 0.65rem',
-                            borderRadius: '12px',
-                            boxShadow: '0 4px 14px rgba(124, 58, 237, 0.45)',
-                            border: '1.5px solid #a78bfa',
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                            zIndex: 10,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                            animation: 'ftTodayPulse 2.5s ease-in-out infinite'
-                          }}
-                          title={`Click to view & submit deliverables for ${steps[idx + 1].title}`}
-                        >
-                          <span>📥</span>
-                          <span>Submissions</span>
-                        </div>
-                      )}
-
                       {/* Radar Tip Pointer on active tip */}
                       {isTipSegment && (
                         <div style={{
@@ -695,41 +656,6 @@ export default function FTDashboard() {
                         transition: `height 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${segDelay}`,
                         position: 'relative'
                       }} />
-
-                      {/* Floating Callout Badge for Stage Submissions on Vertical Turn */}
-                      {isNextStepStage && (
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedStepId(steps[idx + 1].id);
-                          }}
-                          style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '18px',
-                            transform: 'translateY(-50%)',
-                            background: 'linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)',
-                            color: '#ffffff',
-                            fontSize: '0.68rem',
-                            fontWeight: 900,
-                            padding: '0.22rem 0.65rem',
-                            borderRadius: '12px',
-                            boxShadow: '0 4px 14px rgba(124, 58, 237, 0.45)',
-                            border: '1.5px solid #a78bfa',
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                            zIndex: 10,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                            animation: 'ftTodayPulse 2.5s ease-in-out infinite'
-                          }}
-                          title={`Click to view & submit deliverables for ${steps[idx + 1].title}`}
-                        >
-                          <span>📥</span>
-                          <span>Submissions</span>
-                        </div>
-                      )}
 
                       {/* Radar Tip Pointer on active vertical tip */}
                       {isTipSegment && (
