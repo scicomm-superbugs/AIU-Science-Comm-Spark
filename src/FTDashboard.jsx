@@ -16,6 +16,8 @@ export default function FTDashboard() {
   const customConfig = useLiveCollection('timeline_config') || [];
   const scientists = useLiveCollection('scientists') || [];
   const dynamicWorkshops = useLiveCollection('workshops') || [];
+  const liveEvaluations = useLiveCollection('ft_evaluations') || [];
+  const publishedResults = useLiveCollection('published_results') || [];
 
   const isAdmin = ['admin', 'master'].includes(user?.role);
   const [editingPoster, setEditingPoster] = useState(false);
@@ -973,36 +975,64 @@ export default function FTDashboard() {
                     <span style={{ fontSize: '1rem' }}>⚖️</span> JUDGING CRITERIA BREAKDOWN:
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {(activeStep.criteria || []).length === 0 ? (
-                      <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontStyle: 'italic' }}>No criteria assigned to this stage yet</span>
-                    ) : (
-                      (activeStep.criteria || []).map(c => (
-                        <div key={c.id} style={{
-                          padding: '0.8rem 1.1rem', borderRadius: '14px',
-                          background: '#161f30', border: `1.5px solid ${c.category === 'academic' ? '#0284c7' : '#e11d48'}`,
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                            <span style={{
-                              fontSize: '0.78rem', padding: '0.25rem 0.65rem', borderRadius: '8px',
-                              background: c.category === 'academic' ? '#0284c7' : '#e11d48',
-                              color: '#ffffff', fontWeight: 900
-                            }}>
-                              {c.category === 'academic' ? 'Academic 🎓' : 'SciComm 🎙️'}
-                            </span>
-                            <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#ffffff' }}>{c.name}</span>
-                          </div>
-                          <span style={{
-                            fontSize: '0.88rem', fontWeight: 900, color: '#0f172a',
-                            background: '#f59e0b', padding: '0.25rem 0.7rem', borderRadius: '8px',
-                            boxShadow: '0 2px 8px rgba(245, 158, 11, 0.4)'
+                    {(() => {
+                      const stageCriteria = (activeStep.criteria && activeStep.criteria.length > 0)
+                        ? activeStep.criteria
+                        : DEFAULT_JUDGING_CRITERIA.filter(dc => dc.stageId === 'all' || Number(dc.stageId) === Number(activeStep.id));
+
+                      if (stageCriteria.length === 0) {
+                        return <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontStyle: 'italic' }}>No criteria assigned to this stage yet</span>;
+                      }
+
+                      // Check if user has an evaluation score published
+                      const userEval = (liveEvaluations || []).find(ev =>
+                        (Number(ev.stageId) === Number(activeStep.id) || Number(ev.stageId) === Number(activeStep.stageId)) &&
+                        (ev.competitorId === meDoc?.id || ev.competitorUsername === meDoc?.username || ev.competitorCode === meDoc?.code || ev.competitorId === user?.id || ev.userId === user?.id)
+                      );
+
+                      const isPublished = (publishedResults || []).some(p =>
+                        (Number(p.stageId) === Number(activeStep.id) || Number(p.stageId) === Number(activeStep.stageId)) &&
+                        p.isPublished === true
+                      );
+
+                      const showEvaluatedScore = Boolean(userEval && (isPublished || isAdmin));
+
+                      return stageCriteria.map((c, idx) => {
+                        const maxPts = Number(c.maxPoints || c.points || c.weight || c.score || 25);
+                        const scoredPts = (userEval && userEval.criteriaScores && userEval.criteriaScores[c.id]) !== undefined
+                          ? Number(userEval.criteriaScores[c.id])
+                          : (showEvaluatedScore && userEval?.score !== undefined ? Math.round(Number(userEval.score) / stageCriteria.length) : null);
+
+                        return (
+                          <div key={c.id || c.name || idx} style={{
+                            padding: '0.8rem 1.1rem', borderRadius: '14px',
+                            background: '#161f30', border: `1.5px solid ${c.category === 'academic' ? '#0284c7' : '#e11d48'}`,
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
                           }}>
-                            {c.maxPoints} pts
-                          </span>
-                        </div>
-                      ))
-                    )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                              <span style={{
+                                fontSize: '0.78rem', padding: '0.25rem 0.65rem', borderRadius: '8px',
+                                background: c.category === 'academic' ? '#0284c7' : '#e11d48',
+                                color: '#ffffff', fontWeight: 900
+                              }}>
+                                {c.category === 'academic' ? 'Academic 🎓' : 'SciComm 🎙️'}
+                              </span>
+                              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#ffffff' }}>{c.name}</span>
+                            </div>
+                            <span style={{
+                              fontSize: '0.88rem', fontWeight: 900,
+                              color: showEvaluatedScore ? '#ffffff' : '#0f172a',
+                              background: showEvaluatedScore ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : '#f59e0b',
+                              padding: '0.25rem 0.75rem', borderRadius: '8px',
+                              boxShadow: showEvaluatedScore ? '0 2px 10px rgba(16, 185, 129, 0.4)' : '0 2px 8px rgba(245, 158, 11, 0.4)'
+                            }}>
+                              {scoredPts !== null ? `⭐ ${scoredPts} / ${maxPts} pts` : `${maxPts} pts`}
+                            </span>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
               )}
