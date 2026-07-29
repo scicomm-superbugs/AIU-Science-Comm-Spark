@@ -252,9 +252,15 @@ export default function FTDashboard() {
     };
   };
 
-  // Find index of currently selected/targeted step node
+  // Find index of currently selected/targeted step node dynamically
   const selectedStepIndex = useMemo(() => {
-    const idx = steps.findIndex(s => s.id === selectedStepId);
+    if (!steps || steps.length === 0) return 0;
+    const targetStr = String(selectedStepId).toLowerCase().trim();
+    const idx = steps.findIndex(s => {
+      const sId = String(s.id).toLowerCase().trim();
+      const sStageId = s.stageId !== undefined ? String(s.stageId).toLowerCase().trim() : '';
+      return sId === targetStr || (sStageId && sStageId === targetStr);
+    });
     return idx >= 0 ? idx : 0;
   }, [steps, selectedStepId]);
 
@@ -499,8 +505,8 @@ export default function FTDashboard() {
             {/* Connecting Progress Ribbon Line */}
             <div style={{
               position: 'absolute', top: '30px',
-              left: `calc(100% / (${steps.length} * 2))`,
-              right: `calc(100% / (${steps.length} * 2))`,
+              left: `calc((100% - (${steps.length - 1} * 1.25rem)) / (${steps.length} * 2))`,
+              right: `calc((100% - (${steps.length - 1} * 1.25rem)) / (${steps.length} * 2))`,
               height: '8px',
               background: '#e2e8f0',
               borderRadius: '10px', zIndex: 1,
@@ -537,7 +543,7 @@ export default function FTDashboard() {
             {/* Steps Track Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: `repeat(${steps.length}, minmax(180px, 1fr))`, gap: '1.25rem', position: 'relative', zIndex: 5, width: '100%' }}>
               {steps.map((st, idx) => {
-                const isSelected = selectedStepId === st.id;
+                const isSelected = String(selectedStepId).toLowerCase().trim() === String(st.id).toLowerCase().trim();
 
                 return (
                   <div
@@ -620,8 +626,8 @@ export default function FTDashboard() {
             padding: '0.5rem 0'
           }}>
             {steps.map((st, idx) => {
-              const isSelected = selectedStepId === st.id;
-              const selectedIdx = steps.findIndex(s => s.id === selectedStepId);
+              const isSelected = String(selectedStepId).toLowerCase().trim() === String(st.id).toLowerCase().trim();
+              const selectedIdx = selectedStepIndex;
               const row = Math.floor(idx / 2);
               const isEvenRow = row % 2 === 0;
               const isLeftCol = isEvenRow ? (idx % 2 === 0) : (idx % 2 === 1);
