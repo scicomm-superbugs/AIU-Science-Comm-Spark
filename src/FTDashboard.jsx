@@ -571,12 +571,19 @@ export default function FTDashboard() {
                         height: '100%',
                         width: isSegmentActive ? '100%' : '0%',
                         background: selectedTrack === 'pop_science'
-                          ? 'linear-gradient(90deg, #be123c 0%, #e11d48 60%, #f43f5e 100%)'
-                          : 'linear-gradient(90deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)',
+                          ? (isEvenRow
+                              ? 'linear-gradient(90deg, #be123c 0%, #e11d48 60%, #f43f5e 100%)'
+                              : 'linear-gradient(270deg, #be123c 0%, #e11d48 60%, #f43f5e 100%)'
+                            )
+                          : (isEvenRow
+                              ? 'linear-gradient(90deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)'
+                              : 'linear-gradient(270deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)'
+                            ),
                         borderRadius: '10px',
                         boxShadow: isSegmentActive ? `0 0 16px ${trackThemeColor}80, 0 0 25px ${trackThemeColor}40` : 'none',
                         transition: 'width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                        position: 'relative'
+                        position: 'relative',
+                        float: isEvenRow ? 'left' : 'right'
                       }} />
 
                       {/* Radar Tip Pointer on active tip */}
