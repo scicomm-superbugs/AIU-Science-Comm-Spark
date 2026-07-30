@@ -383,15 +383,24 @@ export default function FTDashboard() {
     return idx >= 0 ? idx : 0;
   }, [steps, selectedStepId]);
 
-  // Track previous step index for continuous sequential laser wave animations
+  // Track previous track & previous step index for continuous sequential laser wave animations
+  const prevTrackRef = useRef(selectedTrack);
   const prevStepIndexRef = useRef(selectedStepIndex);
 
   useEffect(() => {
-    prevStepIndexRef.current = selectedStepIndex;
-  }, [selectedStepIndex]);
+    if (prevTrackRef.current !== selectedTrack) {
+      prevTrackRef.current = selectedTrack;
+      prevStepIndexRef.current = selectedStepIndex;
+    } else {
+      prevStepIndexRef.current = selectedStepIndex;
+    }
+  }, [selectedTrack, selectedStepIndex]);
 
   // Calculate staggered transition delay per segment for continuous sequential fill/rewind
   const getSegmentTransitionDelay = (segmentIndex) => {
+    // Prevent staggered rewind animations from triggering across different tracks
+    if (prevTrackRef.current !== selectedTrack) return '0s';
+
     const prevIdx = prevStepIndexRef.current;
     const currIdx = selectedStepIndex;
 
@@ -606,7 +615,7 @@ export default function FTDashboard() {
           <>
             <button
               className="ft-track-btn"
-              onClick={() => { setSelectedTrack('pop_science'); setSelectedStepId(1); }}
+              onClick={() => setSelectedTrack('pop_science')}
               style={{
                 padding: '0.9rem 2.2rem', borderRadius: '16px', border: '2px solid',
                 borderColor: selectedTrack === 'pop_science' ? '#be123c' : '#e2e8f0',
@@ -622,7 +631,7 @@ export default function FTDashboard() {
 
             <button
               className="ft-track-btn"
-              onClick={() => { setSelectedTrack('science_journalism'); setSelectedStepId(1); }}
+              onClick={() => setSelectedTrack('science_journalism')}
               style={{
                 padding: '0.9rem 2.2rem', borderRadius: '16px', border: '2px solid',
                 borderColor: selectedTrack === 'science_journalism' ? '#2563eb' : '#e2e8f0',
