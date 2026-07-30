@@ -843,7 +843,7 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
                 : '#047857';
 
               return (
-                <div key={ws.id} style={{
+                <div key={ws.id} className="ft-list-view-item-card" style={{
                   padding: '1.4rem 1.6rem', borderRadius: '18px',
                   background: isPassed ? '#f8fafc' : '#ffffff',
                   border: isPassed ? '1.5px solid #cbd5e1' : '1.5px solid #e2e8f0',

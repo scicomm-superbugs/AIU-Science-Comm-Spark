@@ -3763,6 +3763,58 @@ body.ft-modal-open .ft-main {
   }
 }
 
+/* ─────────────────────────── SCHEDULE PAGE WRAPPER & FOOTER MOBILE FIXES ─────────────────────────── */
+.ft-schedule-page-wrapper {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1rem 0.75rem 5rem 0.75rem;
+}
+
+.ft-footer {
+  margin-top: 3rem;
+  padding: 1.5rem 0;
+  border-top: 1px solid var(--ft-border-light);
+}
+
+.ft-footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .ft-schedule-page-wrapper {
+    padding: 0.5rem 0.5rem 6.5rem 0.5rem !important;
+  }
+
+  .ft-schedule-banner {
+    padding: 1.25rem 1rem !important;
+    border-radius: 16px !important;
+    margin-bottom: 1.25rem !important;
+  }
+
+  .ft-schedule-banner h1 {
+    font-size: 1.35rem !important;
+  }
+
+  .ft-schedule-banner p {
+    font-size: 0.85rem !important;
+  }
+
+  .ft-list-view-item-card {
+    padding: 1rem !important;
+    border-radius: 14px !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .ft-footer {
+    margin-bottom: 5.5rem !important;
+    padding-bottom: 2rem !important;
+  }
+}
+
 
 
 

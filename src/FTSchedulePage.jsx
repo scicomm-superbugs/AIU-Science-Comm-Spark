@@ -7,9 +7,9 @@ export default function FTSchedulePage() {
   const [selectedTrack, setSelectedTrack] = useState('pop_science');
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1rem 0.5rem 4rem 0.5rem' }}>
+    <div className="ft-schedule-page-wrapper">
       {/* Top Banner */}
-      <div style={{
+      <div className="ft-schedule-banner" style={{
         background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
         borderRadius: '24px',
         padding: '1.75rem 1.5rem',
