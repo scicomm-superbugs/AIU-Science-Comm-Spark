@@ -1265,7 +1265,7 @@ export default function FTDashboard() {
                   {activeStep.details}
                 </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.75rem', borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: '1.75rem' }}>
+                <div className="ft-modal-body-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.75rem', borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: '1.75rem' }}>
                   {/* Left Box: Judging Criteria */}
                   {activeStep.type === 'stage' && (
                     <div>
