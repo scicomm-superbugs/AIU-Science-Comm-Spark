@@ -174,27 +174,60 @@ export default function FTDashboard() {
   };
 
   const steps = useMemo(() => {
-    // 1. Get merged stages for this track from defaultStages and Firestore timeline_config
+    // 1. Map raw stages from defaultStages merged with timeline_config
     const rawStages = (defaultStages[selectedTrack] || defaultStages.pop_science).map((st) => getMergedStage(st, selectedTrack));
 
-    const stageMilestoneEvents = [];
-    const submissionEvents = [];
+    // 2. Map dynamic workshops / orientations / office hours
+    const mainWorkshops = dynamicWorkshops
+      .filter(ws => ws.targetTrack === 'both' || ws.targetTrack === selectedTrack)
+      .map((ws, idx) => ({
+        id: ws.id,
+        type: 'workshop',
+        title: ws.title,
+        badge: ws.type || 'Workshop',
+        meetingLink: ws.meetingLink || '',
+        sub: ws.trainerName ? `Trainer: ${ws.trainerName}` : 'Training Session',
+        trainerName: ws.trainerName || '',
+        trainerId: ws.trainerId || '',
+        deadline: formatUnifiedDate(ws.startDate),
+        startDate: ws.startDate,
+        _rawDate: getRawDate(ws.startDate, 100 + idx),
+        icon: ws.type === 'Orientation' ? <Zap size={20} />
+            : ws.type === 'Lecture' ? <Mic size={20} />
+            : ws.type === 'Office Hours' ? <Clock size={20} />
+            : <Sparkles size={20} />,
+        color: ws.type === 'Orientation' ? '#0d9488'
+             : ws.type === 'Lecture' ? '#7c3aed'
+             : ws.type === 'Office Hours' ? '#d97706'
+             : '#059669',
+        bgColor: ws.type === 'Orientation' ? '#ccfbf1'
+               : ws.type === 'Lecture' ? '#f3e8ff'
+               : ws.type === 'Office Hours' ? '#fef3c7'
+               : '#ecfdf5',
+        details: ws.description || 'No description provided.'
+      }));
 
-    rawStages.forEach((st, stageIdx) => {
-      // A. Stage Milestone Event
-      stageMilestoneEvents.push({
-        ...st,
-        type: 'stage',
-        badge: 'Stage Milestone',
-        deadline: formatUnifiedDate(st.deadline),
-        _rawDate: getRawDate(st.deadline, stageIdx * 10)
-      });
+    // 3. Map Stage Milestone Events
+    const stageMilestones = rawStages.map((st, idx) => ({
+      ...st,
+      type: 'stage',
+      badge: 'Stage Milestone',
+      deadline: formatUnifiedDate(st.deadline),
+      _rawDate: getRawDate(st.deadline, 500 + idx)
+    }));
 
-      // B. Individual Submissions Open Events (e.g. Pre-Interview, Post-Interview)
+    // 4. Combine Main Events (Workshops + Stage Milestones)
+    const mainEvents = [...mainWorkshops, ...stageMilestones];
+    mainEvents.sort((a, b) => a._rawDate.getTime() - b._rawDate.getTime());
+
+    // 5. Collect all custom submissions from all stages and attach to matching main event (after the workshop)
+    const submissionMapByDate = {};
+
+    rawStages.forEach((st) => {
       const stageSubs = (st.submissions && st.submissions.length > 0)
         ? st.submissions
         : (st.openDate || st.fieldOpenDate
-            ? [{ id: 'default', name: `Stage ${st.id} Submissions`, openDate: st.openDate || st.fieldOpenDate, deadline: st.deadline }]
+            ? [{ id: 'default', name: `Stage ${st.id} Deliverables`, openDate: st.openDate || st.fieldOpenDate, deadline: st.deadline }]
             : []
           );
 
@@ -212,69 +245,53 @@ export default function FTDashboard() {
         }
 
         if (openDateStr) {
-          const subNameClean = sub.name || `Submission ${subIdx + 1}`;
-          const subTitle = `${subNameClean} Submissions Open`;
-          submissionEvents.push({
-            id: `sub_open_${st.id}_${sub.id || subIdx}`,
+          const subNameClean = sub.name || sub.title || `Submission ${subIdx + 1}`;
+          if (!submissionMapByDate[openDateStr]) {
+            submissionMapByDate[openDateStr] = [];
+          }
+          submissionMapByDate[openDateStr].push({
+            id: `sub_${st.id}_${sub.id || subIdx}`,
             stageId: st.id,
-            subId: sub.id,
-            type: 'submission_open',
-            title: subTitle,
-            subName: subNameClean,
-            stageTitle: st.title || `Stage ${st.id}`,
-            badge: 'Submissions Open',
-            sub: `Deliverable Portal Opens for ${st.title}`,
-            deadline: formatUnifiedDate(openDateStr),
+            stageTitle: st.title,
+            name: subNameClean,
             openDate: openDateStr,
-            closeDate: sub.deadline ? formatUnifiedDate(sub.deadline) : formatUnifiedDate(st.deadline),
-            _rawDate: getRawDate(openDateStr, (stageIdx * 10) + subIdx + 1),
-            icon: <Upload size={20} />,
-            color: '#059669',
-            bgColor: '#ecfdf5',
-            details: `Submissions portal for "${subNameClean}" (${st.title}) opens on ${formatUnifiedDate(openDateStr)}. Competitors can submit their deliverables through their competition dashboard until ${sub.deadline ? formatUnifiedDate(sub.deadline) : formatUnifiedDate(st.deadline)}.`
+            closeDate: closeDateStr,
+            formattedOpen: formatUnifiedDate(openDateStr),
+            formattedClose: formatUnifiedDate(closeDateStr)
           });
         }
       });
     });
 
-    // 2. Map dynamic workshops for this track
-    const trackWorkshops = dynamicWorkshops
-      .filter(ws => ws.targetTrack === 'both' || ws.targetTrack === selectedTrack)
-      .map((ws, idx) => ({
-        id: ws.id,
-        type: 'workshop',
-        title: ws.title,
-        badge: ws.type || 'Workshop',
-        meetingLink: ws.meetingLink || '',
-        sub: ws.trainerName ? `Trainer: ${ws.trainerName}` : 'Training Session',
-        trainerName: ws.trainerName || '',
-        trainerId: ws.trainerId || '',
-        deadline: formatUnifiedDate(ws.startDate),
-        startDate: ws.startDate,
-        _rawDate: getRawDate(ws.startDate, 500 + idx),
-        icon: ws.type === 'Orientation' ? <Zap size={20} />
-            : ws.type === 'Lecture' ? <Mic size={20} />
-            : ws.type === 'Office Hours' ? <Clock size={20} />
-            : <Sparkles size={20} />,
-        color: ws.type === 'Orientation' ? '#0d9488'
-             : ws.type === 'Lecture' ? '#7c3aed'
-             : ws.type === 'Office Hours' ? '#d97706'
-             : '#059669',
-        bgColor: ws.type === 'Orientation' ? '#ccfbf1'
-               : ws.type === 'Lecture' ? '#f3e8ff'
-               : ws.type === 'Office Hours' ? '#fef3c7'
-               : '#ecfdf5',
-        details: ws.description || 'No description provided.'
-      }));
+    // Attach submission groups to the corresponding main event (on or immediately before the open date)
+    mainEvents.forEach((ev) => {
+      ev.attachedSubmissions = [];
+    });
 
-    // 3. Combine ALL individual events (Stage Milestones, Submission Events, Workshops)
-    const combined = [...stageMilestoneEvents, ...submissionEvents, ...trackWorkshops];
+    Object.keys(submissionMapByDate).forEach((dateKey) => {
+      const subsForDate = submissionMapByDate[dateKey];
+      const targetDate = getRawDate(dateKey);
 
-    // 4. Sort strictly chronologically by _rawDate (earliest date first)
-    combined.sort((a, b) => a._rawDate.getTime() - b._rawDate.getTime());
+      // Find the main event whose date matches or is closest prior to targetDate
+      let matchedEv = mainEvents.find(ev => ev._rawDate.toDateString() === targetDate.toDateString());
 
-    // 5. Assign step sequential numbers 01, 02, 03...
-    return combined.map((item, idx) => ({
+      if (!matchedEv) {
+        // Find nearest preceding event
+        const precedingEvents = mainEvents.filter(ev => ev._rawDate.getTime() <= targetDate.getTime());
+        if (precedingEvents.length > 0) {
+          matchedEv = precedingEvents[precedingEvents.length - 1];
+        } else {
+          matchedEv = mainEvents[0];
+        }
+      }
+
+      if (matchedEv) {
+        matchedEv.attachedSubmissions.push(...subsForDate);
+      }
+    });
+
+    // 6. Assign sequential step numbers 01, 02, 03...
+    return mainEvents.map((item, idx) => ({
       ...item,
       stepNumber: String(idx + 1).padStart(2, '0')
     }));
@@ -726,6 +743,46 @@ export default function FTDashboard() {
                           transition: `all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${segDelay}`
                         }} />
                       )}
+                      {st.attachedSubmissions && st.attachedSubmissions.length > 0 && (
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedStepId(st.id);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            zIndex: 12,
+                            background: '#ffffff',
+                            border: '2px solid #10b981',
+                            borderRadius: '12px',
+                            padding: '0.35rem 0.65rem',
+                            boxShadow: '0 4px 16px rgba(16, 185, 129, 0.25)',
+                            whiteSpace: 'nowrap',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '0.15rem'
+                          }}
+                        >
+                          <div style={{
+                            fontSize: '0.62rem', fontWeight: 900, color: '#047857',
+                            background: '#dcfce7', padding: '0.12rem 0.45rem', borderRadius: '8px',
+                            border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', gap: '0.2rem'
+                          }}>
+                            <span>📤</span> Submissions Open ({st.attachedSubmissions[0].formattedOpen})
+                          </div>
+
+                          {st.attachedSubmissions.map((sub, sIdx) => (
+                            <div key={sub.id || sIdx} style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0f172a' }}>
+                              • {sub.name}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -754,6 +811,48 @@ export default function FTDashboard() {
                         transition: `height 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${segDelay}`,
                         position: 'relative'
                       }} />
+
+                      {/* Submissions Open Badge Box on Vertical Turn */}
+                      {st.attachedSubmissions && st.attachedSubmissions.length > 0 && (
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedStepId(st.id);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            zIndex: 12,
+                            background: '#ffffff',
+                            border: '2px solid #10b981',
+                            borderRadius: '12px',
+                            padding: '0.35rem 0.65rem',
+                            boxShadow: '0 4px 16px rgba(16, 185, 129, 0.25)',
+                            whiteSpace: 'nowrap',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '0.15rem'
+                          }}
+                        >
+                          <div style={{
+                            fontSize: '0.62rem', fontWeight: 900, color: '#047857',
+                            background: '#dcfce7', padding: '0.12rem 0.45rem', borderRadius: '8px',
+                            border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', gap: '0.2rem'
+                          }}>
+                            <span>📤</span> Submissions Open ({st.attachedSubmissions[0].formattedOpen})
+                          </div>
+
+                          {st.attachedSubmissions.map((sub, sIdx) => (
+                            <div key={sub.id || sIdx} style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0f172a' }}>
+                              • {sub.name}
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
                       {/* Radar Tip Pointer on active vertical tip */}
                       {isTipSegment && (
