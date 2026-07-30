@@ -1385,7 +1385,8 @@ export default function FTDashboard() {
                 </div>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
       </div>
