@@ -51,6 +51,7 @@ export default function FTDashboard() {
   const [selectedTrack, setSelectedTrack] = useState(isCompetitorUser ? userTrack : 'pop_science');
   const [selectedStepId, setSelectedStepId] = useState(1);
   const [openMobileCardId, setOpenMobileCardId] = useState(null);
+  const [openSignId, setOpenSignId] = useState(null);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
   useEffect(() => {
@@ -724,25 +725,135 @@ export default function FTDashboard() {
                         borderRadius: '10px',
                         boxShadow: isSegmentActive ? `0 0 16px ${trackThemeColor}80, 0 0 25px ${trackThemeColor}40` : 'none',
                         transition: `width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${segDelay}`,
-                        position: 'relative',
-                        float: isEvenRow ? 'left' : 'right'
-                      }} />
-
-                      {/* Radar Tip Pointer on active tip */}
-                      {isTipSegment && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '-6px',
-                          ...(isEvenRow ? { right: '-10px' } : { left: '-10px' }),
-                          width: '20px', height: '20px', borderRadius: '50%',
-                          background: '#ffffff',
-                          border: `4px solid ${trackThemeColor}`,
-                          boxShadow: `0 0 0 4px ${trackThemeColor}30, 0 0 20px ${trackThemeColor}`,
-                          animation: 'ftTodayPulse 2s ease-in-out infinite',
                         }} />
-                      )}
-                    </div>
-                  )}
+                        {/* Radar Tip Pointer on active tip */}
+                        {isTipSegment && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '-6px',
+                            ...(isEvenRow ? { right: '-10px' } : { left: '-10px' }),
+                            width: '20px', height: '20px', borderRadius: '50%',
+                            background: '#ffffff',
+                            border: `4px solid ${trackThemeColor}`,
+                            boxShadow: `0 0 0 4px ${trackThemeColor}30, 0 0 20px ${trackThemeColor}`,
+                            animation: 'ftTodayPulse 2s ease-in-out infinite',
+                          }} />
+                        )}
+
+                        {/* 🪧 Submissions Open Signboard in Middle of Line Segment */}
+                        {st.attachedSubmissions && st.attachedSubmissions.length > 0 && (
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenSignId(openSignId === st.id ? null : st.id);
+                            }}
+                            style={{
+                              position: 'absolute',
+                              top: '50%',
+                              left: '50%',
+                              transform: 'translate(-50%, -50%)',
+                              zIndex: 15,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {/* Compact Sign Pill in Middle of Line */}
+                            <div style={{
+                              background: '#ffffff',
+                              border: '2.5px solid #10b981',
+                              borderRadius: '20px',
+                              padding: '0.3rem 0.75rem',
+                              boxShadow: '0 4px 16px rgba(16, 185, 129, 0.35)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              whiteSpace: 'nowrap',
+                              transition: 'all 0.25s ease'
+                            }}>
+                              <span style={{ fontSize: '0.85rem' }}>🪧</span>
+                              <span style={{ fontSize: '0.74rem', fontWeight: 900, color: '#047857' }}>
+                                Submissions Open ({st.attachedSubmissions.length})
+                              </span>
+                            </div>
+
+                            {/* EXPANDED GRAPHICAL SIGNBOARD POPUP (POPS UP WHEN CLICKED) */}
+                            {openSignId === st.id && (
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '100%',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                marginBottom: '12px',
+                                zIndex: 30,
+                                width: '220px',
+                                animation: 'ftPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                pointerEvents: 'auto'
+                              }}>
+                                {/* Signboard Body Card */}
+                                <div style={{
+                                  background: '#ffffff',
+                                  border: '2.5px solid #10b981',
+                                  borderRadius: '16px',
+                                  padding: '0.8rem 0.85rem',
+                                  boxShadow: '0 12px 30px rgba(16, 185, 129, 0.4), 0 4px 12px rgba(0,0,0,0.1)',
+                                  textAlign: 'center'
+                                }}>
+                                  <div style={{
+                                    fontSize: '0.66rem', fontWeight: 900, color: '#047857',
+                                    background: '#dcfce7', padding: '0.2rem 0.55rem', borderRadius: '10px',
+                                    display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.4rem',
+                                    border: '1px solid #a7f3d0'
+                                  }}>
+                                    <span>🪧</span> Submissions Open ({st.attachedSubmissions[0].formattedOpen})
+                                  </div>
+
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                    {st.attachedSubmissions.map((sub, sIdx) => (
+                                      <div key={sub.id || sIdx} style={{
+                                        fontSize: '0.76rem', fontWeight: 800, color: '#0f172a',
+                                        background: '#f8fafc', padding: '0.35rem 0.55rem', borderRadius: '8px',
+                                        border: '1px solid #e2e8f0', textAlign: 'left',
+                                        display: 'flex', alignItems: 'center', gap: '0.35rem'
+                                      }}>
+                                        <span style={{ color: '#10b981', fontWeight: 900 }}>•</span>
+                                        <span>{sub.name}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  {/* Quick Link Button */}
+                                  <a
+                                    href="#/dashboard/my-competition"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate('/dashboard/my-competition');
+                                    }}
+                                    style={{
+                                      marginTop: '0.55rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem',
+                                      background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: '#ffffff',
+                                      fontSize: '0.72rem', fontWeight: 900, padding: '0.4rem 0.65rem', borderRadius: '8px',
+                                      textDecoration: 'none', boxShadow: '0 3px 10px rgba(16,185,129,0.35)'
+                                    }}
+                                  >
+                                    <span>🚀</span> Open Submissions Portal <ChevronRight size={12} />
+                                  </a>
+                                </div>
+
+                                {/* Stem Pole pointing down to connector line */}
+                                <div style={{
+                                  position: 'absolute',
+                                  top: '100%',
+                                  left: 'calc(50% - 2.5px)',
+                                  width: '5px',
+                                  height: '12px',
+                                  background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)',
+                                  borderRadius: '4px'
+                                }} />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                   {/* B. Vertical Turn Connector Segment (from end of row down to next row) */}
                   {isTurnToNext && (
