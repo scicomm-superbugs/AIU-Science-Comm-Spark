@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { useLiveCollection, db } from './db';
 import { Calendar, Clock, Plus, Trash2, Edit3, AlertCircle, CheckCircle2, User, MapPin, Link2, ExternalLink, Video, BookOpen, Layers, Search, Award, Send, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { normalizeTrackKey } from './ftConstants';
 import './scicommspark.css';
 
 export default function WorkshopManager({ isAdmin = true, isTrainer = true, currentTrack = 'all' }) {
@@ -113,14 +114,18 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
 
   // Master Schedule combining workshops, orientations, lectures & stage milestones
   const allMasterEvents = useMemo(() => {
+    const filterNorm = normalizeTrackKey(trackFilter);
+
     const filteredWs = workshops.filter(ws => {
       if (trackFilter === 'all' || !trackFilter) return true;
-      return ws.targetTrack === 'both' || ws.targetTrack === trackFilter || !ws.targetTrack;
+      const target = normalizeTrackKey(ws.targetTrack || ws.trackKey || 'both');
+      return target === 'both' || target === filterNorm || !ws.targetTrack;
     });
 
     const filteredStages = defaultStageMilestones.filter(st => {
       if (trackFilter === 'all' || !trackFilter) return true;
-      return st.targetTrack === trackFilter;
+      const target = normalizeTrackKey(st.targetTrack);
+      return target === 'both' || target === filterNorm;
     });
 
     const combined = [...filteredWs, ...filteredStages];
@@ -589,6 +594,7 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
                 return (
                   <div
                     key={idx}
+                    className="ft-calendar-day-box"
                     onClick={() => setSelectedDateStr(day.dateStr)}
                     style={{
                       minHeight: '78px',
@@ -625,8 +631,8 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
                       )}
                     </div>
 
-                    {/* Mini event tags */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: '0.25rem', overflow: 'hidden' }}>
+                    {/* Mini event tags (Desktop View) */}
+                    <div className="ft-day-event-text-tag" style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginTop: '0.25rem', overflow: 'hidden' }}>
                       {dayEvents.slice(0, 2).map((evt, eIdx) => {
                         const isStage = !!evt.isStage;
                         const badgeColor = isStage ? '#be123c' : evt.type === 'Orientation' ? '#0d9488' : '#2563eb';
@@ -656,6 +662,19 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
                         </div>
                       )}
                     </div>
+
+                    {/* Mini Event Indicator Dots (Mobile View) */}
+                    {dayEvents.length > 0 && (
+                      <div className="ft-day-event-dot-tag" style={{ display: 'none', gap: '0.2rem', justifyContent: 'center', marginTop: '0.15rem' }}>
+                        {dayEvents.slice(0, 3).map((evt, eIdx) => (
+                          <span key={eIdx} style={{
+                            width: '6px', height: '6px', borderRadius: '50%',
+                            background: evt.isStage ? '#be123c' : '#2563eb',
+                            display: 'inline-block'
+                          }} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}

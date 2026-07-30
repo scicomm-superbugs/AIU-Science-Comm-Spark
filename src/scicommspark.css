@@ -3742,6 +3742,27 @@ body.ft-modal-open .ft-main {
   }
 }
 
+/* ─────────────────────────── MOBILE CALENDAR GRID DAY BOX UNIFICATION ─────────────────────────── */
+@media (max-width: 768px) {
+  .ft-schedule-calendar-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ft-calendar-day-box {
+    min-height: 48px !important;
+    padding: 0.25rem 0.15rem !important;
+    border-radius: 8px !important;
+  }
+
+  .ft-day-event-text-tag {
+    display: none !important;
+  }
+
+  .ft-day-event-dot-tag {
+    display: flex !important;
+  }
+}
+
 
 
 
