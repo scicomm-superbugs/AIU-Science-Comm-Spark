@@ -3492,8 +3492,9 @@
    Global Forced Desktop Layout Rules (Mobile Layout Disabled)
    ══════════════════════════════════════════════════════════════════════ */
 html, body, #root {
-  min-width: 1200px !important;
-  overflow-x: auto !important;
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 .landing-nav-bar {
@@ -3501,9 +3502,6 @@ html, body, #root {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  flex-wrap: nowrap !important;
-  white-space: nowrap !important;
-  min-width: 1200px !important;
   box-sizing: border-box !important;
 }
 
