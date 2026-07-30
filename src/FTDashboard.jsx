@@ -77,8 +77,8 @@ export default function FTDashboard() {
         sub: 'Reels / TikTok Video (max 90 seconds)',
         deadline: '2026-09-01',
         icon: <Video size={22} />,
-        color: '#be123c',
-        bgColor: '#fff1f2',
+        color: '#d97706',
+        bgColor: '#fffbeb',
         details: 'Produce a punchy, highly engaging short video introducing a core scientific concept for social media.'
       },
       {
@@ -89,8 +89,8 @@ export default function FTDashboard() {
         sub: 'YouTube SciComm Video (up to 3 minutes)',
         deadline: '2026-09-20',
         icon: <Play size={22} />,
-        color: '#be123c',
-        bgColor: '#fff1f2',
+        color: '#d97706',
+        bgColor: '#fffbeb',
         details: 'Deep scientific storytelling featuring comprehensive explanation, visual graphics, and clear narration.'
       },
       {
@@ -115,8 +115,8 @@ export default function FTDashboard() {
         sub: 'Topic Research & Expert Interviews Prep',
         deadline: '2026-09-01',
         icon: <BookOpen size={22} />,
-        color: '#2563eb',
-        bgColor: '#eff6ff',
+        color: '#d97706',
+        bgColor: '#fffbeb',
         details: 'Select a scientific topic, gather research data, and conduct interviews with researchers & academic experts.'
       },
       {
@@ -127,8 +127,8 @@ export default function FTDashboard() {
         sub: 'Simplified Science Article Publication',
         deadline: '2026-09-20',
         icon: <FileText size={22} />,
-        color: '#2563eb',
-        bgColor: '#eff6ff',
+        color: '#d97706',
+        bgColor: '#fffbeb',
         details: 'Write a simplified science news article published on the digital platform with opportunity for magazine feature.'
       },
       {
@@ -260,8 +260,8 @@ export default function FTDashboard() {
         _rawDate: primaryItem._rawDate,
         _sortPriority: 2, // Submissions come AFTER workshops (priority 1) on same date
         icon: <Upload size={20} />,
-        color: '#059669',
-        bgColor: '#ecfdf5',
+        color: '#dc2626',
+        bgColor: '#fff1f2',
         details: items.map(i => `• ${i.subName} (${i.stageTitle}): Opens ${formatUnifiedDate(i.openDate)}, Closes ${formatUnifiedDate(i.closeDate)}`).join('\n')
       };
     });
@@ -286,14 +286,8 @@ export default function FTDashboard() {
             : ws.type === 'Lecture' ? <Mic size={20} />
             : ws.type === 'Office Hours' ? <Clock size={20} />
             : <Sparkles size={20} />,
-        color: ws.type === 'Orientation' ? '#0d9488'
-             : ws.type === 'Lecture' ? '#7c3aed'
-             : ws.type === 'Office Hours' ? '#d97706'
-             : '#059669',
-        bgColor: ws.type === 'Orientation' ? '#ccfbf1'
-               : ws.type === 'Lecture' ? '#f3e8ff'
-               : ws.type === 'Office Hours' ? '#fef3c7'
-               : '#ecfdf5',
+        color: ws.type === 'Office Hours' ? '#059669' : '#2563eb',
+        bgColor: ws.type === 'Office Hours' ? '#ecfdf5' : '#eff6ff',
         details: ws.description || 'No description provided.'
       }));
 
@@ -660,15 +654,18 @@ export default function FTDashboard() {
             </p>
           </div>
 
-          <div className="ft-timeline-legend-bar" style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', fontWeight: 700, flexWrap: 'wrap' }}>
-            <span className="ft-timeline-legend-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#be123c', background: '#fff1f2', padding: '0.3rem 0.75rem', borderRadius: '20px', border: '1px solid #fecdd3' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#be123c', boxShadow: '0 0 8px #be123c' }} /> Stage Milestone
+          <div className="ft-timeline-legend-bar" style={{ display: 'flex', gap: '0.85rem', fontSize: '0.8rem', fontWeight: 800, flexWrap: 'wrap' }}>
+            <span className="ft-timeline-legend-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#dc2626', background: '#fff1f2', padding: '0.35rem 0.8rem', borderRadius: '20px', border: '1px solid #fecdd3' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#dc2626', boxShadow: '0 0 8px #dc2626' }} /> Submissions Open (Red)
             </span>
-            <span className="ft-timeline-legend-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#059669', background: '#ecfdf5', padding: '0.3rem 0.75rem', borderRadius: '20px', border: '1px solid #a7f3d0' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#059669', boxShadow: '0 0 8px #059669' }} /> Submissions Open
+            <span className="ft-timeline-legend-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#d97706', background: '#fffbeb', padding: '0.35rem 0.8rem', borderRadius: '20px', border: '1px solid #fde68a' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#d97706', boxShadow: '0 0 8px #d97706' }} /> Stage Milestone (Gold)
             </span>
-            <span className="ft-timeline-legend-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#2563eb', background: '#eff6ff', padding: '0.3rem 0.75rem', borderRadius: '20px', border: '1px solid #bfdbfe' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb', boxShadow: '0 0 8px #2563eb' }} /> Training / Sessions
+            <span className="ft-timeline-legend-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#2563eb', background: '#eff6ff', padding: '0.35rem 0.8rem', borderRadius: '20px', border: '1px solid #bfdbfe' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb', boxShadow: '0 0 8px #2563eb' }} /> Workshops (Blue)
+            </span>
+            <span className="ft-timeline-legend-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#059669', background: '#ecfdf5', padding: '0.35rem 0.8rem', borderRadius: '20px', border: '1px solid #a7f3d0' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#059669', boxShadow: '0 0 8px #059669' }} /> Office Hours (Green)
             </span>
           </div>
         </div>
