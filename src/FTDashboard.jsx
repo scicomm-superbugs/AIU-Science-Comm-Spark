@@ -1120,10 +1120,10 @@ export default function FTDashboard() {
               <div 
                 className="ft-timeline-hud-header"
                 style={{
-                  padding: '1.6rem 2rem',
+                  padding: '1rem 1.5rem',
                   background: `linear-gradient(135deg, ${activeStep.color}35 0%, rgba(9, 13, 22, 0.98) 100%)`,
                   borderBottom: '1px solid rgba(255,255,255,0.15)',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem'
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.35rem', flexWrap: 'wrap', paddingRight: '2.5rem' }}>
@@ -1212,7 +1212,7 @@ export default function FTDashboard() {
               </div>
 
               {/* Body content inside HUD Card */}
-              <div style={{ padding: '2rem', overflowY: 'auto', overscrollBehavior: 'contain' }}>
+              <div style={{ padding: '1rem 1.5rem', overflow: 'hidden' }}>
                 {/* High-Contrast Subtitle Badge or Full Trainer Profile Card */}
                 {(() => {
                   const trainerAcc = getTrainerAccountForStep(activeStep);
@@ -1262,18 +1262,18 @@ export default function FTDashboard() {
                 })()}
 
                 {/* Crisp Bright Description */}
-                <p style={{ fontSize: '0.98rem', color: '#f1f5f9', margin: '0 0 1.75rem 0', maxWidth: '850px', lineHeight: 1.65, fontWeight: 500 }}>
+                <p style={{ fontSize: '0.9rem', color: '#f1f5f9', margin: '0 0 1rem 0', maxWidth: '850px', lineHeight: 1.5, fontWeight: 500 }}>
                   {activeStep.details}
                 </p>
 
-                <div className="ft-modal-body-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.75rem', borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: '1.75rem' }}>
+                <div className="ft-modal-body-grid" style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: '1rem' }}>
                   {/* Left Box: Judging Criteria */}
                   {activeStep.type === 'stage' && (
                     <div>
-                      <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#ffffff', marginBottom: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '1rem' }}>⚖️</span> JUDGING CRITERIA BREAKDOWN:
+                      <div style={{ fontSize: '0.82rem', fontWeight: 900, color: '#ffffff', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.9rem' }}>⚖️</span> JUDGING CRITERIA BREAKDOWN:
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '0.45rem' }}>
                         {(() => {
                           const stageCriteria = (activeStep.criteria && activeStep.criteria.length > 0)
                             ? activeStep.criteria
@@ -1304,27 +1304,27 @@ export default function FTDashboard() {
 
                             return (
                               <div key={c.id || c.name || idx} style={{
-                                padding: '0.8rem 1.1rem', borderRadius: '14px',
+                                padding: '0.45rem 0.75rem', borderRadius: '10px',
                                 background: '#161f30', border: `1.5px solid ${c.category === 'academic' ? '#0284c7' : '#e11d48'}`,
                                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
                               }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                                   <span style={{
-                                    fontSize: '0.78rem', padding: '0.25rem 0.65rem', borderRadius: '8px',
+                                    fontSize: '0.68rem', padding: '0.15rem 0.45rem', borderRadius: '6px',
                                     background: c.category === 'academic' ? '#0284c7' : '#e11d48',
                                     color: '#ffffff', fontWeight: 900
                                   }}>
                                     {c.category === 'academic' ? 'Academic 🎓' : 'SciComm 🎙️'}
                                   </span>
-                                  <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#ffffff' }}>{c.name}</span>
+                                  <span style={{ fontWeight: 800, fontSize: '0.82rem', color: '#ffffff' }}>{c.name}</span>
                                 </div>
                                 <span style={{
-                                  fontSize: '0.88rem', fontWeight: 900,
+                                  fontSize: '0.78rem', fontWeight: 900,
                                   color: showEvaluatedScore ? '#ffffff' : '#0f172a',
                                   background: showEvaluatedScore ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : '#f59e0b',
-                                  padding: '0.25rem 0.75rem', borderRadius: '8px',
-                                  boxShadow: showEvaluatedScore ? '0 2px 10px rgba(16, 185, 129, 0.4)' : '0 2px 8px rgba(245, 158, 11, 0.4)'
+                                  padding: '0.15rem 0.55rem', borderRadius: '6px', flexShrink: 0,
+                                  boxShadow: showEvaluatedScore ? '0 2px 8px rgba(16, 185, 129, 0.4)' : '0 2px 6px rgba(245, 158, 11, 0.4)'
                                 }}>
                                   {scoredPts !== null ? `⭐ ${scoredPts} / ${maxPts} pts` : `${maxPts} pts`}
                                 </span>
@@ -1339,12 +1339,12 @@ export default function FTDashboard() {
                   {/* Right Box: Assigned Judges */}
                   {activeStep.type === 'stage' && (
                     <div>
-                      <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#ffffff', marginBottom: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '1rem' }}>👥</span> EVALUATION PANEL:
+                      <div style={{ fontSize: '0.82rem', fontWeight: 900, color: '#ffffff', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.9rem' }}>👥</span> EVALUATION PANEL:
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                         {(activeStep.assignedJudgeIds || []).length === 0 ? (
-                          <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontStyle: 'italic' }}>No judges assigned to this stage yet</span>
+                          <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontStyle: 'italic' }}>No judges assigned to this stage yet</span>
                         ) : (
                           (activeStep.assignedJudgeIds || []).map(judgeId => {
                             const judge = scientists.find(u => u.id === judgeId);
@@ -1355,24 +1355,24 @@ export default function FTDashboard() {
 
                             return (
                               <div key={judgeId} style={{
-                                display: 'flex', alignItems: 'center', gap: '0.95rem',
-                                background: '#161f30', padding: '0.85rem 1.15rem', borderRadius: '16px',
+                                display: 'flex', alignItems: 'center', gap: '0.75rem',
+                                background: '#161f30', padding: '0.5rem 0.85rem', borderRadius: '12px',
                                 border: `1.5px solid ${roleColor}80`,
-                                boxShadow: '0 4px 16px rgba(0,0,0,0.2)', flexWrap: 'wrap'
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.2)', flexWrap: 'wrap'
                               }}>
                                 <img
                                   src={avatarUrl}
                                   alt={judge.name}
-                                  style={{ width: '46px', height: '46px', borderRadius: '50%', border: `2.5px solid ${roleColor}`, objectFit: 'cover', flexShrink: 0, boxShadow: `0 0 10px ${roleColor}40` }}
+                                  style={{ width: '38px', height: '38px', borderRadius: '50%', border: `2px solid ${roleColor}`, objectFit: 'cover', flexShrink: 0, boxShadow: `0 0 8px ${roleColor}40` }}
                                 />
                                 <div style={{ flex: 1 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap' }}>
-                                    <div style={{ fontSize: '0.98rem', fontWeight: 900, color: '#ffffff' }}>{judge.name}</div>
-                                    <span style={{ fontSize: '0.7rem', fontWeight: 900, background: `${roleColor}25`, color: roleColor, padding: '0.15rem 0.5rem', borderRadius: '6px', border: `1px solid ${roleColor}60` }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                                    <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#ffffff' }}>{judge.name}</div>
+                                    <span style={{ fontSize: '0.68rem', fontWeight: 900, background: `${roleColor}25`, color: roleColor, padding: '0.1rem 0.45rem', borderRadius: '5px', border: `1px solid ${roleColor}60` }}>
                                       {roleLabel}
                                     </span>
                                   </div>
-                                  <div style={{ fontSize: '0.8rem', color: '#cbd5e1', marginTop: '0.2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                  <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginTop: '0.1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
                                     <span>🎓 {getCleanAcademicTitle(judge)}</span>
                                   </div>
                                 </div>
