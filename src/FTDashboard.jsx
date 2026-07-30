@@ -740,7 +740,7 @@ export default function FTDashboard() {
                           }} />
                         )}
 
-                        {/* Embedded Graphical Signboard Card in Middle of Line Track */}
+                        {/* Embedded Line Signpost Pill (Fits inside gap without overlapping step circles) */}
                         {st.attachedSubmissions && st.attachedSubmissions.length > 0 && (
                           <div
                             style={{
@@ -748,34 +748,25 @@ export default function FTDashboard() {
                               top: '50%',
                               left: '50%',
                               transform: 'translate(-50%, -50%)',
-                              zIndex: 15,
+                              zIndex: 10,
                               background: '#ffffff',
-                              border: '2px solid #10b981',
-                              borderRadius: '14px',
-                              padding: '0.4rem 0.75rem',
-                              boxShadow: '0 6px 20px rgba(16, 185, 129, 0.25)',
+                              border: '1.8px solid #10b981',
+                              borderRadius: '20px',
+                              padding: '0.2rem 0.55rem',
+                              boxShadow: '0 3px 12px rgba(16, 185, 129, 0.25)',
                               whiteSpace: 'nowrap',
+                              maxWidth: 'calc(100% - 80px)',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
                               display: 'flex',
-                              flexDirection: 'column',
                               alignItems: 'center',
-                              gap: '0.2rem'
+                              gap: '0.3rem'
                             }}
                           >
-                            <div style={{
-                              fontSize: '0.62rem', fontWeight: 900, color: '#047857',
-                              background: '#dcfce7', padding: '0.15rem 0.5rem', borderRadius: '8px',
-                              border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', gap: '0.25rem'
-                            }}>
-                              <span>📤</span> Submissions Open ({st.attachedSubmissions[0].formattedOpen})
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', width: '100%', textAlign: 'center' }}>
-                              {st.attachedSubmissions.map((sub, sIdx) => (
-                                <div key={sub.id || sIdx} style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0f172a' }}>
-                                  • {sub.name}
-                                </div>
-                              ))}
-                            </div>
+                            <span style={{ fontSize: '0.72rem' }}>📤</span>
+                            <span style={{ fontSize: '0.63rem', fontWeight: 900, color: '#047857' }}>
+                              Submissions Open: {st.attachedSubmissions.map(s => s.name).join(' & ')}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -807,7 +798,7 @@ export default function FTDashboard() {
                         position: 'relative'
                       }} />
 
-                      {/* Embedded Graphical Signboard Card on Vertical Turn */}
+                      {/* Embedded Line Signpost Pill on Vertical Turn */}
                       {st.attachedSubmissions && st.attachedSubmissions.length > 0 && (
                         <div
                           style={{
@@ -815,34 +806,22 @@ export default function FTDashboard() {
                             top: '50%',
                             left: '50%',
                             transform: 'translate(-50%, -50%)',
-                            zIndex: 15,
+                            zIndex: 10,
                             background: '#ffffff',
-                            border: '2px solid #10b981',
-                            borderRadius: '14px',
-                            padding: '0.4rem 0.75rem',
-                            boxShadow: '0 6px 20px rgba(16, 185, 129, 0.25)',
+                            border: '1.8px solid #10b981',
+                            borderRadius: '20px',
+                            padding: '0.2rem 0.55rem',
+                            boxShadow: '0 3px 12px rgba(16, 185, 129, 0.25)',
                             whiteSpace: 'nowrap',
                             display: 'flex',
-                            flexDirection: 'column',
                             alignItems: 'center',
-                            gap: '0.2rem'
+                            gap: '0.3rem'
                           }}
                         >
-                          <div style={{
-                            fontSize: '0.62rem', fontWeight: 900, color: '#047857',
-                            background: '#dcfce7', padding: '0.15rem 0.5rem', borderRadius: '8px',
-                            border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', gap: '0.25rem'
-                          }}>
-                            <span>📤</span> Submissions Open ({st.attachedSubmissions[0].formattedOpen})
-                          </div>
-
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', width: '100%', textAlign: 'center' }}>
-                            {st.attachedSubmissions.map((sub, sIdx) => (
-                              <div key={sub.id || sIdx} style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0f172a' }}>
-                                • {sub.name}
-                              </div>
-                            ))}
-                          </div>
+                          <span style={{ fontSize: '0.72rem' }}>📤</span>
+                          <span style={{ fontSize: '0.63rem', fontWeight: 900, color: '#047857' }}>
+                            Submissions Open: {st.attachedSubmissions.map(s => s.name).join(' & ')}
+                          </span>
                         </div>
                       )}
 
