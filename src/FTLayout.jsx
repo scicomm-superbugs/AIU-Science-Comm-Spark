@@ -803,7 +803,7 @@ export default function FTLayout() {
             {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
           <Link to="/dashboard" className="ft-navbar-brand" style={{ textDecoration: 'none' }}>
-            <img src="./spark_logo.png" alt="SciComm Spark Logo" style={{ width: '50px', height: '50px', objectFit: 'contain' }} />
+            <img src="./spark_logo.png" alt="SciComm Spark Logo" style={{ width: '42px', height: '42px', objectFit: 'contain', flexShrink: 0 }} />
             <div>
               <div className="ft-navbar-brand-text">SciComm Spark Competition</div>
               <div className="ft-navbar-brand-sub">{FT_FACULTY}</div>
@@ -814,7 +814,7 @@ export default function FTLayout() {
 
         {/* Center Admin View As Role Impersonation Selector & Reset Test Button */}
         {isRealAdmin && (
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.65rem', margin: '0 1rem', flexWrap: 'wrap' }}>
+          <div className="ft-admin-top-bar" style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.65rem', margin: '0 1rem', flexWrap: 'wrap' }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',

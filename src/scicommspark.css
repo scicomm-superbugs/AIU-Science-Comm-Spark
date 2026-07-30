@@ -3641,3 +3641,52 @@ html, body, #root {
   }
 }
 
+/* ─────────────────────────── MOBILE NAVBAR & BOTTOM NAV OVERFLOW FIXES ─────────────────────────── */
+@media (max-width: 900px) {
+  .ft-admin-top-bar {
+    display: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .ft-navbar {
+    padding: 0.5rem 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .ft-navbar-brand-text {
+    font-size: 0.88rem !important;
+    white-space: nowrap !important;
+    line-height: 1.2 !important;
+  }
+
+  .ft-navbar-brand-sub {
+    font-size: 0.7rem !important;
+    white-space: nowrap !important;
+  }
+
+  .ft-mobile-nav {
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    padding: 0.35rem 0.6rem !important;
+    gap: 0.25rem !important;
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.06) !important;
+  }
+
+  .ft-mobile-nav::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .ft-mobile-nav-item {
+    flex: 0 0 auto !important;
+    min-width: 68px !important;
+    padding: 0.35rem 0.5rem !important;
+    text-align: center !important;
+  }
+}
+
+
