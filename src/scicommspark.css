@@ -3848,6 +3848,13 @@ body.ft-modal-open .ft-main {
   }
 }
 
+/* ─────────────────────────── FORCE DESKTOP MODE FOR LANDING PAGE ONLY ─────────────────────────── */
+.ft-landing-forced-desktop {
+  min-width: 1280px !important;
+  width: 100% !important;
+  overflow-x: auto !important;
+}
+
 
 
 

@@ -1033,6 +1033,23 @@ export default function Landing() {
     contentRef.current = content;
   }, [content]);
 
+  // Force Desktop Viewport mode on Landing page ONLY on all devices
+  useEffect(() => {
+    let viewport = document.querySelector('meta[name="viewport"]');
+    if (!viewport) {
+      viewport = document.createElement('meta');
+      viewport.name = 'viewport';
+      document.head.appendChild(viewport);
+    }
+    const originalContent = viewport.getAttribute('content') || 'width=device-width, initial-scale=1.0';
+
+    viewport.setAttribute('content', 'width=1280, initial-scale=0.35, minimum-scale=0.1, maximum-scale=5.0');
+
+    return () => {
+      viewport.setAttribute('content', originalContent);
+    };
+  }, []);
+
   // Load from IndexedDB on mount if available & newer than default
   useEffect(() => {
     try {
@@ -1408,7 +1425,7 @@ export default function Landing() {
   const E = editMode;
 
   return (
-    <div className="landing-page" style={{ fontFamily: "'Outfit', sans-serif", background: '#f8fafc', color: '#0f172a', minHeight: '100vh' }}>
+    <div className="landing-page ft-landing-forced-desktop" style={{ fontFamily: "'Outfit', sans-serif", background: '#f8fafc', color: '#0f172a', minHeight: '100vh', minWidth: '1280px' }}>
 
       {/* ═══════ ADMIN FLOATING TOOLBAR ═══════ */}
       {isAdmin && (
