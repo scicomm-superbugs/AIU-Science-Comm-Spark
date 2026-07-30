@@ -1495,10 +1495,6 @@ export default function Landing() {
               style={{ height: '52px' }}
               alt="SciComm Spark Navbar Logo"
             />
-            <div style={{ lineHeight: 1.1 }}>
-              <div style={{ fontWeight: 900, fontSize: '1.15rem', color: '#be123c', fontFamily: "'Outfit', sans-serif" }}>AIU.</div>
-              <div className="landing-nav-full-subtext" style={{ fontSize: '0.65rem', fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.04em' }}>ALAMEIN INTERNATIONAL UNIVERSITY</div>
-            </div>
           </div>
         </div>
 
