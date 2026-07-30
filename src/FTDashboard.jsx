@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Video, Newspaper, Calendar, Clock, ArrowRight, Award, CheckCircle2, Play, BookOpen, Layers, GitCommit, Zap, Mic, Users, Globe, Mail, ChevronRight, FileText, Check, Radio, ExternalLink, Pencil, Upload } from 'lucide-react';
+import { Sparkles, Video, Newspaper, Calendar, Clock, ArrowRight, Award, CheckCircle2, Play, BookOpen, Layers, GitCommit, Zap, Mic, Users, Globe, Mail, ChevronRight, FileText, Check, Radio, ExternalLink, Pencil, Upload, X } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { db, useLiveCollection } from './db';
 import { COMPETITION_TRACKS, DEFAULT_JUDGING_CRITERIA, normalizeTrackKey, formatUnifiedDate, getCleanAcademicTitle } from './ftConstants';
@@ -21,6 +21,7 @@ export default function FTDashboard() {
 
   const isAdmin = ['admin', 'master'].includes(user?.role);
   const [editingPoster, setEditingPoster] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const savePosterSetting = async (updates) => {
     try {
@@ -824,7 +825,7 @@ export default function FTDashboard() {
 
                   {/* Step Node Icon Circle */}
                   <div
-                    onClick={() => setSelectedStepId(st.id)}
+                    onClick={() => { setSelectedStepId(st.id); setIsDetailModalOpen(true); }}
                     style={{
                       width: '68px', height: '68px', borderRadius: '50%',
                       background: isSelected
@@ -847,7 +848,7 @@ export default function FTDashboard() {
 
                   {/* Glassmorphic Step Title Card (Below Node) */}
                   <div
-                    onClick={() => setSelectedStepId(st.id)}
+                    onClick={() => { setSelectedStepId(st.id); setIsDetailModalOpen(true); }}
                     style={{
                       marginTop: '1.25rem', padding: '0.9rem 0.85rem', borderRadius: '16px',
                       background: isSelected
@@ -1044,7 +1045,7 @@ export default function FTDashboard() {
                   <div
                     onClick={() => {
                       setSelectedStepId(st.id);
-                      setOpenMobileCardId(prev => (prev === st.id ? null : st.id));
+                      setIsDetailModalOpen(true);
                     }}
                     style={{
                       width: '54px', height: '54px', borderRadius: '50%',
@@ -1126,281 +1127,318 @@ export default function FTDashboard() {
           </div>
         </div>
 
-        {/* ACTIVE STAGE / WORKSHOP HUD DETAILS DISPLAY CARD — ULTRA HIGH CONTRAST */}
-        <div style={{
-          borderRadius: '20px', background: '#090d16', color: '#ffffff',
-          boxShadow: `0 16px 45px ${activeStep.color}35`, overflow: 'hidden',
-          border: `2px solid ${activeStep.color}`, transition: 'all 0.3s ease'
-        }}>
-          {/* Header Bar inside Dark HUD */}
-          <div 
-            className="ft-timeline-hud-header"
+        {/* GRAPHICAL POPUP MODAL WINDOW FOR STEP DETAILS */}
+        {isDetailModalOpen && activeStep && (
+          <div
+            onClick={() => setIsDetailModalOpen(false)}
             style={{
-              padding: '1.6rem 2rem',
-              background: `linear-gradient(135deg, ${activeStep.color}35 0%, rgba(9, 13, 22, 0.98) 100%)`,
-              borderBottom: '1px solid rgba(255,255,255,0.15)',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem'
+              position: 'fixed', inset: 0, zIndex: 99999,
+              background: 'rgba(5, 9, 17, 0.85)',
+              backdropFilter: 'blur(12px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '1.5rem', overflowY: 'auto'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.35rem', flexWrap: 'wrap' }}>
-              <div style={{
-                width: 52, height: 52, borderRadius: '16px', background: activeStep.color,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff',
-                boxShadow: `0 0 20px ${activeStep.color}`, flexShrink: 0
-              }}>
-                {activeStep.icon}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <span style={{
-                    fontSize: '0.78rem', fontWeight: 900, textTransform: 'uppercase',
-                    color: '#ffffff', background: activeStep.color,
-                    padding: '0.25rem 0.75rem', borderRadius: '20px', letterSpacing: '0.06em',
-                    boxShadow: `0 0 12px ${activeStep.color}`
-                  }}>
-                    {activeStep.badge}
-                  </span>
-                  <span style={{ fontSize: '0.78rem', background: '#1e293b', border: '1px solid #475569', padding: '0.25rem 0.7rem', borderRadius: '8px', color: '#f8fafc', fontWeight: 700 }}>
-                    {selectedTrack === 'pop_science' ? 'Pop Science Track' : 'Journalism Track'}
-                  </span>
-                </div>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 900, margin: 0, color: '#ffffff', fontFamily: "'Outfit', sans-serif", textShadow: '0 2px 10px rgba(0,0,0,0.5)', lineHeight: 1.25 }}>
-                  {activeStep.title}
-                </h3>
-              </div>
-            </div>
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                borderRadius: '24px', background: '#090d16', color: '#ffffff',
+                boxShadow: `0 25px 60px ${activeStep.color}50, 0 0 100px rgba(0,0,0,0.9)`,
+                overflow: 'hidden', width: '100%', maxWidth: '1000px', maxHeight: '90vh',
+                border: `2px solid ${activeStep.color}`, position: 'relative',
+                animation: 'ftPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                display: 'flex', flexDirection: 'column'
+              }}
+            >
+              {/* Floating Close Button (X) */}
+              <button
+                onClick={() => setIsDetailModalOpen(false)}
+                style={{
+                  position: 'absolute', top: '1.25rem', right: '1.25rem', zIndex: 20,
+                  background: 'rgba(255, 255, 255, 0.12)', border: '1px solid rgba(255,255,255,0.2)',
+                  color: '#ffffff', width: '38px', height: '38px', borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', transition: 'all 0.2s ease',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#e11d48'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)'; e.currentTarget.style.transform = 'scale(1)'; }}
+              >
+                <X size={20} />
+              </button>
 
-            {/* CTA Button in HUD Header - Only visible to competitors */}
-            {!['judge', 'academic_judge', 'scicomm_judge', 'trainer_judge', 'trainer', 'admin', 'master'].includes(user?.role) && (
-              <div className="ft-timeline-hud-cta">
-                {activeStep.type === 'stage' ? (
-                  <button
-                    className="ft-btn"
-                    onClick={() => navigate('/my-competition')}
-                    style={{
-                      background: `linear-gradient(135deg, ${activeStep.color} 0%, #e11d48 100%)`,
-                      color: '#ffffff', fontWeight: 900, padding: '0.85rem 1.6rem', borderRadius: '14px',
-                      fontSize: '0.98rem', border: 'none', boxShadow: `0 4px 20px ${activeStep.color}80`,
-                      display: 'flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer',
-                      letterSpacing: '0.01em'
-                    }}
-                  >
-                    Submit Work for Stage {activeStep.id} <ArrowRight size={18} />
-                  </button>
-                ) : activeStep.meetingLink ? (
-                  <a
-                    href={activeStep.meetingLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="ft-btn"
-                    style={{
-                      background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-                      color: '#ffffff', fontWeight: 900, padding: '0.85rem 1.6rem', borderRadius: '14px',
-                      fontSize: '0.98rem', textDecoration: 'none', border: 'none',
-                      boxShadow: '0 4px 20px rgba(16, 185, 129, 0.45)',
-                      display: 'flex', alignItems: 'center', gap: '0.55rem'
-                    }}
-                  >
-                    {activeStep.badge === 'Orientation' ? '🚀 Join Orientation Session'
-                      : activeStep.badge === 'Lecture' ? '🎙️ Join Live Lecture'
-                      : activeStep.badge === 'Office Hours' ? '💬 Join Office Hours'
-                      : '🎓 Join Workshop Session'} <ExternalLink size={16} />
-                  </a>
-                ) : (
-                  <a
-                    href="#workshops-section"
-                    className="ft-btn"
-                    style={{
-                      background: '#1e293b', border: `2px solid ${activeStep.color}`,
-                      color: '#ffffff', fontWeight: 900, padding: '0.85rem 1.6rem', borderRadius: '14px',
-                      fontSize: '0.98rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.55rem'
-                    }}
-                  >
-                    {activeStep.badge === 'Orientation' ? '🚀 View Orientation Schedule'
-                      : activeStep.badge === 'Lecture' ? '🎙️ View Lecture Schedule'
-                      : activeStep.badge === 'Office Hours' ? '💬 View Office Hours Schedule'
-                      : '🎓 View Workshop Schedule'} <ExternalLink size={16} />
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Body content inside HUD Card */}
-          <div style={{ padding: '2rem' }}>
-            {/* High-Contrast Subtitle Badge or Full Trainer Profile Card */}
-            {(() => {
-              const trainerAcc = getTrainerAccountForStep(activeStep);
-              if (activeStep.type === 'workshop' && trainerAcc) {
-                return (
+              {/* Header Bar inside Dark HUD */}
+              <div 
+                className="ft-timeline-hud-header"
+                style={{
+                  padding: '1.6rem 2rem',
+                  background: `linear-gradient(135deg, ${activeStep.color}35 0%, rgba(9, 13, 22, 0.98) 100%)`,
+                  borderBottom: '1px solid rgba(255,255,255,0.15)',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.35rem', flexWrap: 'wrap', paddingRight: '2.5rem' }}>
                   <div style={{
-                    margin: '0.2rem 0 1.25rem 0', padding: '0.85rem 1.25rem', borderRadius: '16px',
-                    background: '#161f30', border: `1.5px solid ${activeStep.color}`,
-                    display: 'inline-flex', alignItems: 'center', gap: '1rem',
-                    boxShadow: `0 4px 20px ${activeStep.color}25`
+                    width: 52, height: 52, borderRadius: '16px', background: activeStep.color,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff',
+                    boxShadow: `0 0 20px ${activeStep.color}`, flexShrink: 0
                   }}>
-                    <img
-                      src={trainerAcc.avatarUrl || trainerAcc.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${trainerAcc.username}`}
-                      alt={trainerAcc.name}
-                      style={{ width: '48px', height: '48px', borderRadius: '50%', border: `2.5px solid ${activeStep.color}`, objectFit: 'cover', flexShrink: 0 }}
-                    />
-                    <div>
-                      <div style={{ fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', color: activeStep.color, letterSpacing: '0.06em' }}>
-                        {activeStep.badge === 'Orientation' ? '🚀 Session Host & Lead Presenter'
-                          : activeStep.badge === 'Lecture' ? '🎙️ Guest Lecturer / Speaker'
-                          : activeStep.badge === 'Office Hours' ? '💬 Office Hours Mentor'
-                          : `🎓 Lead ${activeStep.badge || 'Workshop'} Trainer / Speaker`}
-                      </div>
-                      <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#ffffff', margin: '0.15rem 0' }}>
-                        {trainerAcc.name || trainerAcc.username}
-                      </div>
-                      <div style={{ fontSize: '0.82rem', color: '#cbd5e1', fontWeight: 600 }}>
-                        <span>{getCleanAcademicTitle(trainerAcc)}</span>
-                      </div>
+                    {activeStep.icon}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <span style={{
+                        fontSize: '0.78rem', fontWeight: 900, textTransform: 'uppercase',
+                        color: '#ffffff', background: activeStep.color,
+                        padding: '0.25rem 0.75rem', borderRadius: '20px', letterSpacing: '0.06em',
+                        boxShadow: `0 0 12px ${activeStep.color}`
+                      }}>
+                        {activeStep.badge}
+                      </span>
+                      <span style={{ fontSize: '0.78rem', background: '#1e293b', border: '1px solid #475569', padding: '0.25rem 0.7rem', borderRadius: '8px', color: '#f8fafc', fontWeight: 700 }}>
+                        {selectedTrack === 'pop_science' ? 'Pop Science Track' : 'Journalism Track'}
+                      </span>
                     </div>
-                  </div>
-                );
-              }
-
-              return (
-                <div style={{
-                  fontSize: '1.05rem', fontWeight: 900,
-                  color: selectedTrack === 'pop_science' ? '#ff6b81' : '#38bdf8',
-                  marginBottom: '0.6rem', display: 'inline-block',
-                  background: selectedTrack === 'pop_science' ? 'rgba(255, 107, 129, 0.12)' : 'rgba(56, 189, 248, 0.12)',
-                  padding: '0.35rem 0.85rem', borderRadius: '10px',
-                  border: `1px solid ${selectedTrack === 'pop_science' ? 'rgba(255, 107, 129, 0.3)' : 'rgba(56, 189, 248, 0.3)'}`
-                }}>
-                  {activeStep.sub}
-                </div>
-              );
-            })()}
-
-            {/* Crisp Bright Description */}
-            <p style={{ fontSize: '0.98rem', color: '#f1f5f9', margin: '0 0 1.75rem 0', maxWidth: '850px', lineHeight: 1.65, fontWeight: 500 }}>
-              {activeStep.details}
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.75rem', borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: '1.75rem' }}>
-              {/* Left Box: Judging Criteria */}
-              {activeStep.type === 'stage' && (
-                <div>
-                  <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#ffffff', marginBottom: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1rem' }}>⚖️</span> JUDGING CRITERIA BREAKDOWN:
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {(() => {
-                      const stageCriteria = (activeStep.criteria && activeStep.criteria.length > 0)
-                        ? activeStep.criteria
-                        : DEFAULT_JUDGING_CRITERIA.filter(dc => dc.stageId === 'all' || Number(dc.stageId) === Number(activeStep.id));
-
-                      if (stageCriteria.length === 0) {
-                        return <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontStyle: 'italic' }}>No criteria assigned to this stage yet</span>;
-                      }
-
-                      // Check if user has an evaluation score published
-                      const userEval = (liveEvaluations || []).find(ev =>
-                        (Number(ev.stageId) === Number(activeStep.id) || Number(ev.stageId) === Number(activeStep.stageId)) &&
-                        (ev.competitorId === meDoc?.id || ev.competitorUsername === meDoc?.username || ev.competitorCode === meDoc?.code || ev.competitorId === user?.id || ev.userId === user?.id)
-                      );
-
-                      const isPublished = (publishedResults || []).some(p =>
-                        (Number(p.stageId) === Number(activeStep.id) || Number(p.stageId) === Number(activeStep.stageId)) &&
-                        p.isPublished === true
-                      );
-
-                      const showEvaluatedScore = Boolean(userEval && (isPublished || isAdmin));
-
-                      return stageCriteria.map((c, idx) => {
-                        const maxPts = Number(c.maxPoints || c.points || c.weight || c.score || 25);
-                        const scoredPts = (userEval && userEval.criteriaScores && userEval.criteriaScores[c.id]) !== undefined
-                          ? Number(userEval.criteriaScores[c.id])
-                          : (showEvaluatedScore && userEval?.score !== undefined ? Math.round(Number(userEval.score) / stageCriteria.length) : null);
-
-                        return (
-                          <div key={c.id || c.name || idx} style={{
-                            padding: '0.8rem 1.1rem', borderRadius: '14px',
-                            background: '#161f30', border: `1.5px solid ${c.category === 'academic' ? '#0284c7' : '#e11d48'}`,
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
-                          }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                              <span style={{
-                                fontSize: '0.78rem', padding: '0.25rem 0.65rem', borderRadius: '8px',
-                                background: c.category === 'academic' ? '#0284c7' : '#e11d48',
-                                color: '#ffffff', fontWeight: 900
-                              }}>
-                                {c.category === 'academic' ? 'Academic 🎓' : 'SciComm 🎙️'}
-                              </span>
-                              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#ffffff' }}>{c.name}</span>
-                            </div>
-                            <span style={{
-                              fontSize: '0.88rem', fontWeight: 900,
-                              color: showEvaluatedScore ? '#ffffff' : '#0f172a',
-                              background: showEvaluatedScore ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : '#f59e0b',
-                              padding: '0.25rem 0.75rem', borderRadius: '8px',
-                              boxShadow: showEvaluatedScore ? '0 2px 10px rgba(16, 185, 129, 0.4)' : '0 2px 8px rgba(245, 158, 11, 0.4)'
-                            }}>
-                              {scoredPts !== null ? `⭐ ${scoredPts} / ${maxPts} pts` : `${maxPts} pts`}
-                            </span>
-                          </div>
-                        );
-                      });
-                    })()}
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: 900, margin: 0, color: '#ffffff', fontFamily: "'Outfit', sans-serif", textShadow: '0 2px 10px rgba(0,0,0,0.5)', lineHeight: 1.25 }}>
+                      {activeStep.title}
+                    </h3>
                   </div>
                 </div>
-              )}
 
-              {/* Right Box: Assigned Judges */}
-              {activeStep.type === 'stage' && (
-                <div>
-                  <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#ffffff', marginBottom: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1rem' }}>👥</span> EVALUATION PANEL:
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {(activeStep.assignedJudgeIds || []).length === 0 ? (
-                      <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontStyle: 'italic' }}>No judges assigned to this stage yet</span>
+                {/* CTA Button in HUD Header - Only visible to competitors */}
+                {!['judge', 'academic_judge', 'scicomm_judge', 'trainer_judge', 'trainer', 'admin', 'master'].includes(user?.role) && (
+                  <div className="ft-timeline-hud-cta">
+                    {activeStep.type === 'stage' ? (
+                      <button
+                        className="ft-btn"
+                        onClick={() => { setIsDetailModalOpen(false); navigate('/my-competition'); }}
+                        style={{
+                          background: `linear-gradient(135deg, ${activeStep.color} 0%, #e11d48 100%)`,
+                          color: '#ffffff', fontWeight: 900, padding: '0.85rem 1.6rem', borderRadius: '14px',
+                          fontSize: '0.98rem', border: 'none', boxShadow: `0 4px 20px ${activeStep.color}80`,
+                          display: 'flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer',
+                          letterSpacing: '0.01em'
+                        }}
+                      >
+                        Submit Work for Stage {activeStep.id} <ArrowRight size={18} />
+                      </button>
+                    ) : activeStep.meetingLink ? (
+                      <a
+                        href={activeStep.meetingLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="ft-btn"
+                        style={{
+                          background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+                          color: '#ffffff', fontWeight: 900, padding: '0.85rem 1.6rem', borderRadius: '14px',
+                          fontSize: '0.98rem', textDecoration: 'none', border: 'none',
+                          boxShadow: '0 4px 20px rgba(16, 185, 129, 0.45)',
+                          display: 'flex', alignItems: 'center', gap: '0.55rem'
+                        }}
+                      >
+                        {activeStep.badge === 'Orientation' ? '🚀 Join Orientation Session'
+                          : activeStep.badge === 'Lecture' ? '🎙️ Join Live Lecture'
+                          : activeStep.badge === 'Office Hours' ? '💬 Join Office Hours'
+                          : '🎓 Join Workshop Session'} <ExternalLink size={16} />
+                      </a>
                     ) : (
-                      (activeStep.assignedJudgeIds || []).map(judgeId => {
-                        const judge = scientists.find(u => u.id === judgeId);
-                        if (!judge) return null;
-                        const roleColor = '#c084fc';
-                        const roleLabel = 'Judge';
-                        const avatarUrl = judge.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${judge.username || judge.name}`;
-
-                        return (
-                          <div key={judgeId} style={{
-                            display: 'flex', alignItems: 'center', gap: '0.95rem',
-                            background: '#161f30', padding: '0.85rem 1.15rem', borderRadius: '16px',
-                            border: `1.5px solid ${roleColor}80`,
-                            boxShadow: '0 4px 16px rgba(0,0,0,0.2)', flexWrap: 'wrap'
-                          }}>
-                            <img
-                              src={avatarUrl}
-                              alt={judge.name}
-                              style={{ width: '46px', height: '46px', borderRadius: '50%', border: `2.5px solid ${roleColor}`, objectFit: 'cover', flexShrink: 0, boxShadow: `0 0 10px ${roleColor}40` }}
-                            />
-                            <div style={{ flex: 1 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap' }}>
-                                <div style={{ fontSize: '0.98rem', fontWeight: 900, color: '#ffffff' }}>{judge.name}</div>
-                                <span style={{ fontSize: '0.7rem', fontWeight: 900, background: `${roleColor}25`, color: roleColor, padding: '0.15rem 0.5rem', borderRadius: '6px', border: `1px solid ${roleColor}60` }}>
-                                  {roleLabel}
-                                </span>
-                              </div>
-                              <div style={{ fontSize: '0.8rem', color: '#cbd5e1', marginTop: '0.2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                <span>🎓 {getCleanAcademicTitle(judge)}</span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
+                      <a
+                        href="#workshops-section"
+                        onClick={() => setIsDetailModalOpen(false)}
+                        className="ft-btn"
+                        style={{
+                          background: '#1e293b', border: `2px solid ${activeStep.color}`,
+                          color: '#ffffff', fontWeight: 900, padding: '0.85rem 1.6rem', borderRadius: '14px',
+                          fontSize: '0.98rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.55rem'
+                        }}
+                      >
+                        {activeStep.badge === 'Orientation' ? '🚀 View Orientation Schedule'
+                          : activeStep.badge === 'Lecture' ? '🎙️ View Lecture Schedule'
+                          : activeStep.badge === 'Office Hours' ? '💬 View Office Hours Schedule'
+                          : '🎓 View Workshop Schedule'} <ExternalLink size={16} />
+                      </a>
                     )}
                   </div>
+                )}
+              </div>
+
+              {/* Body content inside HUD Card */}
+              <div style={{ padding: '2rem', overflowY: 'auto' }}>
+                {/* High-Contrast Subtitle Badge or Full Trainer Profile Card */}
+                {(() => {
+                  const trainerAcc = getTrainerAccountForStep(activeStep);
+                  if (activeStep.type === 'workshop' && trainerAcc) {
+                    return (
+                      <div style={{
+                        margin: '0.2rem 0 1.25rem 0', padding: '0.85rem 1.25rem', borderRadius: '16px',
+                        background: '#161f30', border: `1.5px solid ${activeStep.color}`,
+                        display: 'inline-flex', alignItems: 'center', gap: '1rem',
+                        boxShadow: `0 4px 20px ${activeStep.color}25`
+                      }}>
+                        <img
+                          src={trainerAcc.avatarUrl || trainerAcc.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${trainerAcc.username}`}
+                          alt={trainerAcc.name}
+                          style={{ width: '48px', height: '48px', borderRadius: '50%', border: `2.5px solid ${activeStep.color}`, objectFit: 'cover', flexShrink: 0 }}
+                        />
+                        <div>
+                          <div style={{ fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', color: activeStep.color, letterSpacing: '0.06em' }}>
+                            {activeStep.badge === 'Orientation' ? '🚀 Session Host & Lead Presenter'
+                              : activeStep.badge === 'Lecture' ? '🎙️ Guest Lecturer / Speaker'
+                              : activeStep.badge === 'Office Hours' ? '💬 Office Hours Mentor'
+                              : `🎓 Lead ${activeStep.badge || 'Workshop'} Trainer / Speaker`}
+                          </div>
+                          <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#ffffff', margin: '0.15rem 0' }}>
+                            {trainerAcc.name || trainerAcc.username}
+                          </div>
+                          <div style={{ fontSize: '0.82rem', color: '#cbd5e1', fontWeight: 600 }}>
+                            <span>{getCleanAcademicTitle(trainerAcc)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div style={{
+                      fontSize: '1.05rem', fontWeight: 900,
+                      color: selectedTrack === 'pop_science' ? '#ff6b81' : '#38bdf8',
+                      marginBottom: '0.6rem', display: 'inline-block',
+                      background: selectedTrack === 'pop_science' ? 'rgba(255, 107, 129, 0.12)' : 'rgba(56, 189, 248, 0.12)',
+                      padding: '0.35rem 0.85rem', borderRadius: '10px',
+                      border: `1px solid ${selectedTrack === 'pop_science' ? 'rgba(255, 107, 129, 0.3)' : 'rgba(56, 189, 248, 0.3)'}`
+                    }}>
+                      {activeStep.sub}
+                    </div>
+                  );
+                })()}
+
+                {/* Crisp Bright Description */}
+                <p style={{ fontSize: '0.98rem', color: '#f1f5f9', margin: '0 0 1.75rem 0', maxWidth: '850px', lineHeight: 1.65, fontWeight: 500 }}>
+                  {activeStep.details}
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.75rem', borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: '1.75rem' }}>
+                  {/* Left Box: Judging Criteria */}
+                  {activeStep.type === 'stage' && (
+                    <div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#ffffff', marginBottom: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '1rem' }}>⚖️</span> JUDGING CRITERIA BREAKDOWN:
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {(() => {
+                          const stageCriteria = (activeStep.criteria && activeStep.criteria.length > 0)
+                            ? activeStep.criteria
+                            : DEFAULT_JUDGING_CRITERIA.filter(dc => dc.stageId === 'all' || Number(dc.stageId) === Number(activeStep.id));
+
+                          if (stageCriteria.length === 0) {
+                            return <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontStyle: 'italic' }}>No criteria assigned to this stage yet</span>;
+                          }
+
+                          // Check if user has an evaluation score published
+                          const userEval = (liveEvaluations || []).find(ev =>
+                            (Number(ev.stageId) === Number(activeStep.id) || Number(ev.stageId) === Number(activeStep.stageId)) &&
+                            (ev.competitorId === meDoc?.id || ev.competitorUsername === meDoc?.username || ev.competitorCode === meDoc?.code || ev.competitorId === user?.id || ev.userId === user?.id)
+                          );
+
+                          const isPublished = (publishedResults || []).some(p =>
+                            (Number(p.stageId) === Number(activeStep.id) || Number(p.stageId) === Number(activeStep.stageId)) &&
+                            p.isPublished === true
+                          );
+
+                          const showEvaluatedScore = Boolean(userEval && (isPublished || isAdmin));
+
+                          return stageCriteria.map((c, idx) => {
+                            const maxPts = Number(c.maxPoints || c.points || c.weight || c.score || 25);
+                            const scoredPts = (userEval && userEval.criteriaScores && userEval.criteriaScores[c.id]) !== undefined
+                              ? Number(userEval.criteriaScores[c.id])
+                              : (showEvaluatedScore && userEval?.score !== undefined ? Math.round(Number(userEval.score) / stageCriteria.length) : null);
+
+                            return (
+                              <div key={c.id || c.name || idx} style={{
+                                padding: '0.8rem 1.1rem', borderRadius: '14px',
+                                background: '#161f30', border: `1.5px solid ${c.category === 'academic' ? '#0284c7' : '#e11d48'}`,
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                                  <span style={{
+                                    fontSize: '0.78rem', padding: '0.25rem 0.65rem', borderRadius: '8px',
+                                    background: c.category === 'academic' ? '#0284c7' : '#e11d48',
+                                    color: '#ffffff', fontWeight: 900
+                                  }}>
+                                    {c.category === 'academic' ? 'Academic 🎓' : 'SciComm 🎙️'}
+                                  </span>
+                                  <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#ffffff' }}>{c.name}</span>
+                                </div>
+                                <span style={{
+                                  fontSize: '0.88rem', fontWeight: 900,
+                                  color: showEvaluatedScore ? '#ffffff' : '#0f172a',
+                                  background: showEvaluatedScore ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : '#f59e0b',
+                                  padding: '0.25rem 0.75rem', borderRadius: '8px',
+                                  boxShadow: showEvaluatedScore ? '0 2px 10px rgba(16, 185, 129, 0.4)' : '0 2px 8px rgba(245, 158, 11, 0.4)'
+                                }}>
+                                  {scoredPts !== null ? `⭐ ${scoredPts} / ${maxPts} pts` : `${maxPts} pts`}
+                                </span>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Right Box: Assigned Judges */}
+                  {activeStep.type === 'stage' && (
+                    <div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#ffffff', marginBottom: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '1rem' }}>👥</span> EVALUATION PANEL:
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {(activeStep.assignedJudgeIds || []).length === 0 ? (
+                          <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontStyle: 'italic' }}>No judges assigned to this stage yet</span>
+                        ) : (
+                          (activeStep.assignedJudgeIds || []).map(judgeId => {
+                            const judge = scientists.find(u => u.id === judgeId);
+                            if (!judge) return null;
+                            const roleColor = '#c084fc';
+                            const roleLabel = 'Judge';
+                            const avatarUrl = judge.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${judge.username || judge.name}`;
+
+                            return (
+                              <div key={judgeId} style={{
+                                display: 'flex', alignItems: 'center', gap: '0.95rem',
+                                background: '#161f30', padding: '0.85rem 1.15rem', borderRadius: '16px',
+                                border: `1.5px solid ${roleColor}80`,
+                                boxShadow: '0 4px 16px rgba(0,0,0,0.2)', flexWrap: 'wrap'
+                              }}>
+                                <img
+                                  src={avatarUrl}
+                                  alt={judge.name}
+                                  style={{ width: '46px', height: '46px', borderRadius: '50%', border: `2.5px solid ${roleColor}`, objectFit: 'cover', flexShrink: 0, boxShadow: `0 0 10px ${roleColor}40` }}
+                                />
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap' }}>
+                                    <div style={{ fontSize: '0.98rem', fontWeight: 900, color: '#ffffff' }}>{judge.name}</div>
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 900, background: `${roleColor}25`, color: roleColor, padding: '0.15rem 0.5rem', borderRadius: '6px', border: `1px solid ${roleColor}60` }}>
+                                      {roleLabel}
+                                    </span>
+                                  </div>
+                                  <div style={{ fontSize: '0.8rem', color: '#cbd5e1', marginTop: '0.2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                    <span>🎓 {getCleanAcademicTitle(judge)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
       </div>
 
