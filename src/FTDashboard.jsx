@@ -36,8 +36,8 @@ export default function FTDashboard() {
     // 2. Clear any pending modal open timers
     if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
 
-    // 3. Wait for laser line animation to finish, then open popup modal
-    const animDelay = distance === 0 ? 100 : Math.min(850, Math.max(450, 350 + distance * 100));
+    // 3. Wait for laser line animation to reach target node before opening popup modal
+    const animDelay = distance === 0 ? 120 : ((distance - 1) * 120 + 560);
 
     modalTimerRef.current = setTimeout(() => {
       setIsDetailModalOpen(true);
