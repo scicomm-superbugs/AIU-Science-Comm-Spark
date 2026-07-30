@@ -1426,11 +1426,6 @@ export default function FTDashboard() {
         )}
 
       </div>
-
-      {/* Embedded Workshop Schedule */}
-      <div id="workshops-section">
-        <WorkshopManager isAdmin={false} isTrainer={false} currentTrack={selectedTrack} />
-      </div>
     </div>
   );
 }
