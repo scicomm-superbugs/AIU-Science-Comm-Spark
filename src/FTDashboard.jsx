@@ -600,13 +600,12 @@ export default function FTDashboard() {
             </span>
           </div>
         </div>
-
-        {/* ZIGZAG SNAKE TIMELINE ROAD MAP — FITS ALL STEPS ON ONE PAGE WITHOUT HORIZONTAL SCROLL */}
-        <div className="ft-desktop-timeline" style={{ position: 'relative', margin: '4.5rem 0 2.5rem 0', width: '100%' }}>
+         {/* ZIGZAG SNAKE TIMELINE ROAD MAP — FITS ALL STEPS ON ONE PAGE WITHOUT HORIZONTAL SCROLL */}
+        <div className="ft-desktop-timeline" style={{ position: 'relative', margin: '1.5rem 0 2.5rem 0', width: '100%' }}>
           <div style={{
             display: 'grid',
             gridTemplateColumns: `repeat(${COLUMNS}, 1fr)`,
-            gap: '6.5rem 1.25rem',
+            gap: '2.75rem 1.25rem',
             position: 'relative',
             width: '100%'
           }}>
@@ -626,7 +625,6 @@ export default function FTDashboard() {
               const isSegmentActive = selectedStepIndex > idx;
               const isTipSegment = selectedStepIndex === idx + 1;
               const segDelay = getSegmentTransitionDelay(idx);
-              const isSubOpen = st.type === 'submission_open';
 
               return (
                 <div
@@ -701,7 +699,7 @@ export default function FTDashboard() {
                       top: '30px',
                       left: 'calc(50% - 4px)',
                       width: '8px',
-                      height: 'calc(100% + 6.5rem)',
+                      height: 'calc(100% + 2.75rem)',
                       background: '#e2e8f0',
                       borderRadius: '10px',
                       zIndex: 1,
@@ -761,56 +759,6 @@ export default function FTDashboard() {
                     {st.stepNumber}
                   </div>
 
-                  {/* ⬆️ INVERTED TOP BRANCH BOX (Floats High Above line track for Stage Submissions Open) */}
-                  {st.submissionOpenDate && (
-                    <div style={{ position: 'absolute', bottom: '92px', left: '50%', transform: 'translateX(-50%)', zIndex: 12, width: '185px' }}>
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedStepId(st.id);
-                        }}
-                        style={{
-                          background: '#ffffff',
-                          border: '2px solid #10b981',
-                          borderRadius: '14px',
-                          padding: '0.6rem 0.65rem',
-                          boxShadow: '0 8px 22px rgba(16, 185, 129, 0.18)',
-                          textAlign: 'center',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        <div style={{
-                          fontSize: '0.65rem', fontWeight: 900, color: '#047857',
-                          background: '#dcfce7', padding: '0.18rem 0.5rem', borderRadius: '10px',
-                          display: 'inline-flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem',
-                          border: '1px solid #a7f3d0'
-                        }}>
-                          <span>📤</span> Submissions Open
-                        </div>
-
-                        <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.25, marginBottom: '0.25rem' }}>
-                          {st.submissionOpenTitle || `Stage ${st.stageId || st.id} Submissions Open`}
-                        </div>
-
-                        <div style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem' }}>
-                          <Calendar size={11} style={{ color: '#059669' }} /> Open: {formatUnifiedDate(st.submissionOpenDate)}
-                        </div>
-                      </div>
-
-                      {/* Vertical Branch Stem Line (Connecting down to horizontal track line) */}
-                      <div style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 'calc(50% - 1.5px)',
-                        width: '3px',
-                        height: '24px',
-                        background: '#10b981',
-                        boxShadow: '0 0 6px rgba(16, 185, 129, 0.4)'
-                      }} />
-                    </div>
-                  )}
-
                   {/* Glassmorphic Step Title Card (Below Node) */}
                   <div
                     onClick={() => setSelectedStepId(st.id)}
@@ -849,6 +797,40 @@ export default function FTDashboard() {
                     <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
                       <Calendar size={12} style={{ color: st.color }} /> {st.deadline}
                     </div>
+
+                    {/* Stage Deliverables Submissions Open Badge */}
+                    {st.type === 'stage' && (
+                      <div style={{
+                        marginTop: '0.5rem', paddingTop: '0.45rem', borderTop: '1px dashed #cbd5e1',
+                        display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'center'
+                      }}>
+                        {st.submissions && st.submissions.length > 0 ? (
+                          st.submissions.map((sub, sIdx) => (
+                            <div key={sub.id || sIdx} style={{
+                              fontSize: '0.68rem', fontWeight: 800, color: '#047857', background: '#dcfce7',
+                              padding: '0.2rem 0.5rem', borderRadius: '8px', border: '1px solid #a7f3d0',
+                              width: '100%', boxSizing: 'border-box', textAlign: 'center',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem'
+                            }}>
+                              <span>📤</span>
+                              <span style={{ fontWeight: 900 }}>Submission {sIdx + 1}:</span>
+                              <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                {sub.name || `Deliverable ${sIdx + 1}`}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <div style={{
+                            fontSize: '0.68rem', fontWeight: 800, color: '#047857', background: '#dcfce7',
+                            padding: '0.2rem 0.5rem', borderRadius: '8px', border: '1px solid #a7f3d0',
+                            width: '100%', boxSizing: 'border-box', textAlign: 'center',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem'
+                          }}>
+                            <span>📤</span> Submissions Open: {formatUnifiedDate(st.submissionOpenDate)}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
