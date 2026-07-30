@@ -1047,11 +1047,46 @@ export default function FTDashboard() {
                     {st.title}
                   </div>
 
-                  {st.items && st.items.length > 0 ? (
+                  {st.type === 'submission_open' ? (
+                    <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', fontSize: '0.76rem', fontWeight: 800 }}>
+                        <span style={{ color: '#dc2626', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                          📅 Opens: {st.deadline}
+                        </span>
+                        {st.closeDeadline && (
+                          <span style={{ color: '#991b1b', background: '#fef2f2', padding: '0.15rem 0.5rem', borderRadius: '6px', border: '1px solid #fca5a5', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            ⏰ Deadline: {st.closeDeadline}
+                          </span>
+                        )}
+                      </div>
+
+                      {st.items && st.items.length > 0 && (
+                        <div style={{
+                          marginTop: '0.25rem', paddingTop: '0.35rem', borderTop: '1px dashed #fecdd3',
+                          display: 'flex', flexDirection: 'column', gap: '0.3rem'
+                        }}>
+                          {st.items.map((it, iIdx) => (
+                            <div key={iIdx} style={{
+                              fontSize: '0.74rem', fontWeight: 800, color: '#991b1b', background: '#fff1f2',
+                              padding: '0.25rem 0.55rem', borderRadius: '8px', border: '1px solid #fecdd3',
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.35rem'
+                            }}>
+                              <span>• {it.subName || it.title || 'Submission Item'}</span>
+                              {it.closeDate && (
+                                <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: 800 }}>
+                                  Deadline: {formatUnifiedDate(it.closeDate)}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : st.items && st.items.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.4rem' }}>
                       {st.items.map((it, iIdx) => (
                         <div key={iIdx} style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                          <span style={{ color: st.color, fontWeight: 900 }}>•</span> {it.title}
+                          <span style={{ color: st.color, fontWeight: 900 }}>•</span> {it.title || it.subName || 'Item'}
                         </div>
                       ))}
                     </div>
