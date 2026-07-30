@@ -929,202 +929,99 @@ export default function FTDashboard() {
           </div>
         </div>
 
-        {/* MOBILE SNAKE / ZIGZAG MAZE ROADMAP — MATCHING USER DRAWING & LASER GLOW ANIMATION */}
-        <div className="ft-mobile-vertical-timeline" style={{ flexDirection: 'column', margin: '1.25rem 0 2.25rem 0', position: 'relative' }}>
+        {/* MOBILE SINGLE-COLUMN VERTICAL ROADMAP WITH INLINE PREVIEWS */}
+        <div className="ft-mobile-vertical-timeline" style={{ flexDirection: 'column', margin: '1.25rem 0 2.25rem 0', position: 'relative', paddingLeft: '3.2rem', gap: '1.25rem' }}>
+          {/* Continuous Vertical Laser Progress Track */}
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '2.5rem 1.25rem',
-            position: 'relative',
-            padding: '0.5rem 0'
+            position: 'absolute', top: '24px', bottom: '24px', left: '24px', width: '6px',
+            background: '#e2e8f0', borderRadius: '10px', zIndex: 1, overflow: 'hidden'
           }}>
-            {steps.map((st, idx) => {
-              const isSelected = String(selectedStepId).toLowerCase().trim() === String(st.id).toLowerCase().trim();
-              const selectedIdx = selectedStepIndex;
-              const row = Math.floor(idx / 2);
-              const isEvenRow = row % 2 === 0;
-              const isLeftCol = isEvenRow ? (idx % 2 === 0) : (idx % 2 === 1);
-              const hasNext = idx < steps.length - 1;
-              const isHorizontalConnector = idx % 2 === 0 && hasNext; // connects step i to i+1 horizontally across row
-              const isVerticalConnector = idx % 2 === 1 && hasNext;   // connects step i to i+1 vertically down column
+            <div style={{
+              width: '100%', height: `${targetedProgressPercent}%`,
+              background: selectedTrack === 'pop_science'
+                ? 'linear-gradient(180deg, #be123c 0%, #e11d48 60%, #f43f5e 100%)'
+                : 'linear-gradient(180deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)',
+              borderRadius: '10px', boxShadow: `0 0 14px ${trackThemeColor}90`,
+              transition: 'height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
+            }} />
+          </div>
 
-              const isConnectorActive = selectedIdx >= idx + 1;
+          {steps.map((st, idx) => {
+            const isSelected = String(selectedStepId).toLowerCase().trim() === String(st.id).toLowerCase().trim();
+            const isPast = selectedStepIndex >= idx;
 
-              return (
-                <div
-                  key={st.id}
-                  style={{
-                    gridColumn: isLeftCol ? 1 : 2,
-                    gridRow: row + 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    textAlign: 'center',
-                    position: 'relative',
-                    zIndex: 3
-                  }}
-                >
-                  {/* Horizontal Connecting Laser Track (connects step i to i+1 across row at top node level) */}
-                  {isHorizontalConnector && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '23px',
-                        left: isLeftCol ? '50%' : 'auto',
-                        right: isLeftCol ? 'auto' : '50%',
-                        width: 'calc(100% + 1.25rem)',
-                        height: '8px',
-                        background: '#e2e8f0',
-                        borderRadius: '10px',
-                        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)',
-                        zIndex: 1,
-                        overflow: 'hidden'
-                      }}
-                    >
-                      {/* Laser Progress Fill — Animates from lower step number to higher step number */}
-                      <div
-                        style={{
-                          height: '100%',
-                          position: 'absolute',
-                          top: 0,
-                          left: isLeftCol ? 0 : 'auto',
-                          right: isLeftCol ? 'auto' : 0,
-                          width: isConnectorActive ? '100%' : '0%',
-                          background: selectedTrack === 'pop_science'
-                            ? (isLeftCol
-                                ? 'linear-gradient(90deg, #be123c 0%, #e11d48 60%, #f43f5e 100%)'
-                                : 'linear-gradient(270deg, #be123c 0%, #e11d48 60%, #f43f5e 100%)')
-                            : (isLeftCol
-                                ? 'linear-gradient(90deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)'
-                                : 'linear-gradient(270deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)'),
-                          borderRadius: '10px',
-                          boxShadow: isConnectorActive ? `0 0 14px ${trackThemeColor}90, 0 0 25px ${trackThemeColor}50` : 'none',
-                          transition: 'width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
-                        }}
-                      />
-                    </div>
-                  )}
+            return (
+              <div 
+                key={st.id}
+                onClick={() => { setSelectedStepId(st.id); setIsDetailModalOpen(true); }}
+                style={{
+                  display: 'flex', alignItems: 'flex-start', gap: '1rem',
+                  position: 'relative', zIndex: 3, cursor: 'pointer',
+                  width: '100%'
+                }}
+              >
+                {/* Numbered Circle Node */}
+                <div style={{
+                  position: 'absolute', left: '-3.2rem', top: '4px',
+                  width: '50px', height: '50px', borderRadius: '50%',
+                  background: isSelected
+                    ? `linear-gradient(135deg, ${st.color} 0%, #0f172a 100%)`
+                    : isPast ? st.color : '#ffffff',
+                  color: isSelected || isPast ? '#ffffff' : st.color,
+                  border: `4px solid ${isSelected ? st.color : isPast ? st.color : '#cbd5e1'}`,
+                  boxShadow: isSelected
+                    ? `0 0 0 6px ${st.color}25, 0 8px 20px ${st.color}40`
+                    : '0 4px 12px rgba(0,0,0,0.06)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '1.1rem', fontWeight: 900, fontFamily: "'Outfit', sans-serif",
+                  flexShrink: 0, transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                }}>
+                  {st.stepNumber}
+                </div>
 
-                  {/* Vertical Connecting Laser Track (connects step i to i+1 down along column from top to bottom) */}
-                  {isVerticalConnector && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '23px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        width: '8px',
-                        height: 'calc(100% + 2.5rem)',
-                        background: '#e2e8f0',
-                        borderRadius: '10px',
-                        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)',
-                        zIndex: 1,
-                        overflow: 'hidden'
-                      }}
-                    >
-                      {/* Laser Progress Fill — Animates from top (lower number) down to bottom (higher number) */}
-                      <div
-                        style={{
-                          width: '100%',
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          height: isConnectorActive ? '100%' : '0%',
-                          background: selectedTrack === 'pop_science'
-                            ? 'linear-gradient(180deg, #be123c 0%, #e11d48 60%, #f43f5e 100%)'
-                            : 'linear-gradient(180deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)',
-                          borderRadius: '10px',
-                          boxShadow: isConnectorActive ? `0 0 14px ${trackThemeColor}90, 0 0 25px ${trackThemeColor}50` : 'none',
-                          transition: 'height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Numbered Circle Node */}
-                  <div
-                    onClick={() => {
-                      setSelectedStepId(st.id);
-                      setIsDetailModalOpen(true);
-                    }}
-                    style={{
-                      width: '54px', height: '54px', borderRadius: '50%',
-                      background: isSelected
-                        ? `linear-gradient(135deg, ${st.color} 0%, #0f172a 100%)`
-                        : '#ffffff',
-                      color: isSelected ? '#ffffff' : st.color,
-                      border: `4px solid ${isSelected ? st.color : '#cbd5e1'}`,
-                      boxShadow: isSelected
-                        ? `0 0 0 6px ${st.color}25, 0 8px 20px ${st.color}40`
-                        : '0 4px 12px rgba(0,0,0,0.06)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '1.1rem', fontWeight: 900, fontFamily: "'Outfit', sans-serif",
-                      cursor: 'pointer', position: 'relative', zIndex: 10,
-                      transform: isSelected ? 'scale(1.12)' : 'scale(1)',
-                      transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
-                    }}
-                  >
-                    {st.stepNumber}
-
-                    {/* HUD Radar Target Pointer on Active Step */}
-                    {isSelected && (
-                      <div
-                        style={{
-                          position: 'absolute', inset: '-6px', borderRadius: '50%',
-                          border: `3px solid ${st.color}`,
-                          boxShadow: `0 0 0 3px ${st.color}30, 0 0 16px ${st.color}`,
-                          animation: 'ftTodayPulse 2s ease-in-out infinite',
-                          pointerEvents: 'none'
-                        }}
-                      />
-                    )}
+                {/* Inline Step Preview Card */}
+                <div style={{
+                  flex: 1, padding: '1rem 1.15rem', borderRadius: '18px',
+                  background: isSelected ? `linear-gradient(135deg, ${st.bgColor} 0%, #ffffff 100%)` : '#ffffff',
+                  border: `2px solid ${isSelected ? st.color : '#e2e8f0'}`,
+                  boxShadow: isSelected ? `0 8px 24px ${st.color}25` : '0 2px 8px rgba(0,0,0,0.03)',
+                  transition: 'all 0.3s ease'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                    <span style={{
+                      fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase',
+                      color: '#ffffff', background: st.color,
+                      padding: '0.2rem 0.65rem', borderRadius: '12px', letterSpacing: '0.04em'
+                    }}>
+                      {st.badge}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Calendar size={12} style={{ color: st.color }} /> {st.deadline}
+                    </span>
                   </div>
 
-                  {/* Step Title & Details Box Popup (Appears on click & disappears on click) */}
-                  {openMobileCardId === st.id && (
-                    <div
-                      onClick={() => setOpenMobileCardId(null)}
-                      style={{
-                        marginTop: '0.65rem', padding: '0.75rem 0.65rem', borderRadius: '16px',
-                        background: isSelected
-                          ? `linear-gradient(135deg, ${st.bgColor} 0%, #ffffff 100%)`
-                          : '#ffffff',
-                        border: `2px solid ${st.color}`,
-                        width: '100%', cursor: 'pointer',
-                        position: 'relative', zIndex: 15,
-                        boxShadow: `0 8px 24px ${st.color}30`,
-                        animation: 'ftPopIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)'
-                      }}
-                    >
-                      <div style={{
-                        fontSize: '0.66rem', fontWeight: 800, color: st.color,
-                        textTransform: 'uppercase', marginBottom: '0.2rem',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem'
-                      }}>
-                        <span>
-                          {st.type === 'submission_open' ? '📤 Submission'
-                            : st.type === 'stage' ? '🏆 Milestone'
-                            : st.badge === 'Orientation' ? '🚀 Orientation'
-                            : st.badge === 'Lecture' ? '🎙️ Lecture'
-                            : st.badge === 'Office Hours' ? '💬 Office Hours'
-                            : `📚 ${st.badge || 'Workshop'}`}
-                        </span>
-                        <span>· {st.stepNumber}</span>
-                      </div>
+                  <div style={{ fontSize: '0.98rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.3, marginBottom: '0.35rem' }}>
+                    {st.title}
+                  </div>
 
-                      <div style={{ fontWeight: 800, fontSize: '0.84rem', color: '#0f172a', lineHeight: 1.3, marginBottom: '0.25rem' }}>
-                        {st.title}
-                      </div>
-
-                      <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
-                        <Calendar size={11} style={{ color: st.color }} /> {st.deadline}
-                      </div>
+                  {st.items && st.items.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.4rem' }}>
+                      {st.items.map((it, iIdx) => (
+                        <div key={iIdx} style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <span style={{ color: st.color, fontWeight: 900 }}>•</span> {it.title}
+                        </div>
+                      ))}
                     </div>
-                  )}
+                  ) : st.sub ? (
+                    <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600, marginTop: '0.25rem' }}>
+                      {st.sub}
+                    </div>
+                  ) : null}
                 </div>
-              );
-            })}
-          </div>
+
+              </div>
+            );
+          })}
         </div>
 
         {/* GRAPHICAL POPUP MODAL WINDOW FOR STEP DETAILS */}
