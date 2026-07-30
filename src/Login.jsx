@@ -251,8 +251,8 @@ export default function Login() {
   };
 
   return (
-    <div className="ft-app" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100dvh', padding: '1rem' }}>
-      <div className="ft-card ft-animate-in" style={{ maxWidth: '440px', width: '100%', padding: '2rem' }}>
+    <div className="ft-app ft-login-wrapper" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100dvh', padding: '1rem' }}>
+      <div className="ft-card ft-animate-in ft-login-card" style={{ maxWidth: '440px', width: '100%', padding: '2rem' }}>
         
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2.0rem' }}>

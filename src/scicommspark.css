@@ -3564,3 +3564,82 @@ html, body, #root {
     transform: translateX(-25%);
   }
 }
+
+/* ─────────────────────────── MOBILE RESPONSIVE OPTIMIZATIONS (LOGIN & DASHBOARD) ─────────────────────────── */
+@media (max-width: 640px) {
+  /* Login Page Mobile Optimization */
+  .ft-login-wrapper {
+    padding: 0.75rem !important;
+    min-height: 100dvh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .ft-login-card {
+    padding: 1.25rem 1rem !important;
+    border-radius: 20px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08) !important;
+  }
+
+  .ft-login-card input,
+  .ft-login-card select,
+  .ft-login-card button {
+    font-size: 16px !important; /* Prevents auto-zoom on mobile Safari / Chrome */
+  }
+
+  .ft-login-card button {
+    min-height: 48px !important;
+  }
+
+  /* Dashboard Track Buttons Mobile Stack */
+  .ft-track-selector-bar {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 0.65rem !important;
+  }
+
+  .ft-track-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 0.85rem 1rem !important;
+    font-size: 0.95rem !important;
+  }
+
+  /* Dashboard Container Mobile Padding */
+  .ft-timeline-card-container {
+    padding: 1.25rem 0.85rem !important;
+    border-radius: 18px !important;
+  }
+
+  /* Timeline Legend Bar Mobile */
+  .ft-timeline-legend-bar {
+    gap: 0.4rem !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
+  }
+
+  .ft-timeline-legend-pill {
+    padding: 0.25rem 0.55rem !important;
+    font-size: 0.72rem !important;
+  }
+
+  /* Graphical Popup Modal Window Mobile */
+  .ft-timeline-modal-container {
+    padding: 0.75rem !important;
+  }
+
+  .ft-timeline-modal-content {
+    max-height: 94vh !important;
+    border-radius: 18px !important;
+  }
+
+  .ft-timeline-hud-header {
+    padding: 1.2rem 1rem !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+}
+

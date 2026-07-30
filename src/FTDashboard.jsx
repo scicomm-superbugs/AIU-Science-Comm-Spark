@@ -1130,6 +1130,7 @@ export default function FTDashboard() {
         {/* GRAPHICAL POPUP MODAL WINDOW FOR STEP DETAILS */}
         {isDetailModalOpen && activeStep && (
           <div
+            className="ft-timeline-modal-container"
             onClick={() => setIsDetailModalOpen(false)}
             style={{
               position: 'fixed', inset: 0, zIndex: 99999,
@@ -1140,6 +1141,7 @@ export default function FTDashboard() {
             }}
           >
             <div
+              className="ft-timeline-modal-content"
               onClick={(e) => e.stopPropagation()}
               style={{
                 borderRadius: '24px', background: '#090d16', color: '#ffffff',
