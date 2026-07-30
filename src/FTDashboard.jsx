@@ -385,31 +385,7 @@ export default function FTDashboard() {
     }
   }, [steps]);
 
-  // Mobile Timeline Track Height & Walking Animation Measurement
-  const mobileTimelineRef = useRef(null);
-  const [mobileTrackHeight, setMobileTrackHeight] = useState(0);
 
-  useEffect(() => {
-    const updateMobileTrack = () => {
-      if (!mobileTimelineRef.current) return;
-      const items = mobileTimelineRef.current.querySelectorAll('.ft-mobile-step-item');
-      if (items.length >= 2) {
-        const first = items[0];
-        const last = items[items.length - 1];
-        const startY = first.offsetTop + 29;
-        const endY = last.offsetTop + 29;
-        setMobileTrackHeight(Math.max(0, endY - startY));
-      }
-    };
-
-    updateMobileTrack();
-    const timer = setTimeout(updateMobileTrack, 100);
-    window.addEventListener('resize', updateMobileTrack);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', updateMobileTrack);
-    };
-  }, [steps, selectedTrack]);
 
   // Helper to match workshop trainer account
   const getTrainerAccountForStep = (step) => {
@@ -1008,46 +984,16 @@ export default function FTDashboard() {
         </div>
 
         {/* MOBILE SINGLE-COLUMN VERTICAL ROADMAP WITH INLINE PREVIEWS */}
-        <div 
-          ref={mobileTimelineRef}
-          className="ft-mobile-vertical-timeline"
-          style={{ flexDirection: 'column', margin: '1.25rem 0 2.25rem 0', position: 'relative', paddingLeft: '3.2rem', gap: '1.25rem' }}
-        >
-          {/* Continuous Track Background & Animated Walking Fill Bar (Terminates strictly at last step circle) */}
-          {mobileTrackHeight > 0 && (
-            <div style={{
-              position: 'absolute',
-              top: '29px',
-              left: '-1.65rem',
-              width: '5px',
-              height: `${mobileTrackHeight}px`,
-              background: '#cbd5e1',
-              borderRadius: '4px',
-              zIndex: 1,
-              overflow: 'hidden'
-            }}>
-              {/* Walking Animated Color Laser Fill */}
-              <div style={{
-                width: '100%',
-                height: `${(selectedStepIndex / Math.max(1, steps.length - 1)) * 100}%`,
-                background: selectedTrack === 'pop_science'
-                  ? 'linear-gradient(180deg, #be123c 0%, #e11d48 60%, #f43f5e 100%)'
-                  : 'linear-gradient(180deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)',
-                borderRadius: '4px',
-                boxShadow: `0 0 12px ${trackThemeColor}`,
-                transition: 'height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
-              }} />
-            </div>
-          )}
-
+        <div className="ft-mobile-vertical-timeline" style={{ flexDirection: 'column', margin: '1.25rem 0 2.25rem 0', position: 'relative', paddingLeft: '3.2rem', gap: '1.25rem' }}>
           {steps.map((st, idx) => {
             const isSelected = String(selectedStepId).toLowerCase().trim() === String(st.id).toLowerCase().trim();
             const isPast = selectedStepIndex >= idx;
+            const isSegmentActive = selectedStepIndex > idx;
+            const isTipSegment = (selectedStepIndex === idx + 1);
 
             return (
               <div 
                 key={st.id}
-                className="ft-mobile-step-item"
                 onClick={() => handleStepClick(st.id)}
                 style={{
                   display: 'flex', alignItems: 'flex-start', gap: '1rem',
@@ -1055,6 +1001,49 @@ export default function FTDashboard() {
                   width: '100%'
                 }}
               >
+                {/* Connecting Vertical Laser Track Segment (Terminates strictly at last step circle node) */}
+                {idx < steps.length - 1 && (
+                  <div style={{
+                    position: 'absolute',
+                    left: '-1.65rem',
+                    top: '29px',
+                    height: 'calc(100% + 1.25rem)',
+                    width: '6px',
+                    background: '#e2e8f0',
+                    borderRadius: '10px',
+                    zIndex: 1,
+                    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
+                  }}>
+                    {/* Inner Animated Laser Color Fill Segment */}
+                    <div style={{
+                      width: '100%',
+                      height: isSegmentActive ? '100%' : '0%',
+                      background: selectedTrack === 'pop_science'
+                        ? 'linear-gradient(180deg, #be123c 0%, #e11d48 60%, #f43f5e 100%)'
+                        : 'linear-gradient(180deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)',
+                      borderRadius: '10px',
+                      boxShadow: isSegmentActive ? `0 0 14px ${trackThemeColor}90` : 'none',
+                      transition: 'height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      position: 'relative'
+                    }} />
+
+                    {/* Glowing Radar Tip Pulse on active segment tip */}
+                    {isTipSegment && (
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '-8px',
+                        left: '-6px',
+                        width: '18px', height: '18px', borderRadius: '50%',
+                        background: '#ffffff',
+                        border: `3.5px solid ${trackThemeColor}`,
+                        boxShadow: `0 0 0 4px ${trackThemeColor}30, 0 0 16px ${trackThemeColor}`,
+                        animation: 'ftTodayPulse 2s ease-in-out infinite',
+                        zIndex: 3,
+                        transition: 'all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                      }} />
+                    )}
+                  </div>
+                )}
                 {/* Numbered Circle Node */}
                 <div style={{
                   position: 'absolute', left: '-3.2rem', top: '4px',
