@@ -243,10 +243,11 @@ export default function FTDashboard() {
 
       let combinedTitle = '';
       if (items.length === 1) {
-        combinedTitle = `${primaryItem.subName} Submissions Open`;
+        const cleanName = primaryItem.subName.replace(/\s*submissions?\s*(open)?/i, '').trim();
+        combinedTitle = `${cleanName} Submission`;
       } else {
-        const names = items.map(i => i.subName.replace(/\s*submissions?\s*/i, '').trim());
-        combinedTitle = `${names.join(' & ')} Submissions Open`;
+        const names = items.map(i => i.subName.replace(/\s*submissions?\s*(open)?/i, '').trim());
+        combinedTitle = `${names.join(' & ')} Submission`;
       }
 
       return {
@@ -254,7 +255,7 @@ export default function FTDashboard() {
         type: 'submission_open',
         title: combinedTitle,
         items: items,
-        badge: 'Submissions Open',
+        badge: 'Submission',
         deadline: formatUnifiedDate(dateKey),
         closeDeadline: primaryItem.closeDate ? formatUnifiedDate(primaryItem.closeDate) : '',
         openDate: dateKey,
@@ -663,7 +664,7 @@ export default function FTDashboard() {
 
           <div className="ft-timeline-legend-bar" style={{ display: 'flex', gap: '0.85rem', fontSize: '0.8rem', fontWeight: 800, flexWrap: 'wrap' }}>
             <span className="ft-timeline-legend-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#dc2626', background: '#fff1f2', padding: '0.35rem 0.8rem', borderRadius: '20px', border: '1px solid #fecdd3' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#dc2626', boxShadow: '0 0 8px #dc2626' }} /> Submissions Open (Red)
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#dc2626', boxShadow: '0 0 8px #dc2626' }} /> Submission (Red)
             </span>
             <span className="ft-timeline-legend-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#d97706', background: '#fffbeb', padding: '0.35rem 0.8rem', borderRadius: '20px', border: '1px solid #fde68a' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#d97706', boxShadow: '0 0 8px #d97706' }} /> Stage Milestone (Gold)
@@ -857,7 +858,7 @@ export default function FTDashboard() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem'
                     }}>
                       <span>
-                        {st.type === 'submission_open' ? '📤 Submissions Open'
+                        {st.type === 'submission_open' ? '📤 Submission'
                           : st.type === 'stage' ? '🏆 Milestone'
                           : st.badge === 'Orientation' ? '🚀 Orientation'
                           : st.badge === 'Lecture' ? '🎙️ Lecture'
@@ -1091,7 +1092,7 @@ export default function FTDashboard() {
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem'
                       }}>
                         <span>
-                          {st.type === 'submission_open' ? '📤 Submissions Open'
+                          {st.type === 'submission_open' ? '📤 Submission'
                             : st.type === 'stage' ? '🏆 Milestone'
                             : st.badge === 'Orientation' ? '🚀 Orientation'
                             : st.badge === 'Lecture' ? '🎙️ Lecture'
