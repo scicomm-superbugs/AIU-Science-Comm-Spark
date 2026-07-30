@@ -22,6 +22,27 @@ export default function FTDashboard() {
   const isAdmin = ['admin', 'master'].includes(user?.role);
   const [editingPoster, setEditingPoster] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const modalTimerRef = useRef(null);
+
+  // Helper to handle step clicks: animate laser line first, then pop up modal window
+  const handleStepClick = (stepId) => {
+    const targetIdx = steps.findIndex(s => String(s.id).toLowerCase().trim() === String(stepId).toLowerCase().trim());
+    const currIdx = selectedStepIndex;
+    const distance = targetIdx >= 0 ? Math.abs(targetIdx - currIdx) : 1;
+
+    // 1. Move laser line immediately towards clicked step
+    setSelectedStepId(stepId);
+
+    // 2. Clear any pending modal open timers
+    if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
+
+    // 3. Wait for laser line animation to finish, then open popup modal
+    const animDelay = distance === 0 ? 100 : Math.min(850, Math.max(450, 350 + distance * 100));
+
+    modalTimerRef.current = setTimeout(() => {
+      setIsDetailModalOpen(true);
+    }, animDelay);
+  };
 
   const savePosterSetting = async (updates) => {
     try {
@@ -825,7 +846,7 @@ export default function FTDashboard() {
 
                   {/* Step Node Icon Circle */}
                   <div
-                    onClick={() => { setSelectedStepId(st.id); setIsDetailModalOpen(true); }}
+                    onClick={() => handleStepClick(st.id)}
                     style={{
                       width: '68px', height: '68px', borderRadius: '50%',
                       background: isSelected
@@ -848,7 +869,7 @@ export default function FTDashboard() {
 
                   {/* Glassmorphic Step Title Card (Below Node) */}
                   <div
-                    onClick={() => { setSelectedStepId(st.id); setIsDetailModalOpen(true); }}
+                    onClick={() => handleStepClick(st.id)}
                     style={{
                       marginTop: '1.25rem', padding: '0.9rem 0.85rem', borderRadius: '16px',
                       background: isSelected
@@ -953,7 +974,7 @@ export default function FTDashboard() {
             return (
               <div 
                 key={st.id}
-                onClick={() => { setSelectedStepId(st.id); setIsDetailModalOpen(true); }}
+                onClick={() => handleStepClick(st.id)}
                 style={{
                   display: 'flex', alignItems: 'flex-start', gap: '1rem',
                   position: 'relative', zIndex: 3, cursor: 'pointer',
