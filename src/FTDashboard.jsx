@@ -1256,6 +1256,20 @@ export default function FTDashboard() {
                       >
                         Submit Work for Stage {activeStep.id} <ArrowRight size={18} />
                       </button>
+                    ) : activeStep.type === 'submission' || activeStep.type === 'submission_open' || activeStep.badge === 'Submission' ? (
+                      <button
+                        className="ft-btn"
+                        onClick={() => { setIsDetailModalOpen(false); navigate('/my-competition'); }}
+                        style={{
+                          background: 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)',
+                          color: '#ffffff', fontWeight: 900, padding: '0.85rem 1.6rem', borderRadius: '14px',
+                          fontSize: '0.98rem', border: 'none', boxShadow: '0 4px 20px rgba(225, 29, 72, 0.4)',
+                          display: 'flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer',
+                          letterSpacing: '0.01em'
+                        }}
+                      >
+                        📤 Submit Deliverables Now <ArrowRight size={18} />
+                      </button>
                     ) : activeStep.meetingLink ? (
                       <a
                         href={activeStep.meetingLink}
