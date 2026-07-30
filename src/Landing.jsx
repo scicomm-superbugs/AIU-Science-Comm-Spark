@@ -2224,16 +2224,16 @@ export default function Landing() {
                   </div>
 
                   {/* Circular Photos & Winner Info Grid */}
-                  <div style={{
-                    display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start',
-                    gap: champIdx === 0 ? '2.5rem' : '1.5rem', width: '100%', zIndex: 5
-                  }}>
-                    {(champ?.members || []).map((m, mIdx) => (
+                  {(() => {
+                    const members = champ?.members || [];
+
+                    const renderMemberCard = (m, mIdx) => (
                       <div
                         key={mIdx}
                         style={{
                           display: 'flex', flexDirection: 'column', alignItems: 'center',
-                          gap: '0.85rem', maxWidth: '240px', position: 'relative'
+                          gap: '0.6rem', maxWidth: members.length >= 3 ? '150px' : '240px', position: 'relative',
+                          flex: members.length >= 3 ? '1 1 120px' : 'none'
                         }}
                       >
                         {/* Circular Photo with Graphic Spinning Ring */}
@@ -2241,7 +2241,7 @@ export default function Landing() {
                           <div
                             className="fame-graphic-spin-ring"
                             style={{
-                              position: 'absolute', inset: '-6px', borderRadius: '50%',
+                              position: 'absolute', inset: '-5px', borderRadius: '50%',
                               background: `conic-gradient(from 0deg, ${champ?.badgeColor || '#be123c'}, #f59e0b, #3b82f6, #10b981, ${champ?.badgeColor || '#be123c'})`,
                               opacity: 0.85, filter: 'blur(3px)', zIndex: 1
                             }}
@@ -2249,10 +2249,10 @@ export default function Landing() {
 
                           <div style={{
                             position: 'relative', zIndex: 2,
-                            width: champIdx === 0 ? ((champ?.members || []).length > 1 ? '140px' : '175px') : ((champ?.members || []).length > 1 ? '110px' : '140px'),
-                            height: champIdx === 0 ? ((champ?.members || []).length > 1 ? '140px' : '175px') : ((champ?.members || []).length > 1 ? '110px' : '140px'),
+                            width: champIdx === 0 ? (members.length > 1 ? '130px' : '175px') : (members.length >= 3 ? '92px' : (members.length > 1 ? '110px' : '140px')),
+                            height: champIdx === 0 ? (members.length > 1 ? '130px' : '175px') : (members.length >= 3 ? '92px' : (members.length > 1 ? '110px' : '140px')),
                             borderRadius: '50%', overflow: 'hidden',
-                            border: '4px solid #ffffff',
+                            border: '3.5px solid #ffffff',
                             boxShadow: `0 10px 30px ${(champ?.badgeColor || '#be123c')}35`,
                             background: '#e2e8f0'
                           }}>
@@ -2292,7 +2292,7 @@ export default function Landing() {
                             }}
                             editing={E}
                             tag="h3"
-                            style={{ fontWeight: 900, fontSize: champIdx === 0 ? '1.15rem' : '1rem', color: '#0f172a', margin: 0, lineHeight: 1.3 }}
+                            style={{ fontWeight: 900, fontSize: members.length >= 3 ? '0.85rem' : (champIdx === 0 ? '1.15rem' : '1rem'), color: '#0f172a', margin: 0, lineHeight: 1.2 }}
                           />
                           <EditableText
                             value={m.faculty}
@@ -2305,11 +2305,11 @@ export default function Landing() {
                             }}
                             editing={E}
                             tag="p"
-                            style={{ fontSize: '0.82rem', color: '#64748b', fontStyle: 'italic', fontWeight: 600, margin: 0, marginTop: '0.3rem' }}
+                            style={{ fontSize: members.length >= 3 ? '0.7rem' : '0.82rem', color: '#64748b', fontStyle: 'italic', fontWeight: 600, margin: 0, marginTop: '0.2rem', lineHeight: 1.2 }}
                           />
                         </div>
 
-                        {E && ((champ?.members || []).length > 1) && (
+                        {E && (members.length > 1) && (
                           <button
                             onClick={() => {
                               const copy = structuredClone(content.hallOfFameChampions || DEFAULT_CONTENT.hallOfFameChampions);
@@ -2325,8 +2325,35 @@ export default function Landing() {
                           </button>
                         )}
                       </div>
-                    ))}
-                  </div>
+                    );
+
+                    // 🔺 TRIANGLE PYRAMID LAYOUT FOR 3-MEMBER TEAMS
+                    if (members.length === 3) {
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem', width: '100%', zIndex: 5 }}>
+                          {/* Apex: Member 1 Centered */}
+                          <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                            {renderMemberCard(members[0], 0)}
+                          </div>
+
+                          {/* Base: Members 2 & 3 Side-by-Side */}
+                          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: '0.75rem', width: '100%' }}>
+                            {renderMemberCard(members[1], 1)}
+                            {renderMemberCard(members[2], 2)}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div style={{
+                        display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start',
+                        gap: champIdx === 0 ? '2.5rem' : '1.5rem', width: '100%', zIndex: 5
+                      }}>
+                        {members.map((m, mIdx) => renderMemberCard(m, mIdx))}
+                      </div>
+                    );
+                  })()}
 
                   {E && (
                     <button
