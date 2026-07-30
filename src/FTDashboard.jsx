@@ -171,33 +171,65 @@ export default function FTDashboard() {
   };
 
   const steps = useMemo(() => {
-    // 1. Get default stages for this track merged with timeline_config settings
-    const stages = (defaultStages[selectedTrack] || defaultStages.pop_science).map((st, idx) => {
-      const merged = getMergedStage(st, selectedTrack);
+    // 1. Get merged stages for this track from defaultStages and Firestore timeline_config
+    const rawStages = (defaultStages[selectedTrack] || defaultStages.pop_science).map((st) => getMergedStage(st, selectedTrack));
 
-      // Determine submission open date for this stage
-      let openDateStr = merged.openDate || merged.fieldOpenDate;
-      if (!openDateStr && merged.submissions && merged.submissions.length > 0) {
-        const dates = merged.submissions.map(sub => sub.openDate || sub.startDate).filter(Boolean);
-        if (dates.length > 0) openDateStr = dates[0];
-      }
-      if (!openDateStr && merged.deadline && merged.deadline !== 'TBD') {
-        const d = new Date(merged.deadline);
-        if (!isNaN(d.getTime())) {
-          const openD = new Date(d);
-          openD.setDate(openD.getDate() - 14); // 14 days before stage deadline
-          openDateStr = openD.toISOString().split('T')[0];
-        }
-      }
+    const stageMilestoneEvents = [];
+    const submissionEvents = [];
 
-      return {
-        ...merged,
+    rawStages.forEach((st, stageIdx) => {
+      // A. Stage Milestone Event
+      stageMilestoneEvents.push({
+        ...st,
         type: 'stage',
-        deadline: formatUnifiedDate(merged.deadline),
-        submissionOpenDate: openDateStr,
-        submissionOpenTitle: `Stage ${merged.id} Submissions Open`,
-        _rawDate: getRawDate(merged.deadline, idx)
-      };
+        badge: 'Stage Milestone',
+        deadline: formatUnifiedDate(st.deadline),
+        _rawDate: getRawDate(st.deadline, stageIdx * 10)
+      });
+
+      // B. Individual Submissions Open Events (e.g. Pre-Interview, Post-Interview)
+      const stageSubs = (st.submissions && st.submissions.length > 0)
+        ? st.submissions
+        : (st.openDate || st.fieldOpenDate
+            ? [{ id: 'default', name: `Stage ${st.id} Submissions`, openDate: st.openDate || st.fieldOpenDate, deadline: st.deadline }]
+            : []
+          );
+
+      stageSubs.forEach((sub, subIdx) => {
+        let openDateStr = sub.openDate || sub.startDate;
+        if (!openDateStr && st.deadline && st.deadline !== 'TBD') {
+          const d = new Date(st.deadline);
+          if (!isNaN(d.getTime())) {
+            const openD = new Date(d);
+            openD.setDate(openD.getDate() - 14);
+            openDateStr = openD.toISOString().split('T')[0];
+          }
+        }
+
+        if (openDateStr) {
+          const subNameClean = sub.name || `Submission ${subIdx + 1}`;
+          const subTitle = `${subNameClean} Submissions Open`;
+          submissionEvents.push({
+            id: `sub_open_${st.id}_${sub.id || subIdx}`,
+            stageId: st.id,
+            subId: sub.id,
+            type: 'submission_open',
+            title: subTitle,
+            subName: subNameClean,
+            stageTitle: st.title || `Stage ${st.id}`,
+            badge: 'Submissions Open',
+            sub: `Deliverable Portal Opens for ${st.title}`,
+            deadline: formatUnifiedDate(openDateStr),
+            openDate: openDateStr,
+            closeDate: sub.deadline ? formatUnifiedDate(sub.deadline) : formatUnifiedDate(st.deadline),
+            _rawDate: getRawDate(openDateStr, (stageIdx * 10) + subIdx + 1),
+            icon: <Upload size={20} />,
+            color: '#059669',
+            bgColor: '#ecfdf5',
+            details: `Submissions portal for "${subNameClean}" (${st.title}) opens on ${formatUnifiedDate(openDateStr)}. Competitors can submit their deliverables through their competition dashboard until ${sub.deadline ? formatUnifiedDate(sub.deadline) : formatUnifiedDate(st.deadline)}.`
+          });
+        }
+      });
     });
 
     // 2. Map dynamic workshops for this track
@@ -214,7 +246,7 @@ export default function FTDashboard() {
         trainerId: ws.trainerId || '',
         deadline: formatUnifiedDate(ws.startDate),
         startDate: ws.startDate,
-        _rawDate: getRawDate(ws.startDate, 100 + idx),
+        _rawDate: getRawDate(ws.startDate, 500 + idx),
         icon: ws.type === 'Orientation' ? <Zap size={20} />
             : ws.type === 'Lecture' ? <Mic size={20} />
             : ws.type === 'Office Hours' ? <Clock size={20} />
@@ -230,13 +262,13 @@ export default function FTDashboard() {
         details: ws.description || 'No description provided.'
       }));
 
-    // 3. Combine stages and workshops
-    const combined = [...stages, ...trackWorkshops];
+    // 3. Combine ALL individual events (Stage Milestones, Submission Events, Workshops)
+    const combined = [...stageMilestoneEvents, ...submissionEvents, ...trackWorkshops];
 
-    // 4. Sort strictly chronologically by _rawDate (earliest first)
+    // 4. Sort strictly chronologically by _rawDate (earliest date first)
     combined.sort((a, b) => a._rawDate.getTime() - b._rawDate.getTime());
 
-    // 5. Assign step sequential numbers
+    // 5. Assign step sequential numbers 01, 02, 03...
     return combined.map((item, idx) => ({
       ...item,
       stepNumber: String(idx + 1).padStart(2, '0')
@@ -766,8 +798,8 @@ export default function FTDashboard() {
                       marginTop: '1.25rem', padding: '0.9rem 0.85rem', borderRadius: '16px',
                       background: isSelected
                         ? `linear-gradient(135deg, ${st.bgColor} 0%, #ffffff 100%)`
-                        : '#f8fafc',
-                      border: `2px solid ${isSelected ? st.color : '#e2e8f0'}`,
+                        : (st.type === 'submission_open' ? '#f0fdf4' : '#f8fafc'),
+                      border: `2px solid ${isSelected ? st.color : (st.type === 'submission_open' ? '#a7f3d0' : '#e2e8f0')}`,
                       width: '100%',
                       boxShadow: isSelected ? `0 8px 20px ${st.color}20` : 'none',
                       transition: 'all 0.25s ease',
@@ -781,7 +813,8 @@ export default function FTDashboard() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem'
                     }}>
                       <span>
-                        {st.type === 'stage' ? '🏆 Milestone'
+                        {st.type === 'submission_open' ? '📤 Submissions Open'
+                          : st.type === 'stage' ? '🏆 Milestone'
                           : st.badge === 'Orientation' ? '🚀 Orientation'
                           : st.badge === 'Lecture' ? '🎙️ Lecture'
                           : st.badge === 'Office Hours' ? '💬 Office Hours'
@@ -794,43 +827,9 @@ export default function FTDashboard() {
                       {st.title}
                     </div>
 
-                    <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
-                      <Calendar size={12} style={{ color: st.color }} /> {st.deadline}
+                    <div style={{ fontSize: '0.74rem', color: st.type === 'submission_open' ? '#059669' : '#64748b', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                      <Calendar size={12} style={{ color: st.color }} /> {st.type === 'submission_open' ? `Opens: ${st.deadline}` : st.deadline}
                     </div>
-
-                    {/* Stage Deliverables Submissions Open Badge */}
-                    {st.type === 'stage' && (
-                      <div style={{
-                        marginTop: '0.5rem', paddingTop: '0.45rem', borderTop: '1px dashed #cbd5e1',
-                        display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'center'
-                      }}>
-                        {st.submissions && st.submissions.length > 0 ? (
-                          st.submissions.map((sub, sIdx) => (
-                            <div key={sub.id || sIdx} style={{
-                              fontSize: '0.68rem', fontWeight: 800, color: '#047857', background: '#dcfce7',
-                              padding: '0.2rem 0.5rem', borderRadius: '8px', border: '1px solid #a7f3d0',
-                              width: '100%', boxSizing: 'border-box', textAlign: 'center',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem'
-                            }}>
-                              <span>📤</span>
-                              <span style={{ fontWeight: 900 }}>Submission {sIdx + 1}:</span>
-                              <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                {sub.name || `Deliverable ${sIdx + 1}`}
-                              </span>
-                            </div>
-                          ))
-                        ) : (
-                          <div style={{
-                            fontSize: '0.68rem', fontWeight: 800, color: '#047857', background: '#dcfce7',
-                            padding: '0.2rem 0.5rem', borderRadius: '8px', border: '1px solid #a7f3d0',
-                            width: '100%', boxSizing: 'border-box', textAlign: 'center',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem'
-                          }}>
-                            <span>📤</span> Submissions Open: {formatUnifiedDate(st.submissionOpenDate)}
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </div>
               );
@@ -1011,7 +1010,8 @@ export default function FTDashboard() {
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem'
                       }}>
                         <span>
-                          {st.type === 'stage' ? '🏆 Milestone'
+                          {st.type === 'submission_open' ? '📤 Submissions Open'
+                            : st.type === 'stage' ? '🏆 Milestone'
                             : st.badge === 'Orientation' ? '🚀 Orientation'
                             : st.badge === 'Lecture' ? '🎙️ Lecture'
                             : st.badge === 'Office Hours' ? '💬 Office Hours'
