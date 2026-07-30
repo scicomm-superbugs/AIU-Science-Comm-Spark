@@ -592,6 +592,8 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
                     onClick={() => setSelectedDateStr(day.dateStr)}
                     style={{
                       minHeight: '78px',
+                      minWidth: 0,
+                      boxSizing: 'border-box',
                       padding: '0.35rem',
                       borderRadius: '10px',
                       background: isSelected ? 'rgba(30, 41, 59, 0.06)' : day.isCurrentMonth ? '#f8fafc' : '#f1f5f9',
