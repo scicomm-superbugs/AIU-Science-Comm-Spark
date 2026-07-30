@@ -51,7 +51,6 @@ export default function FTDashboard() {
   const [selectedTrack, setSelectedTrack] = useState(isCompetitorUser ? userTrack : 'pop_science');
   const [selectedStepId, setSelectedStepId] = useState(1);
   const [openMobileCardId, setOpenMobileCardId] = useState(null);
-  const [openSignId, setOpenSignId] = useState(null);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
   useEffect(() => {
@@ -175,60 +174,28 @@ export default function FTDashboard() {
   };
 
   const steps = useMemo(() => {
-    // 1. Map raw stages from defaultStages merged with timeline_config
+    // 1. Get merged stages for this track from defaultStages and Firestore timeline_config
     const rawStages = (defaultStages[selectedTrack] || defaultStages.pop_science).map((st) => getMergedStage(st, selectedTrack));
 
-    // 2. Map dynamic workshops / orientations / office hours
-    const mainWorkshops = dynamicWorkshops
-      .filter(ws => ws.targetTrack === 'both' || ws.targetTrack === selectedTrack)
-      .map((ws, idx) => ({
-        id: ws.id,
-        type: 'workshop',
-        title: ws.title,
-        badge: ws.type || 'Workshop',
-        meetingLink: ws.meetingLink || '',
-        sub: ws.trainerName ? `Trainer: ${ws.trainerName}` : 'Training Session',
-        trainerName: ws.trainerName || '',
-        trainerId: ws.trainerId || '',
-        deadline: formatUnifiedDate(ws.startDate),
-        startDate: ws.startDate,
-        _rawDate: getRawDate(ws.startDate, 100 + idx),
-        icon: ws.type === 'Orientation' ? <Zap size={20} />
-            : ws.type === 'Lecture' ? <Mic size={20} />
-            : ws.type === 'Office Hours' ? <Clock size={20} />
-            : <Sparkles size={20} />,
-        color: ws.type === 'Orientation' ? '#0d9488'
-             : ws.type === 'Lecture' ? '#7c3aed'
-             : ws.type === 'Office Hours' ? '#d97706'
-             : '#059669',
-        bgColor: ws.type === 'Orientation' ? '#ccfbf1'
-               : ws.type === 'Lecture' ? '#f3e8ff'
-               : ws.type === 'Office Hours' ? '#fef3c7'
-               : '#ecfdf5',
-        details: ws.description || 'No description provided.'
-      }));
+    const stageMilestoneEvents = [];
+    const rawSubmissionItems = [];
 
-    // 3. Map Stage Milestone Events
-    const stageMilestones = rawStages.map((st, idx) => ({
-      ...st,
-      type: 'stage',
-      badge: 'Stage Milestone',
-      deadline: formatUnifiedDate(st.deadline),
-      _rawDate: getRawDate(st.deadline, 500 + idx)
-    }));
+    rawStages.forEach((st, stageIdx) => {
+      // A. Stage Milestone Event
+      stageMilestoneEvents.push({
+        ...st,
+        type: 'stage',
+        badge: 'Stage Milestone',
+        deadline: formatUnifiedDate(st.deadline),
+        _rawDate: getRawDate(st.deadline, stageIdx * 10),
+        _sortPriority: 3 // Stage milestones come after workshops & submission opens on same date
+      });
 
-    // 4. Combine Main Events (Workshops + Stage Milestones)
-    const mainEvents = [...mainWorkshops, ...stageMilestones];
-    mainEvents.sort((a, b) => a._rawDate.getTime() - b._rawDate.getTime());
-
-    // 5. Collect all custom submissions from all stages and attach to matching main event (after the workshop)
-    const submissionMapByDate = {};
-
-    rawStages.forEach((st) => {
+      // B. Individual Submissions Open Items
       const stageSubs = (st.submissions && st.submissions.length > 0)
         ? st.submissions
         : (st.openDate || st.fieldOpenDate
-            ? [{ id: 'default', name: `Stage ${st.id} Deliverables`, openDate: st.openDate || st.fieldOpenDate, deadline: st.deadline }]
+            ? [{ id: 'default', name: `Stage ${st.id} Submissions`, openDate: st.openDate || st.fieldOpenDate, deadline: st.deadline }]
             : []
           );
 
@@ -246,53 +213,103 @@ export default function FTDashboard() {
         }
 
         if (openDateStr) {
-          const subNameClean = sub.name || sub.title || `Submission ${subIdx + 1}`;
-          if (!submissionMapByDate[openDateStr]) {
-            submissionMapByDate[openDateStr] = [];
-          }
-          submissionMapByDate[openDateStr].push({
+          const subNameClean = sub.name || sub.title || `Stage ${st.id} Deliverable`;
+          rawSubmissionItems.push({
             id: `sub_${st.id}_${sub.id || subIdx}`,
             stageId: st.id,
-            stageTitle: st.title,
-            name: subNameClean,
+            stageTitle: st.title || `Stage ${st.id}`,
+            subName: subNameClean,
             openDate: openDateStr,
             closeDate: closeDateStr,
-            formattedOpen: formatUnifiedDate(openDateStr),
-            formattedClose: formatUnifiedDate(closeDateStr)
+            _rawDate: getRawDate(openDateStr, (stageIdx * 10) + subIdx + 1)
           });
         }
       });
     });
 
-    // Attach submission groups to the corresponding main event (on or immediately before the open date)
-    mainEvents.forEach((ev) => {
-      ev.attachedSubmissions = [];
+    // Group submission items that share the EXACT SAME openDate into 1 combined submission event step
+    const groupedSubmissionsMap = {};
+    rawSubmissionItems.forEach(item => {
+      const dateKey = item.openDate;
+      if (!groupedSubmissionsMap[dateKey]) {
+        groupedSubmissionsMap[dateKey] = [];
+      }
+      groupedSubmissionsMap[dateKey].push(item);
     });
 
-    Object.keys(submissionMapByDate).forEach((dateKey) => {
-      const subsForDate = submissionMapByDate[dateKey];
-      const targetDate = getRawDate(dateKey);
+    const submissionEvents = Object.keys(groupedSubmissionsMap).map(dateKey => {
+      const items = groupedSubmissionsMap[dateKey];
+      const primaryItem = items[0];
 
-      // Find the main event whose date matches or is closest prior to targetDate
-      let matchedEv = mainEvents.find(ev => ev._rawDate.toDateString() === targetDate.toDateString());
-
-      if (!matchedEv) {
-        // Find nearest preceding event
-        const precedingEvents = mainEvents.filter(ev => ev._rawDate.getTime() <= targetDate.getTime());
-        if (precedingEvents.length > 0) {
-          matchedEv = precedingEvents[precedingEvents.length - 1];
-        } else {
-          matchedEv = mainEvents[0];
-        }
+      let combinedTitle = '';
+      if (items.length === 1) {
+        combinedTitle = `${primaryItem.subName} Submissions Open`;
+      } else {
+        const names = items.map(i => i.subName.replace(/\s*submissions?\s*/i, '').trim());
+        combinedTitle = `${names.join(' & ')} Submissions Open`;
       }
 
-      if (matchedEv) {
-        matchedEv.attachedSubmissions.push(...subsForDate);
-      }
+      return {
+        id: `sub_group_${dateKey.replace(/[^a-zA-Z0-9]/g, '_')}`,
+        type: 'submission_open',
+        title: combinedTitle,
+        items: items,
+        badge: 'Submissions Open',
+        deadline: formatUnifiedDate(dateKey),
+        openDate: dateKey,
+        _rawDate: primaryItem._rawDate,
+        _sortPriority: 2, // Submissions come AFTER workshops (priority 1) on same date
+        icon: <Upload size={20} />,
+        color: '#059669',
+        bgColor: '#ecfdf5',
+        details: items.map(i => `• ${i.subName} (${i.stageTitle}): Opens ${formatUnifiedDate(i.openDate)}, Closes ${formatUnifiedDate(i.closeDate)}`).join('\n')
+      };
     });
 
-    // 6. Assign sequential step numbers 01, 02, 03...
-    return mainEvents.map((item, idx) => ({
+    // 2. Map dynamic workshops for this track
+    const trackWorkshops = dynamicWorkshops
+      .filter(ws => ws.targetTrack === 'both' || ws.targetTrack === selectedTrack)
+      .map((ws, idx) => ({
+        id: ws.id,
+        type: 'workshop',
+        title: ws.title,
+        badge: ws.type || 'Workshop',
+        meetingLink: ws.meetingLink || '',
+        sub: ws.trainerName ? `Trainer: ${ws.trainerName}` : 'Training Session',
+        trainerName: ws.trainerName || '',
+        trainerId: ws.trainerId || '',
+        deadline: formatUnifiedDate(ws.startDate),
+        startDate: ws.startDate,
+        _rawDate: getRawDate(ws.startDate, 500 + idx),
+        _sortPriority: 1, // Workshops come FIRST on same date
+        icon: ws.type === 'Orientation' ? <Zap size={20} />
+            : ws.type === 'Lecture' ? <Mic size={20} />
+            : ws.type === 'Office Hours' ? <Clock size={20} />
+            : <Sparkles size={20} />,
+        color: ws.type === 'Orientation' ? '#0d9488'
+             : ws.type === 'Lecture' ? '#7c3aed'
+             : ws.type === 'Office Hours' ? '#d97706'
+             : '#059669',
+        bgColor: ws.type === 'Orientation' ? '#ccfbf1'
+               : ws.type === 'Lecture' ? '#f3e8ff'
+               : ws.type === 'Office Hours' ? '#fef3c7'
+               : '#ecfdf5',
+        details: ws.description || 'No description provided.'
+      }));
+
+    // 3. Combine ALL individual events
+    const combined = [...stageMilestoneEvents, ...submissionEvents, ...trackWorkshops];
+
+    // 4. Sort strictly chronologically by _rawDate, and then by _sortPriority (Workshops=1, Submissions=2, Milestones=3)
+    combined.sort((a, b) => {
+      const timeA = a._rawDate.getTime();
+      const timeB = b._rawDate.getTime();
+      if (timeA !== timeB) return timeA - timeB;
+      return (a._sortPriority || 1) - (b._sortPriority || 1);
+    });
+
+    // 5. Assign step sequential numbers 01, 02, 03...
+    return combined.map((item, idx) => ({
       ...item,
       stepNumber: String(idx + 1).padStart(2, '0')
     }));
@@ -725,52 +742,27 @@ export default function FTDashboard() {
                         borderRadius: '10px',
                         boxShadow: isSegmentActive ? `0 0 16px ${trackThemeColor}80, 0 0 25px ${trackThemeColor}40` : 'none',
                         transition: `width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${segDelay}`,
-                        }} />
-                        {/* Radar Tip Pointer on active tip */}
-                        {isTipSegment && (
-                          <div style={{
-                            position: 'absolute',
-                            top: '-6px',
-                            ...(isEvenRow ? { right: '-10px' } : { left: '-10px' }),
-                            width: '20px', height: '20px', borderRadius: '50%',
-                            background: '#ffffff',
-                            border: `4px solid ${trackThemeColor}`,
-                            boxShadow: `0 0 0 4px ${trackThemeColor}30, 0 0 20px ${trackThemeColor}`,
-                            animation: 'ftTodayPulse 2s ease-in-out infinite',
-                          }} />
-                        )}
+                        position: 'relative',
+                        float: isEvenRow ? 'left' : 'right'
+                      }} />
 
-                        {/* Embedded Line Signpost Pill (Fits inside gap without overlapping step circles) */}
-                        {st.attachedSubmissions && st.attachedSubmissions.length > 0 && (
-                          <div
-                            style={{
-                              position: 'absolute',
-                              top: '50%',
-                              left: '50%',
-                              transform: 'translate(-50%, -50%)',
-                              zIndex: 10,
-                              background: '#ffffff',
-                              border: '1.8px solid #10b981',
-                              borderRadius: '20px',
-                              padding: '0.2rem 0.55rem',
-                              boxShadow: '0 3px 12px rgba(16, 185, 129, 0.25)',
-                              whiteSpace: 'nowrap',
-                              maxWidth: 'calc(100% - 80px)',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.3rem'
-                            }}
-                          >
-                            <span style={{ fontSize: '0.72rem' }}>📤</span>
-                            <span style={{ fontSize: '0.63rem', fontWeight: 900, color: '#047857' }}>
-                              Submissions Open: {st.attachedSubmissions.map(s => s.name).join(' & ')}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                      {/* Radar Tip Pointer on active tip */}
+                      {isTipSegment && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '-6px',
+                          ...(isEvenRow ? { right: '-10px' } : { left: '-10px' }),
+                          width: '20px', height: '20px', borderRadius: '50%',
+                          background: '#ffffff',
+                          border: `4px solid ${trackThemeColor}`,
+                          boxShadow: `0 0 0 4px ${trackThemeColor}30, 0 0 20px ${trackThemeColor}`,
+                          animation: 'ftTodayPulse 2s ease-in-out infinite',
+                          zIndex: 3,
+                          transition: `all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${segDelay}`
+                        }} />
+                      )}
+                    </div>
+                  )}
 
                   {/* B. Vertical Turn Connector Segment (from end of row down to next row) */}
                   {isTurnToNext && (
@@ -797,33 +789,6 @@ export default function FTDashboard() {
                         transition: `height 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${segDelay}`,
                         position: 'relative'
                       }} />
-
-                      {/* Embedded Line Signpost Pill on Vertical Turn */}
-                      {st.attachedSubmissions && st.attachedSubmissions.length > 0 && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            zIndex: 10,
-                            background: '#ffffff',
-                            border: '1.8px solid #10b981',
-                            borderRadius: '20px',
-                            padding: '0.2rem 0.55rem',
-                            boxShadow: '0 3px 12px rgba(16, 185, 129, 0.25)',
-                            whiteSpace: 'nowrap',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.3rem'
-                          }}
-                        >
-                          <span style={{ fontSize: '0.72rem' }}>📤</span>
-                          <span style={{ fontSize: '0.63rem', fontWeight: 900, color: '#047857' }}>
-                            Submissions Open: {st.attachedSubmissions.map(s => s.name).join(' & ')}
-                          </span>
-                        </div>
-                      )}
 
                       {/* Radar Tip Pointer on active vertical tip */}
                       {isTipSegment && (
@@ -865,6 +830,7 @@ export default function FTDashboard() {
                   >
                     {st.stepNumber}
                   </div>
+
                   {/* Glassmorphic Step Title Card (Below Node) */}
                   <div
                     onClick={() => setSelectedStepId(st.id)}
@@ -872,8 +838,8 @@ export default function FTDashboard() {
                       marginTop: '1.25rem', padding: '0.9rem 0.85rem', borderRadius: '16px',
                       background: isSelected
                         ? `linear-gradient(135deg, ${st.bgColor} 0%, #ffffff 100%)`
-                        : '#f8fafc',
-                      border: `2px solid ${isSelected ? st.color : '#e2e8f0'}`,
+                        : (st.type === 'submission_open' ? '#f0fdf4' : '#f8fafc'),
+                      border: `2px solid ${isSelected ? st.color : (st.type === 'submission_open' ? '#a7f3d0' : '#e2e8f0')}`,
                       width: '100%',
                       boxShadow: isSelected ? `0 8px 20px ${st.color}20` : 'none',
                       transition: 'all 0.25s ease',
@@ -887,7 +853,8 @@ export default function FTDashboard() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem'
                     }}>
                       <span>
-                        {st.type === 'stage' ? '🏆 Milestone'
+                        {st.type === 'submission_open' ? '📤 Submissions Open'
+                          : st.type === 'stage' ? '🏆 Milestone'
                           : st.badge === 'Orientation' ? '🚀 Orientation'
                           : st.badge === 'Lecture' ? '🎙️ Lecture'
                           : st.badge === 'Office Hours' ? '💬 Office Hours'
@@ -900,19 +867,20 @@ export default function FTDashboard() {
                       {st.title}
                     </div>
 
-                    <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
-                      <Calendar size={12} style={{ color: st.color }} /> {st.deadline}
+                    <div style={{ fontSize: '0.74rem', color: st.type === 'submission_open' ? '#059669' : '#64748b', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                      <Calendar size={12} style={{ color: st.color }} /> {st.type === 'submission_open' ? `Opens: ${st.deadline}` : st.deadline}
                     </div>
 
-                    {/* Submissions Indicator Pill on Workshop Card */}
-                    {st.attachedSubmissions && st.attachedSubmissions.length > 0 && (
+                    {st.items && st.items.length > 1 && (
                       <div style={{
-                        marginTop: '0.45rem', paddingTop: '0.4rem', borderTop: '1px dashed #a7f3d0',
-                        fontSize: '0.68rem', fontWeight: 900, color: '#047857', background: '#dcfce7',
-                        padding: '0.25rem 0.5rem', borderRadius: '10px', border: '1px solid #a7f3d0',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem'
+                        marginTop: '0.35rem', paddingTop: '0.35rem', borderTop: '1px dashed #a7f3d0',
+                        display: 'flex', flexDirection: 'column', gap: '0.15rem', alignItems: 'center'
                       }}>
-                        <span>🪧</span> 📤 Submissions Open ({st.attachedSubmissions.length})
+                        {st.items.map((it, iIdx) => (
+                          <div key={iIdx} style={{ fontSize: '0.66rem', fontWeight: 800, color: '#047857', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                            <span>•</span> <span>{it.subName}</span>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
