@@ -984,6 +984,7 @@ export default function FTDashboard() {
           {steps.map((st, idx) => {
             const isSelected = String(selectedStepId).toLowerCase().trim() === String(st.id).toLowerCase().trim();
             const isPast = selectedStepIndex >= idx;
+            const isSegmentActive = selectedStepIndex > idx;
 
             return (
               <div 
@@ -1004,14 +1005,14 @@ export default function FTDashboard() {
                     height: 'calc(100% + 1.25rem)',
                     width: '5px',
                     borderRadius: '4px',
-                    background: isPast
+                    background: isSegmentActive
                       ? selectedTrack === 'pop_science'
                         ? 'linear-gradient(180deg, #be123c 0%, #e11d48 100%)'
                         : 'linear-gradient(180deg, #1d4ed8 0%, #2563eb 100%)'
                       : '#cbd5e1',
-                    boxShadow: isPast ? `0 0 8px ${trackThemeColor}80` : 'none',
+                    boxShadow: isSegmentActive ? `0 0 8px ${trackThemeColor}80` : 'none',
                     zIndex: 1,
-                    transition: 'background 0.3s ease'
+                    transition: 'background 0.3s ease, boxShadow 0.3s ease'
                   }} />
                 )}
 
