@@ -567,7 +567,7 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
       </div>
 
       {viewMode === 'calendar' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
+        <div className="ft-schedule-calendar-grid" style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
           {/* Calendar Grid Box */}
           <div style={{ background: '#ffffff', borderRadius: '16px', border: '1.5px solid #e2e8f0', padding: '1rem', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
             {/* Day Header Row */}

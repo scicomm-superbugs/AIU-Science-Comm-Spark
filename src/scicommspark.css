@@ -3642,9 +3642,20 @@ html, body, #root {
 }
 
 /* ─────────────────────────── MOBILE NAVBAR & BOTTOM NAV OVERFLOW FIXES ─────────────────────────── */
+html, body, #root, .ft-app, .ft-main {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+  box-sizing: border-box !important;
+}
+
 @media (max-width: 900px) {
   .ft-admin-top-bar {
     display: none !important;
+  }
+
+  .ft-schedule-calendar-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.25rem !important;
   }
 }
 
@@ -3688,5 +3699,6 @@ html, body, #root {
     text-align: center !important;
   }
 }
+
 
 
