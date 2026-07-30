@@ -172,13 +172,50 @@ export default function FTDashboard() {
 
   const steps = useMemo(() => {
     // 1. Get default stages for this track merged with timeline_config settings
-    const stages = (defaultStages[selectedTrack] || defaultStages.pop_science).map((st, idx) => {
-      const merged = getMergedStage(st, selectedTrack);
-      return {
-        ...merged,
-        deadline: formatUnifiedDate(merged.deadline),
-        _rawDate: getRawDate(merged.deadline, idx)
-      };
+    const rawStages = (defaultStages[selectedTrack] || defaultStages.pop_science).map((st) => getMergedStage(st, selectedTrack));
+
+    const stageEvents = [];
+    rawStages.forEach((st, idx) => {
+      // Milestone Event Item
+      stageEvents.push({
+        ...st,
+        type: 'stage',
+        deadline: formatUnifiedDate(st.deadline),
+        _rawDate: getRawDate(st.deadline, idx * 2)
+      });
+
+      // Inverted Branch Submission Open Event Item
+      let openDateStr = st.openDate || st.fieldOpenDate;
+      if (!openDateStr && st.submissions && st.submissions.length > 0) {
+        const dates = st.submissions.map(sub => sub.openDate || sub.startDate).filter(Boolean);
+        if (dates.length > 0) openDateStr = dates[0];
+      }
+      if (!openDateStr && st.deadline && st.deadline !== 'TBD') {
+        const d = new Date(st.deadline);
+        if (!isNaN(d.getTime())) {
+          d.setDate(d.getDate() - 14); // 14 days before stage deadline
+          openDateStr = d.toISOString().split('T')[0];
+        }
+      }
+
+      if (openDateStr) {
+        stageEvents.push({
+          id: `sub_open_stage_${st.id}`,
+          stageId: st.id,
+          type: 'submission_open',
+          title: `Stage ${st.id} Submissions Open`,
+          stageTitle: st.title || `Stage ${st.id}`,
+          badge: 'Submissions Open',
+          sub: `Deliverables Portal Opens for Stage ${st.id}`,
+          deadline: formatUnifiedDate(openDateStr),
+          openDate: openDateStr,
+          _rawDate: getRawDate(openDateStr, (idx * 2) + 1),
+          icon: <Upload size={20} />,
+          color: '#059669',
+          bgColor: '#ecfdf5',
+          details: `Submissions portal for Stage ${st.id} (${st.title}) opens on ${formatUnifiedDate(openDateStr)}. Competitors can access their dashboard to submit deliverables until the deadline (${formatUnifiedDate(st.deadline)}).`
+        });
+      }
     });
 
     // 2. Map dynamic workshops for this track
@@ -195,7 +232,7 @@ export default function FTDashboard() {
         trainerId: ws.trainerId || '',
         deadline: formatUnifiedDate(ws.startDate),
         startDate: ws.startDate,
-        _rawDate: getRawDate(ws.startDate, 100 + idx),
+        _rawDate: getRawDate(ws.startDate, 200 + idx),
         icon: ws.type === 'Orientation' ? <Zap size={20} />
             : ws.type === 'Lecture' ? <Mic size={20} />
             : ws.type === 'Office Hours' ? <Clock size={20} />
@@ -211,8 +248,8 @@ export default function FTDashboard() {
         details: ws.description || 'No description provided.'
       }));
 
-    // 3. Combine stages and workshops
-    const combined = [...stages, ...trackWorkshops];
+    // 3. Combine stages, submission events, and workshops
+    const combined = [...stageEvents, ...trackWorkshops];
 
     // 4. Sort strictly chronologically by _rawDate (earliest first)
     combined.sort((a, b) => a._rawDate.getTime() - b._rawDate.getTime());
@@ -574,17 +611,20 @@ export default function FTDashboard() {
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#be123c', boxShadow: '0 0 8px #be123c' }} /> Stage Milestone
             </span>
             <span className="ft-timeline-legend-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#059669', background: '#ecfdf5', padding: '0.3rem 0.75rem', borderRadius: '20px', border: '1px solid #a7f3d0' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#059669', boxShadow: '0 0 8px #059669' }} /> Training / Sessions
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#059669', boxShadow: '0 0 8px #059669' }} /> Submissions Open
+            </span>
+            <span className="ft-timeline-legend-pill" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#2563eb', background: '#eff6ff', padding: '0.3rem 0.75rem', borderRadius: '20px', border: '1px solid #bfdbfe' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb', boxShadow: '0 0 8px #2563eb' }} /> Training / Sessions
             </span>
           </div>
         </div>
 
         {/* ZIGZAG SNAKE TIMELINE ROAD MAP — FITS ALL STEPS ON ONE PAGE WITHOUT HORIZONTAL SCROLL */}
-        <div className="ft-desktop-timeline" style={{ position: 'relative', margin: '1.5rem 0 2.5rem 0', width: '100%' }}>
+        <div className="ft-desktop-timeline" style={{ position: 'relative', margin: '4.5rem 0 2.5rem 0', width: '100%' }}>
           <div style={{
             display: 'grid',
             gridTemplateColumns: `repeat(${COLUMNS}, 1fr)`,
-            gap: '2.75rem 1.25rem',
+            gap: '6.5rem 1.25rem',
             position: 'relative',
             width: '100%'
           }}>
@@ -604,6 +644,7 @@ export default function FTDashboard() {
               const isSegmentActive = selectedStepIndex > idx;
               const isTipSegment = selectedStepIndex === idx + 1;
               const segDelay = getSegmentTransitionDelay(idx);
+              const isSubOpen = st.type === 'submission_open';
 
               return (
                 <div
@@ -678,7 +719,7 @@ export default function FTDashboard() {
                       top: '30px',
                       left: 'calc(50% - 4px)',
                       width: '8px',
-                      height: 'calc(100% + 2.75rem)',
+                      height: 'calc(100% + 6.5rem)',
                       background: '#e2e8f0',
                       borderRadius: '10px',
                       zIndex: 1,
@@ -724,7 +765,7 @@ export default function FTDashboard() {
                         ? `linear-gradient(135deg, ${st.color} 0%, #0f172a 100%)`
                         : '#ffffff',
                       color: isSelected ? '#ffffff' : st.color,
-                      border: `4px solid ${isSelected ? st.color : '#cbd5e1'}`,
+                      border: `4px solid ${isSelected ? st.color : (isSubOpen ? '#a7f3d0' : '#cbd5e1')}`,
                       boxShadow: isSelected
                         ? `0 0 0 6px ${st.color}25, 0 10px 25px ${st.color}40`
                         : '0 4px 14px rgba(0,0,0,0.06)',
@@ -738,45 +779,107 @@ export default function FTDashboard() {
                     {st.stepNumber}
                   </div>
 
-                  {/* Glassmorphic Step Title Card */}
-                  <div
-                    onClick={() => setSelectedStepId(st.id)}
-                    style={{
-                      marginTop: '1.25rem', padding: '0.9rem 0.85rem', borderRadius: '16px',
-                      background: isSelected
-                        ? `linear-gradient(135deg, ${st.bgColor} 0%, #ffffff 100%)`
-                        : '#f8fafc',
-                      border: `2px solid ${isSelected ? st.color : '#e2e8f0'}`,
-                      width: '100%',
-                      boxShadow: isSelected ? `0 8px 20px ${st.color}20` : 'none',
-                      transition: 'all 0.25s ease',
-                      transform: isSelected ? 'translateY(-2px)' : 'none',
-                      zIndex: 5, cursor: 'pointer'
-                    }}
-                  >
-                    <div style={{
-                      fontSize: '0.7rem', fontWeight: 800, color: st.color,
-                      textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.25rem',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem'
-                    }}>
-                      <span>
-                        {st.type === 'stage' ? '🏆 Milestone'
-                          : st.badge === 'Orientation' ? '🚀 Orientation'
-                          : st.badge === 'Lecture' ? '🎙️ Lecture'
-                          : st.badge === 'Office Hours' ? '💬 Office Hours'
-                          : `📚 ${st.badge || 'Workshop'}`}
-                      </span>
-                      <span>· {st.stepNumber}</span>
-                    </div>
+                  {/* ⬆️ INVERTED TOP BRANCH BOX vs NORMAL CARD BELOW NODE */}
+                  {isSubOpen ? (
+                    <>
+                      {/* Inverted Branch Card (Positioned ABOVE the node circle) */}
+                      <div
+                        onClick={() => setSelectedStepId(st.id)}
+                        style={{
+                          position: 'absolute',
+                          bottom: '84px',
+                          left: '50%',
+                          transform: isSelected ? 'translateX(-50%) translateY(-3px)' : 'translateX(-50%)',
+                          width: '180px',
+                          padding: '0.75rem 0.7rem',
+                          borderRadius: '16px',
+                          background: isSelected
+                            ? 'linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%)'
+                            : '#ffffff',
+                          border: `2.5px solid ${isSelected ? '#059669' : '#10b981'}`,
+                          boxShadow: isSelected
+                            ? '0 10px 25px rgba(5, 150, 105, 0.3)'
+                            : '0 6px 18px rgba(16, 185, 129, 0.15)',
+                          zIndex: 10,
+                          cursor: 'pointer',
+                          textAlign: 'center',
+                          transition: 'all 0.25s ease'
+                        }}
+                      >
+                        <div style={{
+                          fontSize: '0.65rem', fontWeight: 900, color: '#047857',
+                          background: '#dcfce7', padding: '0.2rem 0.5rem', borderRadius: '12px',
+                          display: 'inline-flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.3rem',
+                          border: '1px solid #a7f3d0'
+                        }}>
+                          <span>📤</span> Stage {st.stageId} Submissions
+                        </div>
 
-                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a', lineHeight: 1.35, marginBottom: '0.4rem' }}>
-                      {st.title}
-                    </div>
+                        <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#0f172a', lineHeight: 1.25, marginBottom: '0.3rem' }}>
+                          {st.title}
+                        </div>
 
-                    <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
-                      <Calendar size={12} style={{ color: st.color }} /> {st.deadline}
+                        <div style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+                          <Calendar size={12} style={{ color: '#059669' }} /> Open: {st.deadline}
+                        </div>
+                      </div>
+
+                      {/* Vertical Stem Line Connecting Node Up to Inverted Box */}
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '68px',
+                        left: 'calc(50% - 1.5px)',
+                        width: '3px',
+                        height: '16px',
+                        background: isSelected ? '#059669' : '#10b981',
+                        boxShadow: '0 0 8px rgba(16, 185, 129, 0.4)',
+                        zIndex: 6
+                      }} />
+
+                      {/* Dummy Spacer for height alignment */}
+                      <div style={{ marginTop: '1.25rem', height: '42px', width: '100%', opacity: 0, pointerEvents: 'none' }} />
+                    </>
+                  ) : (
+                    /* Glassmorphic Step Title Card (Below Node) */
+                    <div
+                      onClick={() => setSelectedStepId(st.id)}
+                      style={{
+                        marginTop: '1.25rem', padding: '0.9rem 0.85rem', borderRadius: '16px',
+                        background: isSelected
+                          ? `linear-gradient(135deg, ${st.bgColor} 0%, #ffffff 100%)`
+                          : '#f8fafc',
+                        border: `2px solid ${isSelected ? st.color : '#e2e8f0'}`,
+                        width: '100%',
+                        boxShadow: isSelected ? `0 8px 20px ${st.color}20` : 'none',
+                        transition: 'all 0.25s ease',
+                        transform: isSelected ? 'translateY(-2px)' : 'none',
+                        zIndex: 5, cursor: 'pointer'
+                      }}
+                    >
+                      <div style={{
+                        fontSize: '0.7rem', fontWeight: 800, color: st.color,
+                        textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.25rem',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem'
+                      }}>
+                        <span>
+                          {st.type === 'stage' ? '🏆 Milestone'
+                            : st.badge === 'Orientation' ? '🚀 Orientation'
+                            : st.badge === 'Lecture' ? '🎙️ Lecture'
+                            : st.badge === 'Office Hours' ? '💬 Office Hours'
+                            : `📚 ${st.badge || 'Workshop'}`}
+                        </span>
+                        <span>· {st.stepNumber}</span>
+                      </div>
+
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a', lineHeight: 1.35, marginBottom: '0.4rem' }}>
+                        {st.title}
+                      </div>
+
+                      <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                        <Calendar size={12} style={{ color: st.color }} /> {st.deadline}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               );
             })}
