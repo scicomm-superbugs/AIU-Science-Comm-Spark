@@ -1110,11 +1110,6 @@ export default function FTDashboard() {
                       </div>
                       <div style={{ fontSize: '0.82rem', color: '#cbd5e1', fontWeight: 600 }}>
                         <span>{getCleanAcademicTitle(trainerAcc)}</span>
-                        {(trainerAcc.username || trainerAcc.email) && (
-                          <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginLeft: '0.4rem' }}>
-                            (@{trainerAcc.username})
-                          </span>
-                        )}
                       </div>
                     </div>
                   </div>
