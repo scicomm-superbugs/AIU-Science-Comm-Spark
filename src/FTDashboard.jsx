@@ -740,116 +740,42 @@ export default function FTDashboard() {
                           }} />
                         )}
 
-                        {/* 🪧 Submissions Open Signboard in Middle of Line Segment */}
+                        {/* Embedded Graphical Signboard Card in Middle of Line Track */}
                         {st.attachedSubmissions && st.attachedSubmissions.length > 0 && (
                           <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenSignId(openSignId === st.id ? null : st.id);
-                            }}
                             style={{
                               position: 'absolute',
                               top: '50%',
                               left: '50%',
                               transform: 'translate(-50%, -50%)',
                               zIndex: 15,
-                              cursor: 'pointer'
+                              background: '#ffffff',
+                              border: '2px solid #10b981',
+                              borderRadius: '14px',
+                              padding: '0.4rem 0.75rem',
+                              boxShadow: '0 6px 20px rgba(16, 185, 129, 0.25)',
+                              whiteSpace: 'nowrap',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: '0.2rem'
                             }}
                           >
-                            {/* Compact Sign Pill in Middle of Line */}
                             <div style={{
-                              background: '#ffffff',
-                              border: '2.5px solid #10b981',
-                              borderRadius: '20px',
-                              padding: '0.3rem 0.75rem',
-                              boxShadow: '0 4px 16px rgba(16, 185, 129, 0.35)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.35rem',
-                              whiteSpace: 'nowrap',
-                              transition: 'all 0.25s ease'
+                              fontSize: '0.62rem', fontWeight: 900, color: '#047857',
+                              background: '#dcfce7', padding: '0.15rem 0.5rem', borderRadius: '8px',
+                              border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', gap: '0.25rem'
                             }}>
-                              <span style={{ fontSize: '0.85rem' }}>🪧</span>
-                              <span style={{ fontSize: '0.74rem', fontWeight: 900, color: '#047857' }}>
-                                Submissions Open ({st.attachedSubmissions.length})
-                              </span>
+                              <span>📤</span> Submissions Open ({st.attachedSubmissions[0].formattedOpen})
                             </div>
 
-                            {/* EXPANDED GRAPHICAL SIGNBOARD POPUP (POPS UP WHEN CLICKED) */}
-                            {openSignId === st.id && (
-                              <div style={{
-                                position: 'absolute',
-                                bottom: '100%',
-                                left: '50%',
-                                transform: 'translateX(-50%)',
-                                marginBottom: '12px',
-                                zIndex: 30,
-                                width: '220px',
-                                animation: 'ftPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                                pointerEvents: 'auto'
-                              }}>
-                                {/* Signboard Body Card */}
-                                <div style={{
-                                  background: '#ffffff',
-                                  border: '2.5px solid #10b981',
-                                  borderRadius: '16px',
-                                  padding: '0.8rem 0.85rem',
-                                  boxShadow: '0 12px 30px rgba(16, 185, 129, 0.4), 0 4px 12px rgba(0,0,0,0.1)',
-                                  textAlign: 'center'
-                                }}>
-                                  <div style={{
-                                    fontSize: '0.66rem', fontWeight: 900, color: '#047857',
-                                    background: '#dcfce7', padding: '0.2rem 0.55rem', borderRadius: '10px',
-                                    display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.4rem',
-                                    border: '1px solid #a7f3d0'
-                                  }}>
-                                    <span>🪧</span> Submissions Open ({st.attachedSubmissions[0].formattedOpen})
-                                  </div>
-
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                    {st.attachedSubmissions.map((sub, sIdx) => (
-                                      <div key={sub.id || sIdx} style={{
-                                        fontSize: '0.76rem', fontWeight: 800, color: '#0f172a',
-                                        background: '#f8fafc', padding: '0.35rem 0.55rem', borderRadius: '8px',
-                                        border: '1px solid #e2e8f0', textAlign: 'left',
-                                        display: 'flex', alignItems: 'center', gap: '0.35rem'
-                                      }}>
-                                        <span style={{ color: '#10b981', fontWeight: 900 }}>•</span>
-                                        <span>{sub.name}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-
-                                  {/* Quick Link Button */}
-                                  <a
-                                    href="#/dashboard/my-competition"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate('/dashboard/my-competition');
-                                    }}
-                                    style={{
-                                      marginTop: '0.55rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem',
-                                      background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: '#ffffff',
-                                      fontSize: '0.72rem', fontWeight: 900, padding: '0.4rem 0.65rem', borderRadius: '8px',
-                                      textDecoration: 'none', boxShadow: '0 3px 10px rgba(16,185,129,0.35)'
-                                    }}
-                                  >
-                                    <span>🚀</span> Open Submissions Portal <ChevronRight size={12} />
-                                  </a>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', width: '100%', textAlign: 'center' }}>
+                              {st.attachedSubmissions.map((sub, sIdx) => (
+                                <div key={sub.id || sIdx} style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0f172a' }}>
+                                  • {sub.name}
                                 </div>
-
-                                {/* Stem Pole pointing down to connector line */}
-                                <div style={{
-                                  position: 'absolute',
-                                  top: '100%',
-                                  left: 'calc(50% - 2.5px)',
-                                  width: '5px',
-                                  height: '12px',
-                                  background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)',
-                                  borderRadius: '4px'
-                                }} />
-                              </div>
-                            )}
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -880,6 +806,45 @@ export default function FTDashboard() {
                         transition: `height 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${segDelay}`,
                         position: 'relative'
                       }} />
+
+                      {/* Embedded Graphical Signboard Card on Vertical Turn */}
+                      {st.attachedSubmissions && st.attachedSubmissions.length > 0 && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            zIndex: 15,
+                            background: '#ffffff',
+                            border: '2px solid #10b981',
+                            borderRadius: '14px',
+                            padding: '0.4rem 0.75rem',
+                            boxShadow: '0 6px 20px rgba(16, 185, 129, 0.25)',
+                            whiteSpace: 'nowrap',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '0.2rem'
+                          }}
+                        >
+                          <div style={{
+                            fontSize: '0.62rem', fontWeight: 900, color: '#047857',
+                            background: '#dcfce7', padding: '0.15rem 0.5rem', borderRadius: '8px',
+                            border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', gap: '0.25rem'
+                          }}>
+                            <span>📤</span> Submissions Open ({st.attachedSubmissions[0].formattedOpen})
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', width: '100%', textAlign: 'center' }}>
+                            {st.attachedSubmissions.map((sub, sIdx) => (
+                              <div key={sub.id || sIdx} style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0f172a' }}>
+                                • {sub.name}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Radar Tip Pointer on active vertical tip */}
                       {isTipSegment && (
@@ -920,104 +885,7 @@ export default function FTDashboard() {
                     }}
                   >
                     {st.stepNumber}
-
-                    {/* Signpost Badge Indicator on Node Circle */}
-                    {st.attachedSubmissions && st.attachedSubmissions.length > 0 && (
-                      <div style={{
-                        position: 'absolute', top: '-6px', right: '-6px',
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        color: '#ffffff', fontSize: '0.62rem', fontWeight: 900,
-                        padding: '0.15rem 0.4rem', borderRadius: '10px',
-                        border: '2px solid #ffffff', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.4)',
-                        display: 'flex', alignItems: 'center', gap: '0.15rem', zIndex: 12
-                      }}>
-                        <span>🪧</span> {st.attachedSubmissions.length}
-                      </div>
-                    )}
                   </div>
-
-                  {/* 🪧 GRAPHICAL SIGNBOARD POPUP (POPS UP ABOVE WORKSHOP NODE WHEN CLICKED) */}
-                  {st.attachedSubmissions && st.attachedSubmissions.length > 0 && isSelected && (
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '92px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      zIndex: 25,
-                      width: '210px',
-                      animation: 'ftPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                      pointerEvents: 'auto'
-                    }}>
-                      {/* Signboard Header Card */}
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                        }}
-                        style={{
-                          background: '#ffffff',
-                          border: '2.5px solid #10b981',
-                          borderRadius: '16px',
-                          padding: '0.75rem 0.8rem',
-                          boxShadow: '0 12px 30px rgba(16, 185, 129, 0.35), 0 4px 12px rgba(0,0,0,0.08)',
-                          textAlign: 'center',
-                          position: 'relative'
-                        }}
-                      >
-                        <div style={{
-                          fontSize: '0.66rem', fontWeight: 900, color: '#047857',
-                          background: '#dcfce7', padding: '0.2rem 0.55rem', borderRadius: '10px',
-                          display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.35rem',
-                          border: '1px solid #a7f3d0'
-                        }}>
-                          <span>🪧</span> Submissions Open ({st.attachedSubmissions[0].formattedOpen})
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.2rem' }}>
-                          {st.attachedSubmissions.map((sub, sIdx) => (
-                            <div key={sub.id || sIdx} style={{
-                              fontSize: '0.76rem', fontWeight: 800, color: '#0f172a',
-                              background: '#f8fafc', padding: '0.3rem 0.5rem', borderRadius: '8px',
-                              border: '1px solid #e2e8f0', textAlign: 'left',
-                              display: 'flex', alignItems: 'center', gap: '0.35rem'
-                            }}>
-                              <span style={{ color: '#10b981', fontWeight: 900 }}>•</span>
-                              <span style={{ fontWeight: 800 }}>{sub.name}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Quick Link Button */}
-                        <a
-                          href="#/dashboard/my-competition"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate('/dashboard/my-competition');
-                          }}
-                          style={{
-                            marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem',
-                            background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: '#ffffff',
-                            fontSize: '0.72rem', fontWeight: 900, padding: '0.38rem 0.65rem', borderRadius: '8px',
-                            textDecoration: 'none', boxShadow: '0 3px 10px rgba(16,185,129,0.35)'
-                          }}
-                        >
-                          <span>🚀</span> Open Submissions Portal <ChevronRight size={12} />
-                        </a>
-                      </div>
-
-                      {/* Wooden/Emerald Vertical Pole (Stem) extending down to node circle */}
-                      <div style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 'calc(50% - 2.5px)',
-                        width: '5px',
-                        height: '24px',
-                        background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)',
-                        borderRadius: '4px',
-                        boxShadow: '0 2px 8px rgba(16, 185, 129, 0.4)'
-                      }} />
-                    </div>
-                  )}
-
                   {/* Glassmorphic Step Title Card (Below Node) */}
                   <div
                     onClick={() => setSelectedStepId(st.id)}
