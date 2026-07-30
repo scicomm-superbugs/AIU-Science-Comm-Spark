@@ -264,7 +264,7 @@ export default function FTDashboard() {
         icon: <Upload size={20} />,
         color: '#dc2626',
         bgColor: '#fff1f2',
-        details: items.map(i => `• ${i.subName} (${i.stageTitle}): Opens ${formatUnifiedDate(i.openDate)}, Closes ${formatUnifiedDate(i.closeDate)}`).join('\n')
+        details: items.map(i => `• ${i.subName} (${i.stageTitle}): Opens ${formatUnifiedDate(i.openDate)}, Deadline: ${formatUnifiedDate(i.closeDate)}`).join('\n')
       };
     });
 
@@ -883,7 +883,7 @@ export default function FTDashboard() {
                         </div>
                         {st.closeDeadline && (
                           <div style={{ fontSize: '0.66rem', color: '#991b1b', fontWeight: 800, background: '#fef2f2', padding: '0.12rem 0.45rem', borderRadius: '6px', border: '1px solid #fca5a5' }}>
-                            ⏰ Closes: {st.closeDeadline}
+                            ⏰ Deadline: {st.closeDeadline}
                           </div>
                         )}
                       </div>
@@ -906,7 +906,7 @@ export default function FTDashboard() {
                           }}>
                             <div>• {it.subName}</div>
                             <div style={{ fontSize: '0.62rem', color: '#dc2626', fontWeight: 700 }}>
-                              Closes: {formatUnifiedDate(it.closeDate)}
+                              Deadline: {formatUnifiedDate(it.closeDate)}
                             </div>
                           </div>
                         ))}
