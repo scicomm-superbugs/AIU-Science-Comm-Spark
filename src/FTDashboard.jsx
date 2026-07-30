@@ -38,7 +38,7 @@ export default function FTDashboard() {
     if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
 
     // 3. Wait for laser line animation to reach target node before opening popup modal
-    const animDelay = distance === 0 ? 120 : ((distance - 1) * 120 + 560);
+    const animDelay = distance === 0 ? 150 : (((distance - 1) * 120) + 400);
 
     modalTimerRef.current = setTimeout(() => {
       setIsDetailModalOpen(true);
@@ -991,6 +991,10 @@ export default function FTDashboard() {
             const isSegmentActive = selectedStepIndex > idx;
             const isTipSegment = (selectedStepIndex === idx + 1);
 
+            // Staggered chronological laser delay for walking animation 1 -> 2 -> 3 -> 4...
+            const segDelay = isSegmentActive ? `${idx * 0.12}s` : '0s';
+            const segDuration = '0.32s';
+
             return (
               <div 
                 key={st.id}
@@ -1023,7 +1027,7 @@ export default function FTDashboard() {
                         : 'linear-gradient(180deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)',
                       borderRadius: '10px',
                       boxShadow: isSegmentActive ? `0 0 14px ${trackThemeColor}90` : 'none',
-                      transition: 'height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      transition: `height ${segDuration} cubic-bezier(0.34, 1.56, 0.64, 1) ${segDelay}`,
                       position: 'relative'
                     }} />
 
@@ -1039,7 +1043,7 @@ export default function FTDashboard() {
                         boxShadow: `0 0 0 4px ${trackThemeColor}30, 0 0 16px ${trackThemeColor}`,
                         animation: 'ftTodayPulse 2s ease-in-out infinite',
                         zIndex: 3,
-                        transition: 'all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                        transition: `all ${segDuration} cubic-bezier(0.34, 1.56, 0.64, 1) ${segDelay}`
                       }} />
                     )}
                   </div>
