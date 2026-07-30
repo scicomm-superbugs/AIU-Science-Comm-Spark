@@ -412,15 +412,15 @@ export default function FTDashboard() {
                 }}
               />
               <div>
-                <div style={{ fontWeight: 800, fontSize: '0.78rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap' }}>
+                <div style={{ fontWeight: 800, fontSize: '0.84rem', color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
                   <span>Designed & Programmed with</span>
-                  <span style={{ color: '#be123c', fontSize: '0.9rem', lineHeight: 1 }}>❤️</span>
+                  <span style={{ color: '#be123c', fontSize: '0.95rem', lineHeight: 1 }}>❤️</span>
                   <span>by</span>
+                  <span style={{ fontWeight: 900, color: '#be123c', fontFamily: "'Outfit', sans-serif" }}>
+                    {abdullahAccount?.name || 'Abdullah Amr Maged'}
+                  </span>
                 </div>
-                <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#be123c', fontFamily: "'Outfit', sans-serif", marginTop: '0.05rem' }}>
-                  {abdullahAccount?.name || 'Abdullah Amr Maged'}
-                </div>
-                <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, marginTop: '0.05rem' }}>
+                <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, marginTop: '0.15rem' }}>
                   {getCleanAcademicTitle(abdullahAccount) || abdullahAccount?.title || abdullahAccount?.institutionName || 'Teaching Assistant at Alamein International University'}
                 </div>
               </div>
