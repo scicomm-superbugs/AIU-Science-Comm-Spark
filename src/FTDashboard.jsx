@@ -155,13 +155,16 @@ export default function FTDashboard() {
         title: found.title || st.title,
         sub: found.sub || st.sub,
         deadline: found.deadline || st.deadline,
+        openDate: found.openDate || st.openDate,
+        fieldOpenDate: found.fieldOpenDate || st.fieldOpenDate,
         badge: found.status || st.badge,
         details: found.details || st.details,
+        submissions: found.submissions || st.submissions || [],
         criteria: found.criteria || [],
         assignedJudgeIds: found.assignedJudgeIds || []
       };
     }
-    return { ...st, criteria: [], assignedJudgeIds: [] };
+    return { ...st, submissions: st.submissions || [], criteria: [], assignedJudgeIds: [] };
   };
 
   const getRawDate = (dateStr, fallbackIdx = 0) => {
@@ -196,7 +199,9 @@ export default function FTDashboard() {
           );
 
       stageSubs.forEach((sub, subIdx) => {
-        let openDateStr = sub.openDate || sub.startDate;
+        let openDateStr = sub.openDate || sub.startDate || sub.open || sub.fieldOpenDate;
+        let closeDateStr = sub.closeDate || sub.deadline || sub.endDate || sub.closes || st.deadline;
+
         if (!openDateStr && st.deadline && st.deadline !== 'TBD') {
           const d = new Date(st.deadline);
           if (!isNaN(d.getTime())) {
