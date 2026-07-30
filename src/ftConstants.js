@@ -3,11 +3,33 @@ import React from 'react';
 export const FT_UNIVERSITY = 'SciComm Spark Egypt';
 export const FT_FACULTY = '';
 
-export const formatUnifiedDate = (dateStr) => {
+export const formatUnifiedDate = (dateStr, defaultTimeStr = null) => {
   if (!dateStr || dateStr === 'TBD') return 'TBD';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  
+  let d;
+  const str = String(dateStr).trim();
+
+  if (str.includes('T')) {
+    d = new Date(str);
+  } else if (str.includes(' ')) {
+    d = new Date(str.replace(' ', 'T'));
+  } else if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const timeToAppend = defaultTimeStr || '17:00:00';
+    d = new Date(`${str}T${timeToAppend}`);
+  } else {
+    d = new Date(str);
+  }
+
+  if (isNaN(d.getTime())) return str;
+
+  return d.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
 };
 
 export const getCleanAcademicTitle = (account) => {
