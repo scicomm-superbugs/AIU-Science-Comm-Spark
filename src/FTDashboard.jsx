@@ -33,6 +33,18 @@ export default function FTDashboard() {
   
   // Find competitor doc & lock track
   const meDoc = useMemo(() => scientists.find(s => s.id === user?.id || s.username === user?.username) || user, [scientists, user]);
+  
+  // Find Abdullah Amr Maged's account dynamically from scientists
+  const abdullahAccount = useMemo(() => {
+    if (!scientists || scientists.length === 0) return null;
+    return scientists.find(s => 
+      (s.email && s.email.toLowerCase().includes('abdullah')) ||
+      (s.username && s.username.toLowerCase().includes('abdullah')) ||
+      (s.name && s.name.toLowerCase().includes('abdullah')) ||
+      s.role === 'master'
+    ) || null;
+  }, [scientists]);
+
   const isCompetitorUser = user?.isImpersonating || !user || user.role === 'competitor' || user.role === 'user';
   const userTrack = normalizeTrackKey(user?.registeredTrack || meDoc?.registeredTrack || user?.track) || 'pop_science';
 
@@ -365,7 +377,7 @@ export default function FTDashboard() {
         )}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
-          {/* Left University Logo */}
+          {/* Left: Creator Credit Box (Designed & Programmed with ❤️ by Abdullah Amr Maged) */}
           <CanvaTransformBox
             editing={editingPoster}
             scale={settingsData.dashLeftBrandScale || 1}
@@ -376,13 +388,41 @@ export default function FTDashboard() {
               savePosterSetting({ dashLeftBrandScale: scale, dashLeftBrandRotate: rotate, dashLeftBrandOffsetX: offsetX, dashLeftBrandOffsetY: offsetY });
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ fontWeight: 900, color: '#be123c', fontFamily: "'Outfit', sans-serif", fontSize: '1.4rem', lineHeight: 1 }}>
-                AIU.
-              </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.85rem',
+              background: 'linear-gradient(135deg, #ffffff 0%, #fff1f2 100%)',
+              padding: '0.6rem 1rem',
+              borderRadius: '16px',
+              border: '1.5px solid #fecdd3',
+              boxShadow: '0 4px 15px rgba(190, 18, 60, 0.08)'
+            }}>
+              <img
+                src={abdullahAccount?.avatarUrl || abdullahAccount?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=AbdullahAmr'}
+                alt="Abdullah Amr Maged"
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  border: '2.5px solid #be123c',
+                  boxShadow: '0 4px 12px rgba(190, 18, 60, 0.2)',
+                  objectFit: 'cover',
+                  flexShrink: 0
+                }}
+              />
               <div>
-                <div style={{ fontWeight: 800, color: '#1e293b', fontSize: '0.88rem', letterSpacing: '0.05em' }}>ALAMEIN</div>
-                <div style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>INTERNATIONAL UNIVERSITY</div>
+                <div style={{ fontWeight: 800, fontSize: '0.78rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap' }}>
+                  <span>Designed & Programmed with</span>
+                  <span style={{ color: '#be123c', fontSize: '0.9rem', lineHeight: 1 }}>❤️</span>
+                  <span>by</span>
+                </div>
+                <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#be123c', fontFamily: "'Outfit', sans-serif", marginTop: '0.05rem' }}>
+                  {abdullahAccount?.name || 'Abdullah Amr Maged'}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, marginTop: '0.05rem' }}>
+                  {getCleanAcademicTitle(abdullahAccount) || abdullahAccount?.title || abdullahAccount?.institutionName || 'Teaching Assistant at Alamein International University'}
+                </div>
               </div>
             </div>
           </CanvaTransformBox>
