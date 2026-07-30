@@ -981,21 +981,6 @@ export default function FTDashboard() {
 
         {/* MOBILE SINGLE-COLUMN VERTICAL ROADMAP WITH INLINE PREVIEWS */}
         <div className="ft-mobile-vertical-timeline" style={{ flexDirection: 'column', margin: '1.25rem 0 2.25rem 0', position: 'relative', paddingLeft: '3.2rem', gap: '1.25rem' }}>
-          {/* Continuous Vertical Laser Progress Track */}
-          <div style={{
-            position: 'absolute', top: '24px', bottom: '24px', left: '24px', width: '6px',
-            background: '#e2e8f0', borderRadius: '10px', zIndex: 1, overflow: 'hidden'
-          }}>
-            <div style={{
-              width: '100%', height: `${targetedProgressPercent}%`,
-              background: selectedTrack === 'pop_science'
-                ? 'linear-gradient(180deg, #be123c 0%, #e11d48 60%, #f43f5e 100%)'
-                : 'linear-gradient(180deg, #1d4ed8 0%, #2563eb 60%, #3b82f6 100%)',
-              borderRadius: '10px', boxShadow: `0 0 14px ${trackThemeColor}90`,
-              transition: 'height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
-            }} />
-          </div>
-
           {steps.map((st, idx) => {
             const isSelected = String(selectedStepId).toLowerCase().trim() === String(st.id).toLowerCase().trim();
             const isPast = selectedStepIndex >= idx;
@@ -1010,6 +995,26 @@ export default function FTDashboard() {
                   width: '100%'
                 }}
               >
+                {/* Connecting vertical line segment to next step (terminates strictly at last step circle) */}
+                {idx < steps.length - 1 && (
+                  <div style={{
+                    position: 'absolute',
+                    left: '-1.65rem',
+                    top: '29px',
+                    height: 'calc(100% + 1.25rem)',
+                    width: '5px',
+                    borderRadius: '4px',
+                    background: isPast
+                      ? selectedTrack === 'pop_science'
+                        ? 'linear-gradient(180deg, #be123c 0%, #e11d48 100%)'
+                        : 'linear-gradient(180deg, #1d4ed8 0%, #2563eb 100%)'
+                      : '#cbd5e1',
+                    boxShadow: isPast ? `0 0 8px ${trackThemeColor}80` : 'none',
+                    zIndex: 1,
+                    transition: 'background 0.3s ease'
+                  }} />
+                )}
+
                 {/* Numbered Circle Node */}
                 <div style={{
                   position: 'absolute', left: '-3.2rem', top: '4px',
@@ -1024,7 +1029,7 @@ export default function FTDashboard() {
                     : '0 4px 12px rgba(0,0,0,0.06)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '1.1rem', fontWeight: 900, fontFamily: "'Outfit', sans-serif",
-                  flexShrink: 0, transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                  flexShrink: 0, zIndex: 2, transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
                 }}>
                   {st.stepNumber}
                 </div>
