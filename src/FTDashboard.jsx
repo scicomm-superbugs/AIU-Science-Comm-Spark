@@ -81,6 +81,27 @@ export default function FTDashboard() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Lock body & html scroll while graphical popup modal is open so main page cannot scroll
+  useEffect(() => {
+    if (isDetailModalOpen) {
+      document.body.classList.add('ft-modal-open');
+      document.documentElement.classList.add('ft-modal-open');
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.classList.remove('ft-modal-open');
+      document.documentElement.classList.remove('ft-modal-open');
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+    return () => {
+      document.body.classList.remove('ft-modal-open');
+      document.documentElement.classList.remove('ft-modal-open');
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, [isDetailModalOpen]);
+
   // Sync track when competitor doc loads
   useEffect(() => {
     if (isCompetitorUser && userTrack) {
@@ -1045,17 +1066,24 @@ export default function FTDashboard() {
           })}
         </div>
 
-        {/* GRAPHICAL POPUP MODAL WINDOW FOR STEP DETAILS */}
-        {isDetailModalOpen && activeStep && (
+        {/* GRAPHICAL POPUP MODAL WINDOW FOR STEP DETAILS (PORTAL TO BODY) */}
+        {isDetailModalOpen && activeStep && createPortal(
           <div
             className="ft-timeline-modal-container"
             onClick={() => setIsDetailModalOpen(false)}
             style={{
-              position: 'fixed', inset: 0, zIndex: 99999,
+              position: 'fixed',
+              top: 0, left: 0, right: 0, bottom: 0,
+              width: '100vw', height: '100vh',
+              zIndex: 999999,
               background: 'rgba(5, 9, 17, 0.85)',
               backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '1.5rem', overflowY: 'auto'
+              padding: '1.5rem 1rem',
+              boxSizing: 'border-box',
+              overflow: 'hidden',
+              touchAction: 'none'
             }}
           >
             <div
@@ -1183,7 +1211,7 @@ export default function FTDashboard() {
               </div>
 
               {/* Body content inside HUD Card */}
-              <div style={{ padding: '2rem', overflowY: 'auto' }}>
+              <div style={{ padding: '2rem', overflowY: 'auto', overscrollBehavior: 'contain' }}>
                 {/* High-Contrast Subtitle Badge or Full Trainer Profile Card */}
                 {(() => {
                   const trainerAcc = getTrainerAccountForStep(activeStep);

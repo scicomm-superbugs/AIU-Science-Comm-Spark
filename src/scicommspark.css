@@ -3700,5 +3700,19 @@ html, body, #root, .ft-app, .ft-main {
   }
 }
 
+/* ─────────────────────────── MODAL SCROLL LOCK ─────────────────────────── */
+body.ft-modal-open,
+html.ft-modal-open,
+body.ft-modal-open #root,
+body.ft-modal-open .ft-app,
+body.ft-modal-open .ft-main {
+  overflow: hidden !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  touch-action: none !important;
+  overscroll-behavior: none !important;
+}
+
+
 
 
