@@ -256,6 +256,7 @@ export default function FTDashboard() {
         items: items,
         badge: 'Submissions Open',
         deadline: formatUnifiedDate(dateKey),
+        closeDeadline: primaryItem.closeDate ? formatUnifiedDate(primaryItem.closeDate) : '',
         openDate: dateKey,
         _rawDate: primaryItem._rawDate,
         _sortPriority: 2, // Submissions come AFTER workshops (priority 1) on same date
@@ -281,7 +282,7 @@ export default function FTDashboard() {
         deadline: formatUnifiedDate(ws.startDate),
         startDate: ws.startDate,
         _rawDate: getRawDate(ws.startDate, 500 + idx),
-        _sortPriority: 1, // Workshops come FIRST on same date
+        _sortPriority: 1, // Workshops & Office Hours come FIRST on same date
         icon: ws.type === 'Orientation' ? <Zap size={20} />
             : ws.type === 'Lecture' ? <Mic size={20} />
             : ws.type === 'Office Hours' ? <Clock size={20} />
@@ -294,11 +295,17 @@ export default function FTDashboard() {
     // 3. Combine ALL individual events
     const combined = [...stageMilestoneEvents, ...submissionEvents, ...trackWorkshops];
 
-    // 4. Sort strictly chronologically by _rawDate, and then by _sortPriority (Workshops=1, Submissions=2, Milestones=3)
+    // 4. Sort strictly chronologically by calendar day, and then by _sortPriority (Workshops=1, Submissions=2, Milestones=3)
     combined.sort((a, b) => {
-      const timeA = a._rawDate.getTime();
-      const timeB = b._rawDate.getTime();
-      if (timeA !== timeB) return timeA - timeB;
+      const getDayKey = (d) => {
+        if (!d || isNaN(d.getTime())) return 9999999999999;
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0).getTime();
+      };
+
+      const dayA = getDayKey(a._rawDate);
+      const dayB = getDayKey(b._rawDate);
+
+      if (dayA !== dayB) return dayA - dayB;
       return (a._sortPriority || 1) - (b._sortPriority || 1);
     });
 
@@ -864,18 +871,42 @@ export default function FTDashboard() {
                       {st.title}
                     </div>
 
-                    <div style={{ fontSize: '0.74rem', color: st.type === 'submission_open' ? '#059669' : '#64748b', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
-                      <Calendar size={12} style={{ color: st.color }} /> {st.type === 'submission_open' ? `Opens: ${st.deadline}` : st.deadline}
-                    </div>
+                    {st.type === 'submission_open' ? (
+                      <div style={{
+                        fontSize: '0.72rem', color: '#dc2626', fontWeight: 800,
+                        display: 'flex', flexDirection: 'column', gap: '0.2rem', alignItems: 'center'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <Calendar size={12} style={{ color: '#dc2626' }} />
+                          <span>Opens: {st.deadline}</span>
+                        </div>
+                        {st.closeDeadline && (
+                          <div style={{ fontSize: '0.66rem', color: '#991b1b', fontWeight: 800, background: '#fef2f2', padding: '0.12rem 0.45rem', borderRadius: '6px', border: '1px solid #fca5a5' }}>
+                            ⏰ Closes: {st.closeDeadline}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                        <Calendar size={12} style={{ color: st.color }} /> {st.deadline}
+                      </div>
+                    )}
 
                     {st.items && st.items.length > 1 && (
                       <div style={{
-                        marginTop: '0.35rem', paddingTop: '0.35rem', borderTop: '1px dashed #a7f3d0',
-                        display: 'flex', flexDirection: 'column', gap: '0.15rem', alignItems: 'center'
+                        marginTop: '0.4rem', paddingTop: '0.35rem', borderTop: '1px dashed #fecdd3',
+                        display: 'flex', flexDirection: 'column', gap: '0.2rem', alignItems: 'center', width: '100%'
                       }}>
                         {st.items.map((it, iIdx) => (
-                          <div key={iIdx} style={{ fontSize: '0.66rem', fontWeight: 800, color: '#047857', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                            <span>•</span> <span>{it.subName}</span>
+                          <div key={iIdx} style={{
+                            fontSize: '0.65rem', fontWeight: 800, color: '#991b1b', background: '#ffffff',
+                            padding: '0.15rem 0.4rem', borderRadius: '6px', border: '1px solid #fecdd3',
+                            width: '100%', boxSizing: 'border-box', textAlign: 'center'
+                          }}>
+                            <div>• {it.subName}</div>
+                            <div style={{ fontSize: '0.62rem', color: '#dc2626', fontWeight: 700 }}>
+                              Closes: {formatUnifiedDate(it.closeDate)}
+                            </div>
                           </div>
                         ))}
                       </div>
