@@ -32,10 +32,19 @@ function parseMarkdownToHTML(str) {
   if (typeof str !== 'string') return str || '';
   let html = str.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/<b>(.*?)<\/b>/gi, '<strong>$1</strong>');
-  // Strip external inline style="", color="", and span tags that override website default fonts & colors
-  html = html.replace(/\s*style="[^"]*"/gi, '');
+  
+  // Preserve font-weight and font-style rules in style attributes, strip intrusive external styling
+  html = html.replace(/style="([^"]*)"/gi, (match, p1) => {
+    const fw = p1.match(/font-weight\s*:\s*([^;"]+)/i);
+    const fs = p1.match(/font-style\s*:\s*([^;"]+)/i);
+    const rules = [];
+    if (fw) rules.push(`font-weight: ${fw[1].trim()}`);
+    if (fs) rules.push(`font-style: ${fs[1].trim()}`);
+    return rules.length > 0 ? `style="${rules.join('; ')}"` : '';
+  });
+
   html = html.replace(/\s*color="[^"]*"/gi, '');
-  html = html.replace(/<span\b[^>]*>(.*?)<\/span>/gi, '$1');
+  html = html.replace(/<span\s*>(.*?)<\/span>/gi, '$1');
   html = html.replace(/<font\b[^>]*>(.*?)<\/font>/gi, '$1');
   return html;
 }
@@ -44,12 +53,23 @@ export function EditableText({ value, onChange, editing, tag: Tag = 'span', styl
   const ref = useRef(null);
   const [isFocused, setIsFocused] = useState(false);
 
-  // Clean HTML of any inline style/color tags
+  // Clean HTML of external styles while preserving font-weight / font-style (e.g. unbolded text)
   const cleanHTML = (htmlStr) => {
     if (!htmlStr) return '';
-    let cleaned = htmlStr.replace(/\s*style="[^"]*"/gi, '');
+    let cleaned = htmlStr;
+    
+    // Preserve font-weight & font-style (e.g. font-weight: normal for unbolded text)
+    cleaned = cleaned.replace(/style="([^"]*)"/gi, (match, p1) => {
+      const fw = p1.match(/font-weight\s*:\s*([^;"]+)/i);
+      const fs = p1.match(/font-style\s*:\s*([^;"]+)/i);
+      const rules = [];
+      if (fw) rules.push(`font-weight: ${fw[1].trim()}`);
+      if (fs) rules.push(`font-style: ${fs[1].trim()}`);
+      return rules.length > 0 ? `style="${rules.join('; ')}"` : '';
+    });
+
     cleaned = cleaned.replace(/\s*color="[^"]*"/gi, '');
-    cleaned = cleaned.replace(/<span\b[^>]*>(.*?)<\/span>/gi, '$1');
+    cleaned = cleaned.replace(/<span\s*>(.*?)<\/span>/gi, '$1');
     cleaned = cleaned.replace(/<font\b[^>]*>(.*?)<\/font>/gi, '$1');
     return cleaned.trim();
   };
