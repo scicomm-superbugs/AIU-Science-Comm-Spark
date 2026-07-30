@@ -103,31 +103,7 @@ export default function FTDashboard() {
     };
   }, [isDetailModalOpen]);
 
-  // Mobile Timeline Track Height & Walking Animation Measurement
-  const mobileTimelineRef = useRef(null);
-  const [mobileTrackHeight, setMobileTrackHeight] = useState(0);
 
-  useEffect(() => {
-    const updateMobileTrack = () => {
-      if (!mobileTimelineRef.current) return;
-      const items = mobileTimelineRef.current.querySelectorAll('.ft-mobile-step-item');
-      if (items.length >= 2) {
-        const first = items[0];
-        const last = items[items.length - 1];
-        const startY = first.offsetTop + 29;
-        const endY = last.offsetTop + 29;
-        setMobileTrackHeight(Math.max(0, endY - startY));
-      }
-    };
-
-    updateMobileTrack();
-    const timer = setTimeout(updateMobileTrack, 100);
-    window.addEventListener('resize', updateMobileTrack);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', updateMobileTrack);
-    };
-  }, [steps, selectedTrack]);
 
   // Sync track when competitor doc loads
   useEffect(() => {
@@ -408,6 +384,32 @@ export default function FTDashboard() {
       }
     }
   }, [steps]);
+
+  // Mobile Timeline Track Height & Walking Animation Measurement
+  const mobileTimelineRef = useRef(null);
+  const [mobileTrackHeight, setMobileTrackHeight] = useState(0);
+
+  useEffect(() => {
+    const updateMobileTrack = () => {
+      if (!mobileTimelineRef.current) return;
+      const items = mobileTimelineRef.current.querySelectorAll('.ft-mobile-step-item');
+      if (items.length >= 2) {
+        const first = items[0];
+        const last = items[items.length - 1];
+        const startY = first.offsetTop + 29;
+        const endY = last.offsetTop + 29;
+        setMobileTrackHeight(Math.max(0, endY - startY));
+      }
+    };
+
+    updateMobileTrack();
+    const timer = setTimeout(updateMobileTrack, 100);
+    window.addEventListener('resize', updateMobileTrack);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', updateMobileTrack);
+    };
+  }, [steps, selectedTrack]);
 
   // Helper to match workshop trainer account
   const getTrainerAccountForStep = (step) => {
