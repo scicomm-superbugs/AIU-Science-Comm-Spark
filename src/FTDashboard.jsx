@@ -1126,10 +1126,10 @@ export default function FTDashboard() {
               className="ft-timeline-modal-content"
               onClick={(e) => e.stopPropagation()}
               style={{
-                borderRadius: '24px', background: '#090d16', color: '#ffffff',
-                boxShadow: `0 25px 60px ${activeStep.color}50, 0 0 100px rgba(0,0,0,0.9)`,
+                borderRadius: '24px', background: '#ffffff', color: '#0f172a',
+                boxShadow: `0 25px 60px rgba(15, 23, 42, 0.25), 0 0 40px ${activeStep.color}20`,
                 width: '100%', maxWidth: '1060px', maxHeight: '90vh',
-                border: `2px solid ${activeStep.color}`, position: 'relative',
+                border: `2px solid ${activeStep.color}40`, position: 'relative',
                 animation: 'ftPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden'
               }}
@@ -1139,25 +1139,25 @@ export default function FTDashboard() {
                 onClick={() => setIsDetailModalOpen(false)}
                 style={{
                   position: 'absolute', top: '1.25rem', right: '1.25rem', zIndex: 20,
-                  background: 'rgba(255, 255, 255, 0.12)', border: '1px solid rgba(255,255,255,0.2)',
-                  color: '#ffffff', width: '40px', height: '40px', borderRadius: '50%',
+                  background: '#f1f5f9', border: '1px solid #cbd5e1',
+                  color: '#475569', width: '40px', height: '40px', borderRadius: '50%',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', transition: 'all 0.2s ease',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#e11d48'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)'; e.currentTarget.style.transform = 'scale(1)'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#e11d48'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#475569'; e.currentTarget.style.transform = 'scale(1)'; }}
               >
                 <X size={20} />
               </button>
 
-              {/* Header Bar inside Dark HUD */}
+              {/* Header Bar inside Light HUD */}
               <div 
                 className="ft-timeline-hud-header"
                 style={{
                   padding: '1.4rem 2.25rem', flexShrink: 0,
-                  background: `linear-gradient(135deg, ${activeStep.color}35 0%, rgba(9, 13, 22, 0.98) 100%)`,
-                  borderBottom: '1px solid rgba(255,255,255,0.15)',
+                  background: `linear-gradient(135deg, ${activeStep.color}15 0%, #ffffff 100%)`,
+                  borderBottom: '1px solid #e2e8f0',
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem'
                 }}
               >
@@ -1165,7 +1165,7 @@ export default function FTDashboard() {
                   <div style={{
                     width: 54, height: 54, borderRadius: '16px', background: activeStep.color,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff',
-                    boxShadow: `0 0 20px ${activeStep.color}`, flexShrink: 0
+                    boxShadow: `0 4px 15px ${activeStep.color}50`, flexShrink: 0
                   }}>
                     {activeStep.icon}
                   </div>
@@ -1175,15 +1175,15 @@ export default function FTDashboard() {
                         fontSize: '0.78rem', fontWeight: 900, textTransform: 'uppercase',
                         color: '#ffffff', background: activeStep.color,
                         padding: '0.25rem 0.75rem', borderRadius: '20px', letterSpacing: '0.06em',
-                        boxShadow: `0 0 12px ${activeStep.color}`
+                        boxShadow: `0 2px 8px ${activeStep.color}40`
                       }}>
                         {activeStep.badge}
                       </span>
-                      <span style={{ fontSize: '0.78rem', background: '#1e293b', border: '1px solid #475569', padding: '0.25rem 0.7rem', borderRadius: '8px', color: '#f8fafc', fontWeight: 700 }}>
+                      <span style={{ fontSize: '0.78rem', background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '0.25rem 0.7rem', borderRadius: '8px', color: '#334155', fontWeight: 700 }}>
                         {selectedTrack === 'pop_science' ? 'Pop Science Track' : 'Journalism Track'}
                       </span>
                     </div>
-                    <h3 style={{ fontSize: '1.6rem', fontWeight: 900, margin: 0, color: '#ffffff', fontFamily: "'Outfit', sans-serif", textShadow: '0 2px 10px rgba(0,0,0,0.5)', lineHeight: 1.25 }}>
+                    <h3 style={{ fontSize: '1.6rem', fontWeight: 900, margin: 0, color: '#0f172a', fontFamily: "'Outfit', sans-serif", lineHeight: 1.25 }}>
                       {activeStep.title}
                     </h3>
                   </div>
@@ -1199,7 +1199,7 @@ export default function FTDashboard() {
                         style={{
                           background: `linear-gradient(135deg, ${activeStep.color} 0%, #e11d48 100%)`,
                           color: '#ffffff', fontWeight: 900, padding: '0.85rem 1.6rem', borderRadius: '14px',
-                          fontSize: '0.98rem', border: 'none', boxShadow: `0 4px 20px ${activeStep.color}80`,
+                          fontSize: '0.98rem', border: 'none', boxShadow: `0 4px 20px ${activeStep.color}50`,
                           display: 'flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer',
                           letterSpacing: '0.01em'
                         }}
@@ -1216,7 +1216,7 @@ export default function FTDashboard() {
                           background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
                           color: '#ffffff', fontWeight: 900, padding: '0.85rem 1.6rem', borderRadius: '14px',
                           fontSize: '0.98rem', textDecoration: 'none', border: 'none',
-                          boxShadow: '0 4px 20px rgba(16, 185, 129, 0.45)',
+                          boxShadow: '0 4px 20px rgba(16, 185, 129, 0.35)',
                           display: 'flex', alignItems: 'center', gap: '0.55rem'
                         }}
                       >
@@ -1231,8 +1231,8 @@ export default function FTDashboard() {
                         onClick={() => setIsDetailModalOpen(false)}
                         className="ft-btn"
                         style={{
-                          background: '#1e293b', border: `2px solid ${activeStep.color}`,
-                          color: '#ffffff', fontWeight: 900, padding: '0.85rem 1.6rem', borderRadius: '14px',
+                          background: '#f8fafc', border: `2px solid ${activeStep.color}`,
+                          color: '#0f172a', fontWeight: 900, padding: '0.85rem 1.6rem', borderRadius: '14px',
                           fontSize: '0.98rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.55rem'
                         }}
                       >
@@ -1246,25 +1246,25 @@ export default function FTDashboard() {
                 )}
               </div>
 
-              {/* Body content inside HUD Card (Fluid Touch Inner Scroll) */}
+              {/* Body content inside Light HUD Card (Fluid Touch Inner Scroll) */}
               <div 
                 className="ft-modal-body-wrapper"
                 style={{
                   flex: 1, minHeight: 0, overflowY: 'auto',
                   WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain',
-                  padding: '1.75rem 2.25rem'
+                  padding: '1.75rem 2.25rem', background: '#ffffff'
                 }}
               >
-                {/* High-Contrast Subtitle Badge or Full Trainer Profile Card */}
+                {/* Subtitle Badge or Trainer Card */}
                 {(() => {
                   const trainerAcc = getTrainerAccountForStep(activeStep);
                   if (activeStep.type === 'workshop' && trainerAcc) {
                     return (
                       <div style={{
                         margin: '0.2rem 0 1.5rem 0', padding: '1rem 1.4rem', borderRadius: '18px',
-                        background: '#161f30', border: `1.5px solid ${activeStep.color}`,
+                        background: '#f8fafc', border: `1.5px solid ${activeStep.color}`,
                         display: 'inline-flex', alignItems: 'center', gap: '1.1rem',
-                        boxShadow: `0 4px 20px ${activeStep.color}25`
+                        boxShadow: `0 4px 15px rgba(0,0,0,0.05)`
                       }}>
                         <img
                           src={trainerAcc.avatarUrl || trainerAcc.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${trainerAcc.username}`}
@@ -1278,10 +1278,10 @@ export default function FTDashboard() {
                               : activeStep.badge === 'Office Hours' ? '💬 Office Hours Mentor'
                               : `🎓 Lead ${activeStep.badge || 'Workshop'} Trainer / Speaker`}
                           </div>
-                          <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#ffffff', margin: '0.2rem 0' }}>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0f172a', margin: '0.2rem 0' }}>
                             {trainerAcc.name || trainerAcc.username}
                           </div>
-                          <div style={{ fontSize: '0.84rem', color: '#cbd5e1', fontWeight: 600 }}>
+                          <div style={{ fontSize: '0.84rem', color: '#475569', fontWeight: 600 }}>
                             <span>{getCleanAcademicTitle(trainerAcc)}</span>
                           </div>
                         </div>
@@ -1291,28 +1291,28 @@ export default function FTDashboard() {
 
                   return (
                     <div style={{
-                      fontSize: '1.1rem', fontWeight: 900,
-                      color: selectedTrack === 'pop_science' ? '#ff6b81' : '#38bdf8',
+                      fontSize: '1.05rem', fontWeight: 900,
+                      color: selectedTrack === 'pop_science' ? '#be123c' : '#0284c7',
                       marginBottom: '0.85rem', display: 'inline-block',
-                      background: selectedTrack === 'pop_science' ? 'rgba(255, 107, 129, 0.12)' : 'rgba(56, 189, 248, 0.12)',
+                      background: selectedTrack === 'pop_science' ? '#fff1f2' : '#f0f9ff',
                       padding: '0.45rem 1rem', borderRadius: '12px',
-                      border: `1px solid ${selectedTrack === 'pop_science' ? 'rgba(255, 107, 129, 0.3)' : 'rgba(56, 189, 248, 0.3)'}`
+                      border: `1px solid ${selectedTrack === 'pop_science' ? '#fca5a5' : '#bae6fd'}`
                     }}>
                       {activeStep.sub}
                     </div>
                   );
                 })()}
 
-                {/* Crisp Bright Description */}
-                <p style={{ fontSize: '1rem', color: '#e2e8f0', margin: '0 0 1.75rem 0', maxWidth: '900px', lineHeight: 1.65, fontWeight: 500 }}>
+                {/* Crisp Dark Description */}
+                <p style={{ fontSize: '1rem', color: '#334155', margin: '0 0 1.75rem 0', maxWidth: '900px', lineHeight: 1.65, fontWeight: 500 }}>
                   {activeStep.details}
                 </p>
 
-                <div className="ft-modal-body-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: '1.75rem' }}>
+                <div className="ft-modal-body-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', borderTop: '1px solid #e2e8f0', paddingTop: '1.75rem' }}>
                   {/* Left Box: Judging Criteria */}
                   {activeStep.type === 'stage' && (
                     <div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#38bdf8', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#0284c7', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span style={{ fontSize: '1.1rem' }}>⚖️</span> JUDGING CRITERIA BREAKDOWN:
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
@@ -1322,10 +1322,9 @@ export default function FTDashboard() {
                             : DEFAULT_JUDGING_CRITERIA.filter(dc => dc.stageId === 'all' || Number(dc.stageId) === Number(activeStep.id));
 
                           if (stageCriteria.length === 0) {
-                            return <span style={{ fontSize: '0.92rem', color: '#94a3b8', fontStyle: 'italic' }}>No criteria assigned to this stage yet</span>;
+                            return <span style={{ fontSize: '0.92rem', color: '#64748b', fontStyle: 'italic' }}>No criteria assigned to this stage yet</span>;
                           }
 
-                          // Check if user has an evaluation score published
                           const userEval = (liveEvaluations || []).find(ev =>
                             (Number(ev.stageId) === Number(activeStep.id) || Number(ev.stageId) === Number(activeStep.stageId)) &&
                             (ev.competitorId === meDoc?.id || ev.competitorUsername === meDoc?.username || ev.competitorCode === meDoc?.code || ev.competitorId === user?.id || ev.userId === user?.id)
@@ -1347,9 +1346,9 @@ export default function FTDashboard() {
                             return (
                               <div key={c.id || c.name || idx} className="ft-modal-criteria-card" style={{
                                 padding: '0.85rem 1.15rem', borderRadius: '14px',
-                                background: '#161f30', border: `1.5px solid ${c.category === 'academic' ? '#0284c7' : '#e11d48'}`,
+                                background: '#f8fafc', border: `1.5px solid ${c.category === 'academic' ? '#93c5fd' : '#fca5a5'}`,
                                 display: 'flex', flexDirection: 'column', gap: '0.55rem',
-                                boxShadow: '0 4px 14px rgba(0,0,0,0.25)'
+                                boxShadow: '0 2px 10px rgba(0,0,0,0.04)'
                               }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '0.5rem' }}>
                                   <span style={{
@@ -1361,15 +1360,15 @@ export default function FTDashboard() {
                                   </span>
                                   <span style={{
                                     fontSize: '0.88rem', fontWeight: 900,
-                                    color: showEvaluatedScore ? '#ffffff' : '#0f172a',
-                                    background: showEvaluatedScore ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : '#f59e0b',
+                                    color: '#ffffff',
+                                    background: showEvaluatedScore ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : '#d97706',
                                     padding: '0.22rem 0.7rem', borderRadius: '8px', flexShrink: 0,
-                                    boxShadow: showEvaluatedScore ? '0 2px 8px rgba(16, 185, 129, 0.4)' : '0 2px 6px rgba(245, 158, 11, 0.4)'
+                                    boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
                                   }}>
                                     {scoredPts !== null ? `⭐ ${scoredPts} / ${maxPts} pts` : `${maxPts} pts`}
                                   </span>
                                 </div>
-                                <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#ffffff', lineHeight: 1.45 }}>
+                                <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a', lineHeight: 1.45 }}>
                                   {c.name}
                                 </div>
                               </div>
@@ -1383,40 +1382,40 @@ export default function FTDashboard() {
                   {/* Right Box: Assigned Judges */}
                   {activeStep.type === 'stage' && (
                     <div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#c084fc', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#9333ea', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span style={{ fontSize: '1.1rem' }}>👥</span> EVALUATION PANEL:
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                         {(activeStep.assignedJudgeIds || []).length === 0 ? (
-                          <span style={{ fontSize: '0.92rem', color: '#94a3b8', fontStyle: 'italic' }}>No judges assigned to this stage yet</span>
+                          <span style={{ fontSize: '0.92rem', color: '#64748b', fontStyle: 'italic' }}>No judges assigned to this stage yet</span>
                         ) : (
                           (activeStep.assignedJudgeIds || []).map(judgeId => {
                             const judge = scientists.find(u => u.id === judgeId);
                             if (!judge) return null;
-                            const roleColor = '#c084fc';
+                            const roleColor = '#9333ea';
                             const roleLabel = 'Judge';
                             const avatarUrl = judge.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${judge.username || judge.name}`;
 
                             return (
                               <div key={judgeId} className="ft-modal-judge-card" style={{
                                 display: 'flex', alignItems: 'center', gap: '1rem',
-                                background: '#161f30', padding: '0.85rem 1.15rem', borderRadius: '14px',
-                                border: `1.5px solid ${roleColor}80`,
-                                boxShadow: '0 4px 14px rgba(0,0,0,0.25)'
+                                background: '#f8fafc', padding: '0.85rem 1.15rem', borderRadius: '14px',
+                                border: `1.5px solid #d8b4fe`,
+                                boxShadow: '0 2px 10px rgba(0,0,0,0.04)'
                               }}>
                                 <img
                                   src={avatarUrl}
                                   alt={judge.name}
-                                  style={{ width: '46px', height: '46px', borderRadius: '50%', border: `2.5px solid ${roleColor}`, objectFit: 'cover', flexShrink: 0, boxShadow: `0 0 10px ${roleColor}40` }}
+                                  style={{ width: '46px', height: '46px', borderRadius: '50%', border: `2.5px solid ${roleColor}`, objectFit: 'cover', flexShrink: 0 }}
                                 />
                                 <div style={{ flex: 1 }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap' }}>
-                                    <div style={{ fontSize: '0.98rem', fontWeight: 900, color: '#ffffff' }}>{judge.name}</div>
-                                    <span style={{ fontSize: '0.72rem', fontWeight: 900, background: `${roleColor}25`, color: roleColor, padding: '0.15rem 0.5rem', borderRadius: '6px', border: `1px solid ${roleColor}60` }}>
+                                    <div style={{ fontSize: '0.98rem', fontWeight: 900, color: '#0f172a' }}>{judge.name}</div>
+                                    <span style={{ fontSize: '0.72rem', fontWeight: 900, background: `#f3e8ff`, color: roleColor, padding: '0.15rem 0.5rem', borderRadius: '6px', border: `1px solid #c084fc` }}>
                                       {roleLabel}
                                     </span>
                                   </div>
-                                  <div style={{ fontSize: '0.8rem', color: '#cbd5e1', marginTop: '0.15rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                  <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '0.15rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
                                     <span>🎓 {getCleanAcademicTitle(judge)}</span>
                                   </div>
                                 </div>

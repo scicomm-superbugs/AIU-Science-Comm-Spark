@@ -3779,7 +3779,7 @@ body.ft-modal-open {
 @media (max-width: 640px) {
   .ft-timeline-modal-container {
     padding: 0 !important;
-    background: #090d16 !important;
+    background: #ffffff !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
   }
