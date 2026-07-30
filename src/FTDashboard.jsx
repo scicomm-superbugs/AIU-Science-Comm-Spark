@@ -843,8 +843,8 @@ export default function FTDashboard() {
                       marginTop: '1.25rem', padding: '0.9rem 0.85rem', borderRadius: '16px',
                       background: isSelected
                         ? `linear-gradient(135deg, ${st.bgColor} 0%, #ffffff 100%)`
-                        : (st.type === 'submission_open' ? '#f0fdf4' : '#f8fafc'),
-                      border: `2px solid ${isSelected ? st.color : (st.type === 'submission_open' ? '#a7f3d0' : '#e2e8f0')}`,
+                        : (st.type === 'submission_open' ? '#fff1f2' : '#f8fafc'),
+                      border: `2px solid ${isSelected ? st.color : (st.type === 'submission_open' ? '#fecdd3' : '#e2e8f0')}`,
                       width: '100%',
                       boxShadow: isSelected ? `0 8px 20px ${st.color}20` : 'none',
                       transition: 'all 0.25s ease',
