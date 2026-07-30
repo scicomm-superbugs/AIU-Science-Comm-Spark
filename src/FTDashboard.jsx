@@ -1128,10 +1128,10 @@ export default function FTDashboard() {
               style={{
                 borderRadius: '24px', background: '#090d16', color: '#ffffff',
                 boxShadow: `0 25px 60px ${activeStep.color}50, 0 0 100px rgba(0,0,0,0.9)`,
-                overflow: 'hidden', width: '100%', maxWidth: '1060px', maxHeight: '88vh',
+                width: '100%', maxWidth: '1060px', maxHeight: '90vh',
                 border: `2px solid ${activeStep.color}`, position: 'relative',
                 animation: 'ftPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                display: 'flex', flexDirection: 'column'
+                display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden'
               }}
             >
               {/* Floating Close Button (X) */}
@@ -1155,7 +1155,7 @@ export default function FTDashboard() {
               <div 
                 className="ft-timeline-hud-header"
                 style={{
-                  padding: '1.4rem 2.25rem',
+                  padding: '1.4rem 2.25rem', flexShrink: 0,
                   background: `linear-gradient(135deg, ${activeStep.color}35 0%, rgba(9, 13, 22, 0.98) 100%)`,
                   borderBottom: '1px solid rgba(255,255,255,0.15)',
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem'
@@ -1246,8 +1246,15 @@ export default function FTDashboard() {
                 )}
               </div>
 
-              {/* Body content inside HUD Card (Spacious Vertical Inner Scroll) */}
-              <div style={{ padding: '1.75rem 2.25rem', overflowY: 'auto', maxHeight: 'calc(88vh - 90px)' }}>
+              {/* Body content inside HUD Card (Fluid Touch Inner Scroll) */}
+              <div 
+                className="ft-modal-body-wrapper"
+                style={{
+                  flex: 1, minHeight: 0, overflowY: 'auto',
+                  WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain',
+                  padding: '1.75rem 2.25rem'
+                }}
+              >
                 {/* High-Contrast Subtitle Badge or Full Trainer Profile Card */}
                 {(() => {
                   const trainerAcc = getTrainerAccountForStep(activeStep);
@@ -1301,14 +1308,14 @@ export default function FTDashboard() {
                   {activeStep.details}
                 </p>
 
-                <div className="ft-modal-body-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '2rem', borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: '1.75rem' }}>
+                <div className="ft-modal-body-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: '1.75rem' }}>
                   {/* Left Box: Judging Criteria */}
                   {activeStep.type === 'stage' && (
                     <div>
                       <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#38bdf8', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span style={{ fontSize: '1.1rem' }}>⚖️</span> JUDGING CRITERIA BREAKDOWN:
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                         {(() => {
                           const stageCriteria = (activeStep.criteria && activeStep.criteria.length > 0)
                             ? activeStep.criteria
@@ -1338,13 +1345,13 @@ export default function FTDashboard() {
                               : (showEvaluatedScore && userEval?.score !== undefined ? Math.round(Number(userEval.score) / stageCriteria.length) : null);
 
                             return (
-                              <div key={c.id || c.name || idx} style={{
+                              <div key={c.id || c.name || idx} className="ft-modal-criteria-card" style={{
                                 padding: '0.85rem 1.15rem', borderRadius: '14px',
                                 background: '#161f30', border: `1.5px solid ${c.category === 'academic' ? '#0284c7' : '#e11d48'}`,
-                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                boxShadow: '0 4px 14px rgba(0,0,0,0.25)', gap: '0.75rem'
+                                display: 'flex', flexDirection: 'column', gap: '0.55rem',
+                                boxShadow: '0 4px 14px rgba(0,0,0,0.25)'
                               }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '0.5rem' }}>
                                   <span style={{
                                     fontSize: '0.75rem', padding: '0.22rem 0.6rem', borderRadius: '7px',
                                     background: c.category === 'academic' ? '#0284c7' : '#e11d48',
@@ -1352,17 +1359,19 @@ export default function FTDashboard() {
                                   }}>
                                     {c.category === 'academic' ? 'Academic 🎓' : 'SciComm 🎙️'}
                                   </span>
-                                  <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#ffffff', lineHeight: 1.4 }}>{c.name}</span>
+                                  <span style={{
+                                    fontSize: '0.88rem', fontWeight: 900,
+                                    color: showEvaluatedScore ? '#ffffff' : '#0f172a',
+                                    background: showEvaluatedScore ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : '#f59e0b',
+                                    padding: '0.22rem 0.7rem', borderRadius: '8px', flexShrink: 0,
+                                    boxShadow: showEvaluatedScore ? '0 2px 8px rgba(16, 185, 129, 0.4)' : '0 2px 6px rgba(245, 158, 11, 0.4)'
+                                  }}>
+                                    {scoredPts !== null ? `⭐ ${scoredPts} / ${maxPts} pts` : `${maxPts} pts`}
+                                  </span>
                                 </div>
-                                <span style={{
-                                  fontSize: '0.88rem', fontWeight: 900,
-                                  color: showEvaluatedScore ? '#ffffff' : '#0f172a',
-                                  background: showEvaluatedScore ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : '#f59e0b',
-                                  padding: '0.22rem 0.7rem', borderRadius: '8px', flexShrink: 0,
-                                  boxShadow: showEvaluatedScore ? '0 2px 8px rgba(16, 185, 129, 0.4)' : '0 2px 6px rgba(245, 158, 11, 0.4)'
-                                }}>
-                                  {scoredPts !== null ? `⭐ ${scoredPts} / ${maxPts} pts` : `${maxPts} pts`}
-                                </span>
+                                <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#ffffff', lineHeight: 1.45 }}>
+                                  {c.name}
+                                </div>
                               </div>
                             );
                           });
@@ -1377,7 +1386,7 @@ export default function FTDashboard() {
                       <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#c084fc', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span style={{ fontSize: '1.1rem' }}>👥</span> EVALUATION PANEL:
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                         {(activeStep.assignedJudgeIds || []).length === 0 ? (
                           <span style={{ fontSize: '0.92rem', color: '#94a3b8', fontStyle: 'italic' }}>No judges assigned to this stage yet</span>
                         ) : (
@@ -1389,7 +1398,7 @@ export default function FTDashboard() {
                             const avatarUrl = judge.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${judge.username || judge.name}`;
 
                             return (
-                              <div key={judgeId} style={{
+                              <div key={judgeId} className="ft-modal-judge-card" style={{
                                 display: 'flex', alignItems: 'center', gap: '1rem',
                                 background: '#161f30', padding: '0.85rem 1.15rem', borderRadius: '14px',
                                 border: `1.5px solid ${roleColor}80`,
