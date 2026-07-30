@@ -949,20 +949,27 @@ export default function FTDashboard() {
                     {st.items && st.items.length > 1 && (
                       <div style={{
                         marginTop: '0.4rem', paddingTop: '0.35rem', borderTop: '1px dashed #fecdd3',
-                        display: 'flex', flexDirection: 'column', gap: '0.2rem', alignItems: 'center', width: '100%'
+                        display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'center', width: '100%'
                       }}>
-                        {st.items.map((it, iIdx) => (
-                          <div key={iIdx} style={{
-                            fontSize: '0.65rem', fontWeight: 800, color: '#991b1b', background: '#ffffff',
-                            padding: '0.15rem 0.4rem', borderRadius: '6px', border: '1px solid #fecdd3',
-                            width: '100%', boxSizing: 'border-box', textAlign: 'center'
-                          }}>
-                            <div>• {it.subName}</div>
-                            <div style={{ fontSize: '0.62rem', color: '#dc2626', fontWeight: 700 }}>
-                              Deadline: {formatUnifiedDate(it.closeDate)}
+                        {st.items.map((it, iIdx) => {
+                          const itemDeadlineFormatted = formatUnifiedDate(it.closeDate);
+                          const isDuplicateDeadline = itemDeadlineFormatted === st.closeDeadline;
+
+                          return (
+                            <div key={iIdx} style={{
+                              fontSize: '0.72rem', fontWeight: 800, color: '#991b1b', background: '#ffffff',
+                              padding: '0.22rem 0.5rem', borderRadius: '6px', border: '1px solid #fecdd3',
+                              width: '100%', boxSizing: 'border-box', textAlign: 'center'
+                            }}>
+                              <div>• {it.subName}</div>
+                              {!isDuplicateDeadline && it.closeDate && (
+                                <div style={{ fontSize: '0.62rem', color: '#dc2626', fontWeight: 700 }}>
+                                  Deadline: {itemDeadlineFormatted}
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -1065,20 +1072,25 @@ export default function FTDashboard() {
                           marginTop: '0.25rem', paddingTop: '0.35rem', borderTop: '1px dashed #fecdd3',
                           display: 'flex', flexDirection: 'column', gap: '0.3rem'
                         }}>
-                          {st.items.map((it, iIdx) => (
-                            <div key={iIdx} style={{
-                              fontSize: '0.74rem', fontWeight: 800, color: '#991b1b', background: '#fff1f2',
-                              padding: '0.25rem 0.55rem', borderRadius: '8px', border: '1px solid #fecdd3',
-                              display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.35rem'
-                            }}>
-                              <span>• {it.subName || it.title || 'Submission Item'}</span>
-                              {it.closeDate && (
-                                <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: 800 }}>
-                                  Deadline: {formatUnifiedDate(it.closeDate)}
-                                </span>
-                              )}
-                            </div>
-                          ))}
+                          {st.items.map((it, iIdx) => {
+                            const itemDeadlineFormatted = formatUnifiedDate(it.closeDate);
+                            const isDuplicateDeadline = itemDeadlineFormatted === st.closeDeadline;
+
+                            return (
+                              <div key={iIdx} style={{
+                                fontSize: '0.74rem', fontWeight: 800, color: '#991b1b', background: '#fff1f2',
+                                padding: '0.25rem 0.55rem', borderRadius: '8px', border: '1px solid #fecdd3',
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.35rem'
+                              }}>
+                                <span>• {it.subName || it.title || 'Submission Item'}</span>
+                                {!isDuplicateDeadline && it.closeDate && (
+                                  <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: 800 }}>
+                                    Deadline: {itemDeadlineFormatted}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
