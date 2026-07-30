@@ -23,6 +23,10 @@ export default function FTOurTeam() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mobileLeaderboardTrack, setMobileLeaderboardTrack] = useState(() => {
+    const tr = user?.registeredTrack || 'pop_science';
+    return (tr === 'science_journalism' || tr === 'journalism') ? 'journalism' : 'pop_science';
+  });
 
   // Find the current user's scientist doc
   const meDoc = useMemo(() => {
@@ -830,11 +834,40 @@ export default function FTOurTeam() {
         </div>
       )}
 
+      {/* MOBILE TRACK FILTER TABS (Mobile Only) */}
+      <div className="ft-leaderboard-mobile-tabs">
+        <button
+          type="button"
+          className="ft-leaderboard-mobile-tab-btn"
+          onClick={() => setMobileLeaderboardTrack('pop_science')}
+          style={{
+            background: mobileLeaderboardTrack === 'pop_science' ? '#be123c' : '#f1f5f9',
+            color: mobileLeaderboardTrack === 'pop_science' ? '#ffffff' : '#475569',
+            boxShadow: mobileLeaderboardTrack === 'pop_science' ? '0 4px 12px rgba(190, 18, 60, 0.3)' : 'none'
+          }}
+        >
+          🎥 Track 1: Pop Videos
+        </button>
+
+        <button
+          type="button"
+          className="ft-leaderboard-mobile-tab-btn"
+          onClick={() => setMobileLeaderboardTrack('journalism')}
+          style={{
+            background: mobileLeaderboardTrack === 'journalism' ? '#2563eb' : '#f1f5f9',
+            color: mobileLeaderboardTrack === 'journalism' ? '#ffffff' : '#475569',
+            boxShadow: mobileLeaderboardTrack === 'journalism' ? '0 4px 12px rgba(37, 99, 235, 0.3)' : 'none'
+          }}
+        >
+          📰 Track 2: Journalism
+        </button>
+      </div>
+
       {/* SIDE-BY-SIDE SPLIT COMPETITION LEADERBOARDS (TRACK 1 & TRACK 2) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.75rem', alignItems: 'start' }}>
         
         {/* LEFT COLUMN: TRACK 1 POP SCIENCE VIDEOS */}
-        <div className="ft-card" style={{ padding: '1.75rem', background: '#ffffff', borderRadius: '24px', border: '1.5px solid #fecdd3', boxShadow: '0 4px 16px rgba(190,18,60,0.04)' }}>
+        <div className={`ft-card ${mobileLeaderboardTrack === 'journalism' ? 'ft-hide-on-mobile' : ''}`} style={{ padding: '1.75rem', background: '#ffffff', borderRadius: '24px', border: '1.5px solid #fecdd3', boxShadow: '0 4px 16px rgba(190,18,60,0.04)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '2px solid #fff1f2', paddingBottom: '0.85rem' }}>
             <div>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#9f1239', margin: '0 0 0.2rem 0', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
@@ -910,7 +943,7 @@ export default function FTOurTeam() {
         </div>
 
         {/* RIGHT COLUMN: TRACK 2 SCIENCE JOURNALISM */}
-        <div className="ft-card" style={{ padding: '1.75rem', background: '#ffffff', borderRadius: '24px', border: '1.5px solid #bfdbfe', boxShadow: '0 4px 16px rgba(37,99,235,0.04)' }}>
+        <div className={`ft-card ${mobileLeaderboardTrack === 'pop_science' ? 'ft-hide-on-mobile' : ''}`} style={{ padding: '1.75rem', background: '#ffffff', borderRadius: '24px', border: '1.5px solid #bfdbfe', boxShadow: '0 4px 16px rgba(37,99,235,0.04)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '2px solid #eff6ff', paddingBottom: '0.85rem' }}>
             <div>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#1d4ed8', margin: '0 0 0.2rem 0', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
