@@ -6,6 +6,7 @@ import FTDashboard from './FTDashboard';
 import FTPlaceDetails from './FTPlaceDetails';
 import FTMyCompetition from './FTMyCompetition';
 import FTOurTeam from './FTOurTeam';
+import FTSchedulePage from './FTSchedulePage';
 import FTAdminPlaces from './FTAdminPlaces';
 import FTAdminCompetitors from './FTAdminCompetitors';
 import FTAdminSettings from './FTAdminSettings';
@@ -87,6 +88,7 @@ function App() {
               <Route path="place/:placeId" element={<FTPlaceDetails />} />
               <Route path="my-competition" element={<FTMyCompetition />} />
               <Route path="our-team" element={<FTOurTeam />} />
+              <Route path="schedule" element={<FTSchedulePage />} />
 
               {/* Admin/Faculty places */}
               <Route element={<FTProtectedRoute requireRole={['master', 'admin']} />}>

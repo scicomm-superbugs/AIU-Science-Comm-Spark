@@ -663,6 +663,7 @@ export default function FTLayout() {
 
     const items = [
       { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Timeline & Tracks', roles: 'all' },
+      { path: '/dashboard/schedule', icon: <Calendar size={20} />, label: 'Competition Schedule', roles: 'all' },
       { path: '/dashboard/my-competition', icon: <BookOpen size={20} />, label: 'My Submissions', roles: ['competitor', 'user'] },
       { path: '/dashboard/our-team', icon: <Users size={20} />, label: leaderboardLabel, roles: 'all' },
       { path: '/dashboard/judge', icon: <ClipboardCheck size={20} />, label: 'Judge & Trainer Portal', roles: ['judge', 'trainer_judge', 'academic_judge', 'scicomm_judge'] },
@@ -682,9 +683,9 @@ export default function FTLayout() {
 
   const isAdmin = userRole === 'master' || userRole === 'admin';
   const isStaff = userRole === 'master' || userRole === 'admin' || userRole === 'judge' || userRole === 'faculty';
-  const competitorOverviewItems = useMemo(() => navItems.filter(item => item.path === '/dashboard' || item.path === '/dashboard/my-competition' || item.path === '/dashboard/our-team' || item.path === '/' || item.path === '/my-competition' || item.path === '/our-team'), [navItems]);
-  const judgeOverviewItems = useMemo(() => navItems.filter(item => item.path === '/dashboard/judge' || item.path === '/judge'), [navItems]);
-  const otherItems = useMemo(() => navItems.filter(item => !['/dashboard', '/dashboard/my-competition', '/dashboard/our-team', '/dashboard/judge', '/', '/my-competition', '/our-team', '/judge'].includes(item.path)), [navItems]);
+  const competitorOverviewItems = useMemo(() => navItems.filter(item => ['/dashboard', '/dashboard/schedule', '/dashboard/my-competition', '/dashboard/our-team', '/', '/schedule', '/my-competition', '/our-team'].includes(item.path)), [navItems]);
+  const judgeOverviewItems = useMemo(() => navItems.filter(item => ['/dashboard/judge', '/judge'].includes(item.path)), [navItems]);
+  const otherItems = useMemo(() => navItems.filter(item => !['/dashboard', '/dashboard/schedule', '/dashboard/my-competition', '/dashboard/our-team', '/dashboard/judge', '/', '/schedule', '/my-competition', '/our-team', '/judge'].includes(item.path)), [navItems]);
 
   // Get unread notification / action count for a specific sidebar section
   const getSectionUnreadCount = (itemPath) => {
