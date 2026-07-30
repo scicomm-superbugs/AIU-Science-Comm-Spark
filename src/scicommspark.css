@@ -3661,21 +3661,58 @@ html, body, #root, .ft-app, .ft-main {
 
 @media (max-width: 640px) {
   .ft-navbar {
-    padding: 0.5rem 0.75rem !important;
-    gap: 0.5rem !important;
+    padding: 0.4rem 0.65rem !important;
+    height: 58px !important;
+    gap: 0.35rem !important;
+  }
+
+  .ft-navbar-logo-img {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .ft-navbar-brand {
+    gap: 0.45rem !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
   }
 
   .ft-navbar-brand-text {
     font-size: 0.88rem !important;
+    font-weight: 800 !important;
     white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
     line-height: 1.2 !important;
   }
 
   .ft-navbar-brand-sub {
-    font-size: 0.7rem !important;
-    white-space: nowrap !important;
+    display: none !important;
   }
 
+  .ft-navbar-actions {
+    gap: 0.35rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  .ft-theme-toggle {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .ft-navbar-avatar {
+    width: 32px !important;
+    height: 32px !important;
+  }
+}
+
+@media (max-width: 440px) {
+  .ft-brand-suffix {
+    display: none !important;
+  }
+}
+
+@media (max-width: 640px) {
   .ft-mobile-nav {
     display: flex !important;
     justify-content: flex-start !important;

@@ -804,9 +804,11 @@ export default function FTLayout() {
             {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
           <Link to="/dashboard" className="ft-navbar-brand" style={{ textDecoration: 'none' }}>
-            <img src="./spark_logo.png" alt="SciComm Spark Logo" style={{ width: '42px', height: '42px', objectFit: 'contain', flexShrink: 0 }} />
+            <img src="./spark_logo.png" alt="SciComm Spark Logo" className="ft-navbar-logo-img" style={{ width: '42px', height: '42px', objectFit: 'contain', flexShrink: 0 }} />
             <div>
-              <div className="ft-navbar-brand-text">SciComm Spark Competition</div>
+              <div className="ft-navbar-brand-text">
+                SciComm Spark <span className="ft-brand-suffix">Competition</span>
+              </div>
               <div className="ft-navbar-brand-sub">{FT_FACULTY}</div>
             </div>
           </Link>
