@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { useLiveCollection, db } from './db';
 import { Calendar, Clock, Plus, Trash2, Edit3, AlertCircle, CheckCircle2, User, MapPin, Link2, ExternalLink, Video, BookOpen, Layers, Search, Award, Send, Check, ChevronLeft, ChevronRight } from 'lucide-react';
-import { normalizeTrackKey } from './ftConstants';
+import { normalizeTrackKey, renderFormattedDescription } from './ftConstants';
 import './scicommspark.css';
 
 export default function WorkshopManager({ isAdmin = true, isTrainer = true, currentTrack = 'all' }) {
@@ -929,13 +929,13 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
                   </div>
 
                   {ws.description && (
-                    <p style={{
+                    <div style={{
                       fontSize: '0.9rem', color: isPassed ? '#94a3b8' : '#475569',
                       marginTop: '0.75rem', marginBottom: 0, lineHeight: 1.5, fontWeight: 500,
                       textDecoration: isPassed ? 'line-through 1.5px #cbd5e1' : 'none'
-                    }}>
-                      {ws.description}
-                    </p>
+                    }} dir="auto">
+                      {renderFormattedDescription(ws.description)}
+                    </div>
                   )}
                 </div>
 

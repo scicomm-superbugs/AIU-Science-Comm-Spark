@@ -3,7 +3,21 @@
    Alamein International University 
    ══════════════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Caveat:wght@700&family=Pacifico&family=Dancing+Script:wght@700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Caveat:wght@700&display=swap');
+
+/* ── Arabic Typography & Direction Formatting ────────────────────── */
+[dir="auto"], [dir="rtl"], :lang(ar) {
+  font-family: 'Cairo', 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+[dir="auto"] {
+  text-align: initial;
+  unicode-bidi: plaintext;
+}
+
+textarea, input {
+  unicode-bidi: plaintext;
+}
 
 /* Poster Branding Theme Rules */
 .ft-poster-title-container {

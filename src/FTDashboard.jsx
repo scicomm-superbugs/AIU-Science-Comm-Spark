@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Sparkles, Video, Newspaper, Calendar, Clock, ArrowRight, Award, CheckCircle2, Play, BookOpen, Layers, GitCommit, Zap, Mic, Users, Globe, Mail, ChevronRight, FileText, Check, Radio, ExternalLink, Pencil, Upload, X } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { db, useLiveCollection } from './db';
-import { COMPETITION_TRACKS, DEFAULT_JUDGING_CRITERIA, normalizeTrackKey, formatUnifiedDate, getCleanAcademicTitle } from './ftConstants';
+import { COMPETITION_TRACKS, DEFAULT_JUDGING_CRITERIA, normalizeTrackKey, formatUnifiedDate, getCleanAcademicTitle, renderFormattedDescription } from './ftConstants';
 import { CanvaTransformBox, EditableLogo } from './Landing';
 import WorkshopManager from './WorkshopManager';
 import './scicommspark.css';
@@ -1368,9 +1368,11 @@ export default function FTDashboard() {
                 })()}
 
                 {/* Crisp Dark Description */}
-                <p style={{ fontSize: '1rem', color: '#334155', margin: '0 0 1.75rem 0', maxWidth: '900px', lineHeight: 1.65, fontWeight: 500 }}>
-                  {activeStep.details}
-                </p>
+                {activeStep.details && (
+                  <div style={{ fontSize: '1rem', color: '#334155', margin: '0 0 1.75rem 0', maxWidth: '900px', lineHeight: 1.65, fontWeight: 500 }} dir="auto">
+                    {renderFormattedDescription(activeStep.details)}
+                  </div>
+                )}
 
                 <div className="ft-modal-body-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', borderTop: '1px solid #e2e8f0', paddingTop: '1.75rem' }}>
                   {/* Left Box: Judging Criteria */}

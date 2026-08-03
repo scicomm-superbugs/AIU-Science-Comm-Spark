@@ -239,37 +239,64 @@ export const normalizeTrackKey = (rawTrack) => {
   return 'pop_science';
 };
 
-// Rich formatting renderer for Markdown description text (headings, bold, bullets, numbered lists, paragraphs)
+// Rich formatting renderer for Markdown description text (headings, bold, bullets, numbered lists, paragraphs, RTL & Arabic support)
 export const renderFormattedDescription = (text) => {
   if (!text) return null;
   if (typeof text !== 'string') return text;
 
-  const lines = text.split('\n');
+  let cleanedText = text
+    .replace(/بالاستعارات التشبيهات/g, 'بالاستعارات والتشبيهات')
+    .trim();
+
+  // If text is a single long paragraph containing multiple "Header Title: description" points, convert to newlines with bullet points
+  if (!cleanedText.includes('\n') && (cleanedText.match(/[:：]/g) || []).length >= 2) {
+    cleanedText = cleanedText.replace(/([\.\!\?\؟\)])\s*([^\.\!\?\؟\)\n]+?[:：])/g, '$1\n• $2');
+    if (!cleanedText.startsWith('• ') && !cleanedText.startsWith('#') && cleanedText.includes(':')) {
+      cleanedText = '• ' + cleanedText;
+    }
+  }
+
+  const lines = cleanedText.split('\n');
   const elements = [];
   let currentList = null;
   let listType = null;
 
   const flushList = () => {
     if (currentList && currentList.length > 0) {
-      if (listType === 'ul') {
-        elements.push(
-          React.createElement('ul', { key: `ul-${elements.length}`, style: { margin: '0.4rem 0 0.75rem 1.3rem', padding: 0, color: 'inherit' } }, currentList)
-        );
-      } else if (listType === 'ol') {
-        elements.push(
-          React.createElement('ol', { key: `ol-${elements.length}`, style: { margin: '0.4rem 0 0.75rem 1.3rem', padding: 0, color: 'inherit' } }, currentList)
-        );
-      }
+      const ListTag = listType === 'ul' ? 'ul' : 'ol';
+      elements.push(
+        React.createElement(ListTag, {
+          key: `list-${elements.length}`,
+          dir: 'auto',
+          style: {
+            margin: '0.4rem 0 0.75rem 1.4rem',
+            padding: 0,
+            color: 'inherit',
+            textAlign: 'initial'
+          }
+        }, currentList)
+      );
       currentList = null;
       listType = null;
     }
   };
 
-  const parseInlineBold = (str) => {
-    const parts = str.split(/(\*\*.*?\*\*)/g);
+  const parseInlineBoldAndColon = (str) => {
+    let processed = str;
+    // Auto-bold label prefix before colon if not already formatted with **
+    if (!processed.includes('**') && processed.includes(':')) {
+      const colonIdx = processed.indexOf(':');
+      if (colonIdx > 0 && colonIdx < 60) {
+        const titlePart = processed.slice(0, colonIdx).trim();
+        const bodyPart = processed.slice(colonIdx + 1);
+        processed = `**${titlePart}:** ${bodyPart}`;
+      }
+    }
+
+    const parts = processed.split(/(\*\*.*?\*\*)/g);
     return parts.map((part, i) => {
       if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
-        return React.createElement('strong', { key: i, style: { fontWeight: 800, color: '#0f172a' } }, part.slice(2, -2));
+        return React.createElement('strong', { key: i, style: { fontWeight: 800, color: 'inherit' } }, part.slice(2, -2));
       }
       return part;
     });
@@ -287,7 +314,7 @@ export const renderFormattedDescription = (text) => {
     if (trimmed.startsWith('# ')) {
       flushList();
       elements.push(
-        React.createElement('h2', { key: index, style: { fontSize: '1.2rem', fontWeight: 900, color: '#0f172a', margin: '0.8rem 0 0.35rem 0', fontFamily: "'Outfit', sans-serif" } }, parseInlineBold(trimmed.slice(2)))
+        React.createElement('h2', { key: index, dir: 'auto', style: { fontSize: '1.2rem', fontWeight: 900, color: 'inherit', margin: '0.8rem 0 0.35rem 0', fontFamily: "'Outfit', sans-serif" } }, parseInlineBoldAndColon(trimmed.slice(2)))
       );
       return;
     }
@@ -295,7 +322,7 @@ export const renderFormattedDescription = (text) => {
     if (trimmed.startsWith('## ')) {
       flushList();
       elements.push(
-        React.createElement('h3', { key: index, style: { fontSize: '1.08rem', fontWeight: 900, color: '#0f172a', margin: '0.75rem 0 0.3rem 0', fontFamily: "'Outfit', sans-serif" } }, parseInlineBold(trimmed.slice(3)))
+        React.createElement('h3', { key: index, dir: 'auto', style: { fontSize: '1.08rem', fontWeight: 900, color: 'inherit', margin: '0.75rem 0 0.3rem 0', fontFamily: "'Outfit', sans-serif" } }, parseInlineBoldAndColon(trimmed.slice(3)))
       );
       return;
     }
@@ -303,13 +330,13 @@ export const renderFormattedDescription = (text) => {
     if (trimmed.startsWith('### ')) {
       flushList();
       elements.push(
-        React.createElement('h4', { key: index, style: { fontSize: '0.98rem', fontWeight: 900, color: '#0f172a', margin: '0.65rem 0 0.25rem 0', fontFamily: "'Outfit', sans-serif" } }, parseInlineBold(trimmed.slice(4)))
+        React.createElement('h4', { key: index, dir: 'auto', style: { fontSize: '0.98rem', fontWeight: 900, color: 'inherit', margin: '0.65rem 0 0.25rem 0', fontFamily: "'Outfit', sans-serif" } }, parseInlineBoldAndColon(trimmed.slice(4)))
       );
       return;
     }
 
-    // Bullet List (* or -)
-    if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
+    // Bullet List (* or - or •)
+    if (trimmed.startsWith('* ') || trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
       const content = trimmed.slice(2);
       if (listType !== 'ul') {
         flushList();
@@ -317,13 +344,13 @@ export const renderFormattedDescription = (text) => {
         currentList = [];
       }
       currentList.push(
-        React.createElement('li', { key: `item-${index}`, style: { margin: '0.2rem 0', lineHeight: 1.5 } }, parseInlineBold(content))
+        React.createElement('li', { key: `item-${index}`, dir: 'auto', style: { margin: '0.35rem 0', lineHeight: 1.6 } }, parseInlineBoldAndColon(content))
       );
       return;
     }
 
     // Numbered List (1. , 2. , etc.)
-    const numMatch = trimmed.match(/^(\d+)\.\s+(.*)/);
+    const numMatch = trimmed.match(/^(\d+)[\.\)]\s+(.*)/);
     if (numMatch) {
       const content = numMatch[2];
       if (listType !== 'ol') {
@@ -332,7 +359,7 @@ export const renderFormattedDescription = (text) => {
         currentList = [];
       }
       currentList.push(
-        React.createElement('li', { key: `item-${index}`, style: { margin: '0.25rem 0', lineHeight: 1.5 } }, parseInlineBold(content))
+        React.createElement('li', { key: `item-${index}`, dir: 'auto', style: { margin: '0.35rem 0', lineHeight: 1.6 } }, parseInlineBoldAndColon(content))
       );
       return;
     }
@@ -340,11 +367,11 @@ export const renderFormattedDescription = (text) => {
     // Normal Paragraph line
     flushList();
     elements.push(
-      React.createElement('p', { key: index, style: { margin: '0.3rem 0', lineHeight: 1.55, color: 'inherit' } }, parseInlineBold(trimmed))
+      React.createElement('p', { key: index, dir: 'auto', style: { margin: '0.35rem 0', lineHeight: 1.6, color: 'inherit', whiteSpace: 'pre-wrap' } }, parseInlineBoldAndColon(trimmed))
     );
   });
 
   flushList();
 
-  return React.createElement('div', { style: { display: 'flex', flexDirection: 'column' } }, elements);
+  return React.createElement('div', { dir: 'auto', style: { display: 'flex', flexDirection: 'column', gap: '0.15rem' } }, elements);
 };
