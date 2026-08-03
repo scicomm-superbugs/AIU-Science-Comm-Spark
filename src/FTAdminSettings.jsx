@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { db, firestore, getCollectionName, useLiveCollection } from './db';
 import { collection, getDocs } from 'firebase/firestore';
 import { Settings, Save, Search, UserCheck, Plus, Trash2, Award } from 'lucide-react';
-import { DEFAULT_JUDGING_CRITERIA, FT_DEPARTMENTS, FT_ROLE_LABELS } from './ftConstants';
+import { DEFAULT_JUDGING_CRITERIA, FT_DEPARTMENTS, FT_ROLE_LABELS, getUserRoleLabel } from './ftConstants';
 import WorkshopManager from './WorkshopManager';
 import './scicommspark.css';
 
@@ -318,7 +318,7 @@ export default function FTAdminSettings() {
                   </span>
                 </div>
                 <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '0.2rem', fontWeight: 500 }}>
-                  <strong>{u.email}</strong> · Current Role: <strong style={{ color: '#be123c' }}>{FT_ROLE_LABELS[u.role] || u.role}</strong>
+                  <strong>{u.email}</strong> · Current Role: <strong style={{ color: '#be123c' }}>{getUserRoleLabel(u)}</strong>
                   {u.registeredTrack && ` · Track: ${u.registeredTrack === 'pop_science' ? 'Pop Science' : 'Science Journalism'}`}
                 </div>
               </div>

@@ -82,11 +82,11 @@ export const FT_ROLES = {
 export const FT_ROLE_LABELS = {
   master: 'System Administrator 👑',
   admin: 'Administrator 🛡️',
-  trainer_judge: 'Judge & Trainer 🎓⚖️',
-  trainer: 'Trainer & Mentor 🎓',
-  judge: 'Judge ⚖️',
-  academic_judge: 'Academic Judge ⚖️',
-  scicomm_judge: 'SciComm Judge ⚖️',
+  trainer_judge: 'Trainer & Judge 🎓⚖️',
+  trainer: 'Trainer & Judge 🎓⚖️',
+  judge: 'Trainer & Judge 🎓⚖️',
+  academic_judge: 'Trainer & Judge 🎓⚖️',
+  scicomm_judge: 'Trainer & Judge 🎓⚖️',
   competitor: 'Competitor',
   user: 'Competitor'
 };
@@ -94,14 +94,8 @@ export const FT_ROLE_LABELS = {
 export const getUserRoleLabel = (account) => {
   if (!account) return 'Competitor';
   const r = account.role;
-  if (r === 'trainer_judge' || (account.isTrainer && account.isJudge)) {
-    return 'Judge & Trainer 🎓⚖️';
-  }
-  if (r === 'trainer' || account.isTrainer) {
-    return 'Trainer & Mentor 🎓';
-  }
-  if (r === 'judge' || r === 'academic_judge' || r === 'scicomm_judge' || account.isJudge) {
-    return 'Judge ⚖️';
+  if (['trainer_judge', 'trainer', 'judge', 'academic_judge', 'scicomm_judge'].includes(r) || (account.isTrainer && account.isJudge)) {
+    return 'Trainer & Judge 🎓⚖️';
   }
   return FT_ROLE_LABELS[r] || r || 'Competitor';
 };
