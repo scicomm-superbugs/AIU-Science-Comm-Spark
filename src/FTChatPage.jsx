@@ -6,7 +6,7 @@ import {
   Sparkles, ChevronLeft, Shield, Award, GraduationCap, HelpCircle, FileText, 
   MessageCircle, ArrowRight, UserCheck
 } from 'lucide-react';
-import { getCleanAcademicTitle, FT_ROLE_LABELS, FT_ROLE_COLORS, renderFormattedDescription } from './ftConstants';
+import { getCleanAcademicTitle, FT_ROLE_LABELS, FT_ROLE_COLORS, renderFormattedDescription, getUserRoleLabel } from './ftConstants';
 import './scicommspark.css';
 
 export default function FTChatPage() {
@@ -416,7 +416,7 @@ export default function FTChatPage() {
                         color: FT_ROLE_COLORS[activeRecipient.role] || '#2563eb',
                         border: `1px solid ${FT_ROLE_COLORS[activeRecipient.role] || '#2563eb'}40`
                       }}>
-                        {FT_ROLE_LABELS[activeRecipient.role] || activeRecipient.role}
+                        {getUserRoleLabel(activeRecipient)}
                       </span>
                     </div>
                     <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
@@ -714,7 +714,7 @@ export default function FTChatPage() {
                         fontSize: '0.72rem', fontWeight: 800, padding: '0.2rem 0.65rem', borderRadius: '8px',
                         background: `${roleColor}15`, color: roleColor, border: `1px solid ${roleColor}30`
                       }}>
-                        {FT_ROLE_LABELS[acc.role] || acc.role}
+                        {getUserRoleLabel(acc)}
                       </span>
                     </div>
                   );

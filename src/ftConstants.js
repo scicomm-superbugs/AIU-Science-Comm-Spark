@@ -82,13 +82,28 @@ export const FT_ROLES = {
 export const FT_ROLE_LABELS = {
   master: 'System Administrator 👑',
   admin: 'Administrator 🛡️',
-  trainer_judge: 'Judge',
-  trainer: 'Judge',
-  judge: 'Judge',
-  academic_judge: 'Judge',
-  scicomm_judge: 'Judge',
+  trainer_judge: 'Judge & Trainer 🎓⚖️',
+  trainer: 'Trainer & Mentor 🎓',
+  judge: 'Judge ⚖️',
+  academic_judge: 'Academic Judge ⚖️',
+  scicomm_judge: 'SciComm Judge ⚖️',
   competitor: 'Competitor',
   user: 'Competitor'
+};
+
+export const getUserRoleLabel = (account) => {
+  if (!account) return 'Competitor';
+  const r = account.role;
+  if (r === 'trainer_judge' || (account.isTrainer && account.isJudge)) {
+    return 'Judge & Trainer 🎓⚖️';
+  }
+  if (r === 'trainer' || account.isTrainer) {
+    return 'Trainer & Mentor 🎓';
+  }
+  if (r === 'judge' || r === 'academic_judge' || r === 'scicomm_judge' || account.isJudge) {
+    return 'Judge ⚖️';
+  }
+  return FT_ROLE_LABELS[r] || r || 'Competitor';
 };
 
 export const FT_ROLE_COLORS = {
