@@ -1098,28 +1098,6 @@ export default function FTLayout() {
       {/* ── Sidebar ────────────────────────────────────────── */}
       {sidebarOpen && <div className="ft-sidebar-overlay active" onClick={() => setSidebarOpen(false)} />}
       <aside className={`ft-sidebar ${sidebarOpen ? 'open' : ''}`}>
-        {/* Sidebar Top Header Bar */}
-        <div className="ft-sidebar-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <img src="./spark_logo.png" alt="SciComm Spark" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
-            <div>
-              <div style={{ fontWeight: 900, fontSize: '0.92rem', color: '#0f172a', fontFamily: "'Outfit', sans-serif" }}>
-                SciComm Spark
-              </div>
-              <div style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>
-                Competition Portal
-              </div>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="ft-sidebar-close-btn"
-            onClick={() => setSidebarOpen(false)}
-            title="Close Menu"
-          >
-            <X size={16} />
-          </button>
-        </div>
 
         <nav className="ft-sidebar-nav">
           {isAdmin ? (
