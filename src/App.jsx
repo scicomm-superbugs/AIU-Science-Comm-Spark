@@ -16,6 +16,7 @@ import FTProtectedRoute from './FTProtectedRoute';
 import FTTimelineManagement from './FTTimelineManagement';
 import FTEvaluationManagement from './FTEvaluationManagement';
 import FTTestSection from './FTTestSection';
+import FTChatPage from './FTChatPage';
 import Login from './Login';
 import Register from './Register';
 import Landing from './Landing';
@@ -89,6 +90,7 @@ function App() {
               <Route path="my-competition" element={<FTMyCompetition />} />
               <Route path="our-team" element={<FTOurTeam />} />
               <Route path="schedule" element={<FTSchedulePage />} />
+              <Route path="chat" element={<FTChatPage />} />
 
               {/* Admin/Faculty places */}
               <Route element={<FTProtectedRoute requireRole={['master', 'admin']} />}>
@@ -127,6 +129,7 @@ function App() {
           <Route path="/submission-assignments" element={<Navigate to="/dashboard/admin/submission-assignments" replace />} />
           <Route path="/admin/submission-assignments" element={<Navigate to="/dashboard/admin/submission-assignments" replace />} />
           <Route path="/judge" element={<Navigate to="/dashboard/judge" replace />} />
+          <Route path="/chat" element={<Navigate to="/dashboard/chat" replace />} />
           <Route path="/manage-places" element={<Navigate to="/dashboard/manage-places" replace />} />
 
           {/* Route fallback */}

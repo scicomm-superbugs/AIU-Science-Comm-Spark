@@ -4,7 +4,7 @@ import { useAuth } from './context/AuthContext';
 import { db, firestore, getCollectionName, useLiveCollection, getFirebaseAuth, uploadFile } from './db';
 import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { MapPin, BookOpen, Users, Settings, ClipboardCheck, LayoutDashboard, LogOut, Moon, Sun, Menu, X, ChevronDown, GraduationCap, Bell, AlertTriangle, Calendar, FileText, Globe, Camera, TestTube, RotateCcw } from 'lucide-react';
+import { MapPin, BookOpen, Users, Settings, ClipboardCheck, LayoutDashboard, LogOut, Moon, Sun, Menu, X, ChevronDown, GraduationCap, Bell, AlertTriangle, Calendar, FileText, Globe, Camera, TestTube, RotateCcw, MessageSquare } from 'lucide-react';
 import { FT_FACULTY, FT_ROLE_LABELS, FT_ROLE_COLORS, isFacultyRole, isJudgeRole, isCompetitorRole, FT_DEFAULT_REQUIRED_HOURS } from './ftConstants';
 import { getUserConflicts } from './ftConflictUtils';
 import bcrypt from 'bcryptjs';
@@ -666,6 +666,7 @@ export default function FTLayout() {
       { path: '/dashboard/schedule', icon: <Calendar size={20} />, label: 'Competition Schedule', roles: 'all' },
       { path: '/dashboard/my-competition', icon: <BookOpen size={20} />, label: 'My Submissions', roles: ['competitor', 'user'] },
       { path: '/dashboard/our-team', icon: <Users size={20} />, label: leaderboardLabel, roles: 'all' },
+      { path: '/dashboard/chat', icon: <MessageSquare size={20} />, label: 'Ask & Chat with Judges', roles: 'all' },
       { path: '/dashboard/judge', icon: <ClipboardCheck size={20} />, label: 'Judge & Trainer Portal', roles: ['judge', 'trainer_judge', 'academic_judge', 'scicomm_judge'] },
       { section: 'Management', roles: ['master', 'admin'] },
       { path: '/dashboard/competitors', icon: <Users size={20} />, label: 'Users & Roles', roles: ['master', 'admin'] },
@@ -683,9 +684,9 @@ export default function FTLayout() {
 
   const isAdmin = userRole === 'master' || userRole === 'admin';
   const isStaff = userRole === 'master' || userRole === 'admin' || userRole === 'judge' || userRole === 'faculty';
-  const competitorOverviewItems = useMemo(() => navItems.filter(item => ['/dashboard', '/dashboard/schedule', '/dashboard/my-competition', '/dashboard/our-team', '/', '/schedule', '/my-competition', '/our-team'].includes(item.path)), [navItems]);
+  const competitorOverviewItems = useMemo(() => navItems.filter(item => ['/dashboard', '/dashboard/schedule', '/dashboard/my-competition', '/dashboard/our-team', '/dashboard/chat', '/', '/schedule', '/my-competition', '/our-team', '/chat'].includes(item.path)), [navItems]);
   const judgeOverviewItems = useMemo(() => navItems.filter(item => ['/dashboard/judge', '/judge'].includes(item.path)), [navItems]);
-  const otherItems = useMemo(() => navItems.filter(item => !['/dashboard', '/dashboard/schedule', '/dashboard/my-competition', '/dashboard/our-team', '/dashboard/judge', '/', '/schedule', '/my-competition', '/our-team', '/judge'].includes(item.path)), [navItems]);
+  const otherItems = useMemo(() => navItems.filter(item => !['/dashboard', '/dashboard/schedule', '/dashboard/my-competition', '/dashboard/our-team', '/dashboard/chat', '/dashboard/judge', '/', '/schedule', '/my-competition', '/our-team', '/chat', '/judge'].includes(item.path)), [navItems]);
 
   // Get unread notification / action count for a specific sidebar section
   const getSectionUnreadCount = (itemPath) => {
@@ -717,6 +718,9 @@ export default function FTLayout() {
       }
       if (cleanPath === '/dashboard/our-team') {
         return ['team', 'leaderboard'].includes(n.type);
+      }
+      if (cleanPath === '/dashboard/chat') {
+        return ['chat'].includes(n.type);
       }
       if (cleanPath === '/dashboard') {
         return ['workshop', 'announcement', 'general', 'date_conflict'].includes(n.type);
