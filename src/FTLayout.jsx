@@ -666,7 +666,7 @@ export default function FTLayout() {
       { path: '/dashboard/schedule', icon: <Calendar size={20} />, label: 'Competition Schedule', roles: 'all' },
       { path: '/dashboard/my-competition', icon: <BookOpen size={20} />, label: 'My Submissions', roles: ['competitor', 'user'] },
       { path: '/dashboard/our-team', icon: <Users size={20} />, label: leaderboardLabel, roles: 'all' },
-      { path: '/dashboard/chat', icon: <MessageSquare size={20} />, label: 'Ask & Chat with Judges', roles: 'all' },
+      { path: '/dashboard/chat', icon: <MessageSquare size={20} />, label: 'Ask & Chat', roles: 'all' },
       { path: '/dashboard/judge', icon: <ClipboardCheck size={20} />, label: 'Judge & Trainer Portal', roles: ['judge', 'trainer_judge', 'academic_judge', 'scicomm_judge'] },
       { section: 'Management', roles: ['master', 'admin'] },
       { path: '/dashboard/competitors', icon: <Users size={20} />, label: 'Users & Roles', roles: ['master', 'admin'] },
