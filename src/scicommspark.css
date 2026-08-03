@@ -590,7 +590,7 @@
 }
 
 .ft-sidebar-header {
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: space-between;
   padding: 0.15rem 0.25rem 0.75rem 0.25rem;
@@ -1615,6 +1615,10 @@
 
 /* ── Responsive ─────────────────────────────────────────────────────── */
 @media (max-width: 1024px) {
+  .ft-sidebar-header {
+    display: flex;
+  }
+
   .ft-sidebar {
     top: 0 !important;
     height: 100vh !important;
