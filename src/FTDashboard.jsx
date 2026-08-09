@@ -538,19 +538,23 @@ export default function FTDashboard() {
               savePosterSetting({ dashLeftBrandScale: scale, dashLeftBrandRotate: rotate, dashLeftBrandOffsetX: offsetX, dashLeftBrandOffsetY: offsetY });
             }}
           >
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.85rem',
-              background: 'linear-gradient(135deg, #ffffff 0%, #fff1f2 100%)',
-              padding: '0.6rem 1rem',
-              borderRadius: '16px',
-              border: '1.5px solid #fecdd3',
-              boxShadow: '0 4px 15px rgba(190, 18, 60, 0.08)'
-            }}>
+            <div
+              className="ft-dash-creator-credit-box"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.85rem',
+                background: 'linear-gradient(135deg, #ffffff 0%, #fff1f2 100%)',
+                padding: '0.6rem 1rem',
+                borderRadius: '16px',
+                border: '1.5px solid #fecdd3',
+                boxShadow: '0 4px 15px rgba(190, 18, 60, 0.08)'
+              }}
+            >
               <img
                 src={abdullahAccount?.avatarUrl || abdullahAccount?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=AbdullahAmr'}
                 alt="Abdullah Amr Maged"
+                className="ft-dash-creator-avatar"
                 style={{
                   width: '44px',
                   height: '44px',
@@ -562,7 +566,7 @@ export default function FTDashboard() {
                 }}
               />
               <div>
-                <div style={{ fontWeight: 800, fontSize: '0.84rem', color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                <div className="ft-dash-creator-title" style={{ fontWeight: 800, fontSize: '0.84rem', color: '#334155', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
                   <span>Designed & Programmed with</span>
                   <span style={{ color: '#be123c', fontSize: '0.95rem', lineHeight: 1 }}>❤️</span>
                   <span>by</span>
@@ -570,7 +574,7 @@ export default function FTDashboard() {
                     {abdullahAccount?.name || 'Abdullah Amr Maged'}
                   </span>
                 </div>
-                <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, marginTop: '0.15rem' }}>
+                <div className="ft-dash-creator-subtitle" style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, marginTop: '0.15rem' }}>
                   {getCleanAcademicTitle(abdullahAccount) || abdullahAccount?.title || abdullahAccount?.institutionName || 'Teaching Assistant at Alamein International University'}
                 </div>
               </div>

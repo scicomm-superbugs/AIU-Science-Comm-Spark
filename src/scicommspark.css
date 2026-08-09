@@ -4157,6 +4157,29 @@ body.ft-modal-open {
   }
   .ft-dash-creator-credit-wrapper {
     justify-content: center !important;
+    margin-bottom: 0.4rem !important;
+  }
+  .ft-dash-creator-credit-box {
+    padding: 0.35rem 0.65rem !important;
+    border-radius: 12px !important;
+    gap: 0.5rem !important;
+    max-width: 92% !important;
+  }
+  .ft-dash-creator-avatar {
+    width: 32px !important;
+    height: 32px !important;
+    border-width: 1.5px !important;
+  }
+  .ft-dash-creator-title {
+    font-size: 0.72rem !important;
+    gap: 0.2rem !important;
+  }
+  .ft-dash-creator-title span {
+    font-size: 0.72rem !important;
+  }
+  .ft-dash-creator-subtitle {
+    font-size: 0.63rem !important;
+    margin-top: 0.05rem !important;
   }
 }
 
