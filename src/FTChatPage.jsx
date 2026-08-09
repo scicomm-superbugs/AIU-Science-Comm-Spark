@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './context/AuthContext';
 import { db, useLiveCollection } from './db';
 import { Send, User, Users, MessageSquare, Smile, Paperclip, X, FileText, ChevronLeft, MoreVertical, ExternalLink, Download, ZoomIn, ZoomOut, RotateCw, Plus, Search, Check, Globe } from 'lucide-react';
