@@ -499,6 +499,7 @@ export default function FTLayout() {
         ...prev,
         username: updates.username,
         name: updates.name,
+        title: updates.title,
         role: updates.role,
         avatar: updates.avatar
       }));

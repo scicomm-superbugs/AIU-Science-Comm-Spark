@@ -187,10 +187,10 @@ export const AuthProvider = ({ children }) => {
       // Check if this is the Master Admin Email (abdullah.amr.makky@gamil.com / gmail.com)
       if (isAdminEmail(userEmail)) {
         if (scientist) {
-          // Force update existing record to Master Admin status
+          // Force update existing record to Master Admin status while preserving custom title/name
           await db.scientists.update(scientist.id, {
             role: 'master',
-            title: 'Teaching Assistant at Alamein International University',
+            title: scientist.title || 'Teaching Assistant at Alamein International University',
             accountStatus: 'active',
             completedProfile: true,
             googleEmail: userEmail,
@@ -239,6 +239,7 @@ export const AuthProvider = ({ children }) => {
         id: scientist.id,
         username: scientist.username,
         name: scientist.name,
+        title: scientist.title,
         role: scientist.role || 'competitor',
         realRole: scientist.role || 'competitor',
         registeredTrack: scientist.registeredTrack || 'pop_science',
