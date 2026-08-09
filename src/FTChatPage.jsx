@@ -660,23 +660,24 @@ export default function FTChatPage({ user: userProp }) {
               )}
 
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
-                  <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 900, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {activeRecipientAcc ? (activeRecipientAcc.name || activeRecipientAcc.username) : 'Select a Conversation'}
-                  </h3>
+                <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.2 }}>
+                  {activeRecipientAcc ? (activeRecipientAcc.name || activeRecipientAcc.username) : 'Select a Conversation'}
+                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
                   {activeRecipientAcc && (
                     <span style={{
-                      fontSize: '0.65rem', fontWeight: 800, padding: '0.1rem 0.45rem', borderRadius: '6px', flexShrink: 0,
+                      fontSize: '0.62rem', fontWeight: 800, padding: '0.1rem 0.4rem', borderRadius: '6px', flexShrink: 0,
                       background: `${FT_ROLE_COLORS[activeRecipientAcc.role] || '#2563eb'}15`,
                       color: FT_ROLE_COLORS[activeRecipientAcc.role] || '#2563eb',
-                      border: `1px solid ${FT_ROLE_COLORS[activeRecipientAcc.role] || '#2563eb'}40`
+                      border: `1px solid ${FT_ROLE_COLORS[activeRecipientAcc.role] || '#2563eb'}40`,
+                      whiteSpace: 'nowrap'
                     }}>
                       {getUserRoleLabel(activeRecipientAcc)}
                     </span>
                   )}
-                </div>
-                <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {activeRecipientAcc ? (getCleanAcademicTitle(activeRecipientAcc) || activeRecipientAcc?.department || 'Competition Staff') : 'Select a contact from your recent chats or start a new chat'}
+                  <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
+                    {activeRecipientAcc ? (getCleanAcademicTitle(activeRecipientAcc) || activeRecipientAcc?.department || 'Competition Staff') : 'Select a contact'}
+                  </span>
                 </div>
               </div>
             </div>
