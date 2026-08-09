@@ -529,12 +529,11 @@ export default function FTDashboard() {
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.6rem',
-                background: 'linear-gradient(135deg, #ffffff 0%, #fff1f2 100%)',
-                padding: '0.35rem 0.75rem',
-                borderRadius: '9999px',
-                border: '1px solid #fecdd3',
-                boxShadow: '0 2px 8px rgba(190, 18, 60, 0.06)'
+                gap: '0.5rem',
+                background: 'rgba(255, 241, 242, 0.4)',
+                padding: '0.3rem 0.65rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(254, 205, 211, 0.6)'
               }}
             >
               <img
@@ -542,23 +541,25 @@ export default function FTDashboard() {
                 alt="Abdullah Amr Maged"
                 className="ft-dash-creator-avatar"
                 style={{
-                  width: '32px',
-                  height: '32px',
+                  width: '28px',
+                  height: '28px',
                   borderRadius: '50%',
-                  border: '2px solid #be123c',
+                  border: '1.5px solid #be123c',
                   objectFit: 'cover',
                   flexShrink: 0
                 }}
               />
               <div>
-                <div className="ft-dash-creator-title" style={{ fontWeight: 800, fontSize: '0.76rem', color: '#334155', display: 'flex', alignItems: 'center', gap: '0.25rem', whiteSpace: 'nowrap' }}>
-                  <span>Designed & Programmed by</span>
+                <div className="ft-dash-creator-title" style={{ fontWeight: 700, fontSize: '0.78rem', color: '#334155', display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap', lineHeight: 1.2 }}>
+                  <span>Designed & Programmed with</span>
+                  <span style={{ color: '#be123c', fontSize: '0.85rem', lineHeight: 1 }}>❤️</span>
+                  <span>by</span>
                   <span style={{ fontWeight: 900, color: '#be123c', fontFamily: "'Outfit', sans-serif" }}>
                     {abdullahAccount?.name || 'Abdullah Amr Maged'}
                   </span>
                 </div>
-                <div className="ft-dash-creator-subtitle" style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600, marginTop: '0.02rem', whiteSpace: 'nowrap' }}>
-                  Teaching Assistant & Coordinator, AIU
+                <div className="ft-dash-creator-subtitle" style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600, marginTop: '0.1rem', lineHeight: 1.2 }}>
+                  {getCleanAcademicTitle(abdullahAccount) || abdullahAccount?.title || abdullahAccount?.institutionName || 'Teaching Assistant at Alamein International University'}
                 </div>
               </div>
             </div>
