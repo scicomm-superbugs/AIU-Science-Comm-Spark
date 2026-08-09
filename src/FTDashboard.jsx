@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Sparkles, Video, Newspaper, Calendar, Clock, ArrowRight, Award, CheckCircle2, Play, BookOpen, Layers, GitCommit, Zap, Mic, Users, Globe, Mail, ChevronRight, FileText, Check, Radio, ExternalLink, Pencil, Upload, X } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { db, useLiveCollection } from './db';
@@ -12,6 +12,10 @@ import './scicommspark.css';
 export default function FTDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const outletContext = useOutletContext();
+  const editingPoster = outletContext?.editingPoster ?? false;
+  const setEditingPoster = outletContext?.setEditingPoster ?? (() => {});
+
   const settingsCollection = useLiveCollection('ft_settings');
   const settingsData = settingsCollection?.[0] || {};
   const customConfig = useLiveCollection('timeline_config') || [];
@@ -21,7 +25,6 @@ export default function FTDashboard() {
   const publishedResults = useLiveCollection('published_results') || [];
 
   const isAdmin = ['admin', 'master'].includes(user?.role);
-  const [editingPoster, setEditingPoster] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const modalTimerRef = useRef(null);
 
@@ -507,25 +510,7 @@ export default function FTDashboard() {
         border: '1px solid #e2e8f0', boxShadow: '0 8px 30px rgba(15, 23, 42, 0.04)',
         position: 'relative'
       }}>
-        {/* Admin Poster Edit Toggle */}
-        {isAdmin && (
-          <div className="ft-dash-edit-poster-btn-wrapper" style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 100 }}>
-            <button
-              onClick={() => setEditingPoster(prev => !prev)}
-              className="ft-dash-edit-poster-btn"
-              style={{
-                background: editingPoster ? '#2563eb' : '#f1f5f9',
-                color: editingPoster ? '#ffffff' : '#475569',
-                border: '1px solid #cbd5e1', borderRadius: '12px',
-                padding: '0.45rem 0.9rem', fontWeight: 800, fontSize: '0.78rem',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
-                boxShadow: editingPoster ? '0 4px 12px rgba(37,99,235,0.3)' : 'none'
-              }}
-            >
-              <Pencil size={14} /> {editingPoster ? 'Done Editing Poster' : 'Edit Poster Logos Layout'}
-            </button>
-          </div>
-        )}
+
 
         <div className="ft-dash-creator-credit-wrapper" style={{ display: 'flex', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '1rem' }}>
           {/* Left: Creator Credit Box (Designed & Programmed with ❤️ by Abdullah Amr Maged) */}

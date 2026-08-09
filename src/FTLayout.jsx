@@ -4,7 +4,7 @@ import { useAuth } from './context/AuthContext';
 import { db, firestore, getCollectionName, useLiveCollection, getFirebaseAuth, uploadFile } from './db';
 import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { MapPin, BookOpen, Users, Settings, ClipboardCheck, LayoutDashboard, LogOut, Moon, Sun, Menu, X, ChevronDown, GraduationCap, Bell, AlertTriangle, Calendar, FileText, Globe, Camera, TestTube, RotateCcw, MessageSquare } from 'lucide-react';
+import { MapPin, BookOpen, Users, Settings, ClipboardCheck, LayoutDashboard, LogOut, Moon, Sun, Menu, X, ChevronDown, GraduationCap, Bell, AlertTriangle, Calendar, FileText, Globe, Camera, TestTube, RotateCcw, MessageSquare, Pencil } from 'lucide-react';
 import { FT_FACULTY, FT_ROLE_LABELS, FT_ROLE_COLORS, isFacultyRole, isJudgeRole, isCompetitorRole, FT_DEFAULT_REQUIRED_HOURS } from './ftConstants';
 import { getUserConflicts } from './ftConflictUtils';
 import bcrypt from 'bcryptjs';
@@ -19,6 +19,7 @@ export default function FTLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [meDoc, setMeDoc] = useState(null);
+  const [editingPoster, setEditingPoster] = useState(false);
   const userRole = user?.role || 'competitor';
 
   const [resettingTestData, setResettingTestData] = useState(false);
@@ -909,6 +910,30 @@ export default function FTLayout() {
               <RotateCcw size={14} style={{ animation: resettingTestData ? 'spin 1s linear infinite' : 'none' }} />
               {resettingTestData ? 'Resetting Test Data...' : '🔄 Reset Test Users & Submissions'}
             </button>
+
+            {/* Admin Poster Edit Toggle in Top Bar */}
+            <button
+              onClick={() => setEditingPoster(prev => !prev)}
+              title="Toggle poster logo layout editing mode on main dashboard"
+              style={{
+                background: editingPoster ? '#2563eb' : 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                color: editingPoster ? '#ffffff' : '#334155',
+                border: `1.5px solid ${editingPoster ? '#2563eb' : '#cbd5e1'}`,
+                padding: '0.35rem 0.85rem',
+                borderRadius: '12px',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                boxShadow: editingPoster ? '0 4px 12px rgba(37,99,235,0.3)' : '0 2px 6px rgba(0,0,0,0.04)',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <Pencil size={14} /> {editingPoster ? 'Done Editing Layout' : 'Edit Poster Logos Layout'}
+            </button>
           </div>
         )}
 
@@ -1275,7 +1300,7 @@ export default function FTLayout() {
                </button>
              </div>
            )}
-           <Outlet context={{ meDoc, creditData, userRole, places, registrations, settings, resetRequests }} />
+           <Outlet context={{ meDoc, creditData, userRole, places, registrations, settings, resetRequests, editingPoster, setEditingPoster }} />
         </div>
 
         {/* Footer / Downbar */}
