@@ -509,9 +509,10 @@ export default function FTDashboard() {
       }}>
         {/* Admin Poster Edit Toggle */}
         {isAdmin && (
-          <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 100 }}>
+          <div className="ft-dash-edit-poster-btn-wrapper" style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 100 }}>
             <button
               onClick={() => setEditingPoster(prev => !prev)}
+              className="ft-dash-edit-poster-btn"
               style={{
                 background: editingPoster ? '#2563eb' : '#f1f5f9',
                 color: editingPoster ? '#ffffff' : '#475569',

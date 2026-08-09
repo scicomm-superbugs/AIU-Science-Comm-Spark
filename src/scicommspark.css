@@ -4183,6 +4183,17 @@ body.ft-modal-open {
   .ft-desktop-only-badge {
     display: none !important;
   }
+  .ft-dash-edit-poster-btn-wrapper {
+    position: static !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    margin-bottom: 0.4rem !important;
+    width: 100% !important;
+  }
+  .ft-dash-edit-poster-btn {
+    padding: 0.3rem 0.6rem !important;
+    font-size: 0.72rem !important;
+  }
   .ft-dash-creator-credit-wrapper {
     justify-content: center !important;
     margin-bottom: 0.4rem !important;
