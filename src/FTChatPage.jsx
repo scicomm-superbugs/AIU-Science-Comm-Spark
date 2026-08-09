@@ -193,48 +193,25 @@ export default function FTChatPage({ user: userProp }) {
   const rawMessages = useLiveCollection('ft_messages');
   const rawAccounts = useLiveCollection('scientists') || [];
 
-  // Default fallback system admin accounts if not present in collection
-  const defaultAdmins = useMemo(() => [
-    {
-      id: 'admin_sys_1',
-      username: 'admin_sys_1',
-      name: 'Abdullah Amr Maged',
-      role: 'master',
-      title: 'System Administrator & Coordinator',
-      department: 'SciComm Spark Steering Committee',
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AbdullahAmrMaged'
-    },
-    {
-      id: 'admin_sys_2',
-      username: 'admin_sys_2',
-      name: 'SciComm Spark Helpdesk',
-      role: 'admin',
-      title: 'Official Support & Technical Inquiries',
-      department: 'Competition Support Team',
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=SciCommHelpdesk'
-    },
-    {
-      id: 'admin_sys_3',
-      username: 'admin_sys_3',
-      name: 'Organizing Committee Admin',
-      role: 'admin',
-      title: 'Competition Executive Admin',
-      department: 'Alamein International University',
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=OrganizingCommittee'
-    }
-  ], []);
+  // Default fallback system admin account if not present in collection
+  const defaultAdmin = useMemo(() => ({
+    id: 'admin_sys_1',
+    username: 'admin_sys_1',
+    name: 'Abdullah Amr Maged',
+    role: 'master',
+    title: 'System Administrator & Coordinator',
+    department: 'SciComm Spark Steering Committee',
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AbdullahAmrMaged'
+  }), []);
 
   const allAccounts = useMemo(() => {
     const list = [...rawAccounts];
-    // Ensure all default system admins exist in list if missing
-    defaultAdmins.forEach(defAdmin => {
-      const exists = list.some(a => String(a.id || a.username) === String(defAdmin.id) || a.username === defAdmin.username || a.name === defAdmin.name);
-      if (!exists) {
-        list.push(defAdmin);
-      }
-    });
+    const exists = list.some(a => String(a.id || a.username) === String(defaultAdmin.id) || a.username === defaultAdmin.username || a.name === defaultAdmin.name);
+    if (!exists) {
+      list.push(defaultAdmin);
+    }
     return list;
-  }, [rawAccounts, defaultAdmins]);
+  }, [rawAccounts, defaultAdmin]);
 
   const emojis = ['😀','😂','😍','👍','👏','🔬','🧪','✅','❌','🔥','👀','🎉','💡','🚀','💪','❤️','🙏','🤔','😎','⚡'];
 
