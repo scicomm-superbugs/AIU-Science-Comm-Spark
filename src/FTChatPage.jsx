@@ -635,11 +635,14 @@ export default function FTChatPage({ user: userProp }) {
               </div>
             </div>
 
-            <span style={{
-              fontSize: '0.72rem', color: '#059669', background: '#ecfdf5',
-              padding: '0.2rem 0.55rem', borderRadius: '8px', border: '1.5px solid #a7f3d0',
-              fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap', flexShrink: 0
-            }}>
+            <span
+              className="ft-desktop-only-badge"
+              style={{
+                fontSize: '0.72rem', color: '#059669', background: '#ecfdf5',
+                padding: '0.2rem 0.55rem', borderRadius: '8px', border: '1.5px solid #a7f3d0',
+                fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap', flexShrink: 0
+              }}
+            >
               <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', flexShrink: 0 }} /> Active Thread
             </span>
           </div>

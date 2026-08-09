@@ -4152,6 +4152,9 @@ body.ft-modal-open {
     height: calc(100vh - 140px) !important;
     border-radius: 16px !important;
   }
+  .ft-desktop-only-badge {
+    display: none !important;
+  }
 }
 
 
