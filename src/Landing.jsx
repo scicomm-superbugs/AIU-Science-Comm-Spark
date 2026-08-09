@@ -1478,7 +1478,7 @@ export default function Landing() {
   const E = editMode;
 
   return (
-    <div className="landing-page ft-landing-forced-desktop" style={{ fontFamily: "'Outfit', sans-serif", background: '#f8fafc', color: '#0f172a', minHeight: '100vh', minWidth: '1280px' }}>
+    <div className="landing-page" style={{ fontFamily: "'Outfit', sans-serif", background: '#f8fafc', color: '#0f172a', minHeight: '100vh', width: '100%', overflowX: 'hidden' }}>
 
       {/* ═══════ ADMIN FLOATING TOOLBAR ═══════ */}
       {isAdmin && (

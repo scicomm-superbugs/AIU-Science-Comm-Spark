@@ -3962,12 +3962,7 @@ body.ft-modal-open {
   }
 }
 
-/* ─────────────────────────── FORCE DESKTOP MODE FOR LANDING PAGE ONLY ─────────────────────────── */
-.ft-landing-forced-desktop {
-  min-width: 1280px !important;
-  width: 100% !important;
-  overflow-x: auto !important;
-}
+
 
 /* ─────────────────────────── MOBILE CHAT & STAGE CARDS RESPONSIVE FIXES ─────────────────────────── */
 .ft-mobile-chat-back-btn {
