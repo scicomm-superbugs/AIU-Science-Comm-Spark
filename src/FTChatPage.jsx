@@ -979,35 +979,35 @@ export default function FTChatPage({ user: userProp }) {
                       }}
                       style={{
                         padding: '0.85rem 1rem', borderRadius: '16px', border: '1.5px solid #e2e8f0',
-                        marginBottom: '0.55rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-                        cursor: 'pointer', transition: 'all 0.2s ease', background: '#ffffff', gap: '0.75rem'
+                        marginBottom: '0.55rem', cursor: 'pointer', transition: 'all 0.2s ease',
+                        background: '#ffffff', display: 'flex', alignItems: 'flex-start', gap: '0.85rem'
                       }}
                       onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#be123c'; e.currentTarget.style.background = '#fff1f2'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#ffffff'; }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', flex: 1, minWidth: 0 }}>
-                        <img
-                          src={acc.avatarUrl || acc.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${acc.username || acc.name}`}
-                          alt={acc.name}
-                          style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${roleColor}`, flexShrink: 0, marginTop: '2px' }}
-                        />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a', lineHeight: 1.3 }}>
+                      <img
+                        src={acc.avatarUrl || acc.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${acc.username || acc.name}`}
+                        alt={acc.name}
+                        style={{ width: '46px', height: '46px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${roleColor}`, flexShrink: 0, marginTop: '2px' }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.25rem' }}>
+                          <div style={{ fontWeight: 900, fontSize: '0.92rem', color: '#0f172a' }}>
                             {acc.name || acc.username}
                           </div>
-                          <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '0.2rem', lineHeight: 1.35, wordBreak: 'break-word' }}>
-                            {title}
-                          </div>
+                          <span style={{
+                            fontSize: '0.68rem', fontWeight: 800, padding: '0.18rem 0.55rem', borderRadius: '8px',
+                            background: `${roleColor}15`, color: roleColor, border: `1px solid ${roleColor}30`,
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {getUserRoleLabel(acc)}
+                          </span>
+                        </div>
+
+                        <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.4, wordBreak: 'break-word' }}>
+                          {title}
                         </div>
                       </div>
-
-                      <span style={{
-                        fontSize: '0.68rem', fontWeight: 800, padding: '0.2rem 0.55rem', borderRadius: '8px',
-                        background: `${roleColor}15`, color: roleColor, border: `1px solid ${roleColor}30`,
-                        flexShrink: 0, whiteSpace: 'nowrap', alignSelf: 'flex-start'
-                      }}>
-                        {getUserRoleLabel(acc)}
-                      </span>
                     </div>
                   );
                 })
