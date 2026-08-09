@@ -1124,16 +1124,7 @@ export default function Landing() {
     editModeRef.current = editMode;
   }, [editMode]);
 
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const isMobile = false; // Forced Desktop layout on all devices
   const [savedContent, setSavedContent] = useState(null); // snapshot before editing
   const [saving, setSaving] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -1478,7 +1469,7 @@ export default function Landing() {
   const E = editMode;
 
   return (
-    <div className="landing-page" style={{ fontFamily: "'Outfit', sans-serif", background: '#f8fafc', color: '#0f172a', minHeight: '100vh', width: '100%', overflowX: 'hidden' }}>
+    <div className="landing-page ft-landing-forced-desktop" style={{ fontFamily: "'Outfit', sans-serif", background: '#f8fafc', color: '#0f172a', minHeight: '100vh', minWidth: '1280px' }}>
 
       {/* ═══════ ADMIN FLOATING TOOLBAR ═══════ */}
       {isAdmin && (

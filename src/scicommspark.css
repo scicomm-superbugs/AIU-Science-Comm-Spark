@@ -3222,71 +3222,66 @@ textarea, input {
 
 /* ── Mobile Responsive ── */
 @media (max-width: 768px) {
-  .landing-nav-bar {
-    padding: 0.6rem 1rem !important;
+  .landing-navbar {
+    padding: 0.6rem 1rem;
   }
-  .landing-nav-center {
-    display: none !important;
+  .landing-nav-links {
+    display: none;
   }
-  .landing-nav-desktop-btn {
-    display: none !important;
+  .landing-nav-actions {
+    gap: 0.4rem;
   }
-  .landing-nav-mobile-toggle {
-    display: flex !important;
+  .landing-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.82rem;
   }
-  .landing-hero-container {
-    padding: 1.5rem 1rem 1.25rem !important;
-    border-radius: 20px !important;
-    min-height: auto !important;
+  .landing-hero {
+    padding: 3.5rem 1.25rem 3rem;
   }
-  .landing-hero-spark {
-    top: -0.6rem !important;
-    right: -3.2rem !important;
-    transform: scale(0.65) rotate(-4deg) !important;
-    transform-origin: left top !important;
+  .landing-hero h1 {
+    font-size: 1.9rem;
   }
-  .landing-hero-competition {
-    font-size: 1rem !important;
-    letter-spacing: 0.25em !important;
+  .landing-hero-subtitle {
+    font-size: 0.95rem;
   }
-  .landing-hero-buttons {
-    flex-wrap: wrap !important;
-    gap: 0.6rem !important;
+  .landing-countdown {
+    gap: 0.6rem;
   }
-  .landing-hero-buttons button,
-  .landing-hero-buttons a {
-    padding: 0.55rem 1.25rem !important;
-    font-size: 0.85rem !important;
+  .landing-countdown-unit {
+    padding: 0.7rem 0.5rem;
+    min-width: 62px;
+  }
+  .landing-countdown-unit .value {
+    font-size: 1.5rem;
   }
   .landing-section {
-    padding: 2.25rem 0.85rem !important;
+    padding: 3rem 1.25rem;
   }
   .landing-about-content {
-    grid-template-columns: 1fr !important;
-    gap: 1.5rem !important;
+    grid-template-columns: 1fr;
+    gap: 2rem;
   }
   .landing-tracks-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
   }
   .landing-prizes-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
   }
   .landing-director {
-    flex-direction: column !important;
-    text-align: center !important;
-    padding: 1.5rem 1rem !important;
+    flex-direction: column;
+    text-align: center;
+    padding: 2rem 1.5rem;
   }
   .landing-director-photo {
-    width: 90px !important;
-    height: 90px !important;
+    width: 100px;
+    height: 100px;
   }
   .landing-footer-inner {
-    flex-direction: column !important;
-    text-align: center !important;
-    gap: 1.5rem !important;
+    flex-direction: column;
+    text-align: center;
   }
   .landing-edit-btn {
-    opacity: 0.9 !important;
+    opacity: 0.9;
   }
 }
 
@@ -3962,7 +3957,12 @@ body.ft-modal-open {
   }
 }
 
-
+/* ─────────────────────────── FORCE DESKTOP MODE FOR LANDING PAGE ONLY ─────────────────────────── */
+.ft-landing-forced-desktop {
+  min-width: 1280px !important;
+  width: 100% !important;
+  overflow-x: auto !important;
+}
 
 /* ─────────────────────────── MOBILE CHAT & STAGE CARDS RESPONSIVE FIXES ─────────────────────────── */
 .ft-mobile-chat-back-btn {
