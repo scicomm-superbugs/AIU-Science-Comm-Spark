@@ -105,12 +105,10 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
   const [trackFilter, setTrackFilter] = useState(currentTrack || 'all');
 
   useEffect(() => {
-    if (isCompetitorUser && competitorTrack) {
-      setTrackFilter(competitorTrack);
-    } else if (currentTrack) {
+    if (currentTrack) {
       setTrackFilter(currentTrack);
     }
-  }, [isCompetitorUser, competitorTrack, currentTrack]);
+  }, [currentTrack]);
 
   // Master Schedule combining workshops, orientations, lectures & stage milestones
   const allMasterEvents = useMemo(() => {

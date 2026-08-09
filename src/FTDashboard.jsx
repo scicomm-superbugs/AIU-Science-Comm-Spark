@@ -108,12 +108,8 @@ export default function FTDashboard() {
 
 
 
-  // Sync track when competitor doc loads
-  useEffect(() => {
-    if (isCompetitorUser && userTrack) {
-      setSelectedTrack(userTrack);
-    }
-  }, [isCompetitorUser, userTrack]);
+
+
 
   // Sequential Stages per Track
   const defaultStages = {
@@ -642,53 +638,55 @@ export default function FTDashboard() {
 
       {/* TRACK SELECTOR BUTTONS */}
       <div className="ft-track-selector-bar" style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-        {isCompetitorUser ? (
-          <div className="ft-track-btn" style={{
+        <button
+          className="ft-track-btn"
+          onClick={() => setSelectedTrack('pop_science')}
+          style={{
             padding: '0.9rem 2.2rem', borderRadius: '16px', border: '2px solid',
-            borderColor: selectedTrack === 'pop_science' ? '#be123c' : '#2563eb',
-            background: selectedTrack === 'pop_science' ? '#be123c' : '#2563eb',
-            color: '#ffffff', fontWeight: 800, fontSize: '1.02rem', display: 'flex', alignItems: 'center', gap: '0.6rem',
-            boxShadow: '0 8px 20px rgba(0,0,0,0.15)'
-          }}>
-            {selectedTrack === 'pop_science' ? <Video size={18} /> : <Newspaper size={18} />}
-            <span>{selectedTrack === 'pop_science' ? 'Track 1: Pop Science Videos' : 'Track 2: Science Journalism'}</span>
-            {meDoc?.teamName && <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.2rem 0.6rem', borderRadius: '10px', fontSize: '0.82rem' }}>Team: {meDoc.teamName}</span>}
-          </div>
-        ) : (
-          <>
-            <button
-              className="ft-track-btn"
-              onClick={() => setSelectedTrack('pop_science')}
-              style={{
-                padding: '0.9rem 2.2rem', borderRadius: '16px', border: '2px solid',
-                borderColor: selectedTrack === 'pop_science' ? '#be123c' : '#e2e8f0',
-                background: selectedTrack === 'pop_science' ? '#be123c' : '#ffffff',
-                color: selectedTrack === 'pop_science' ? '#ffffff' : '#475569',
-                cursor: 'pointer', fontWeight: 800, fontSize: '1.02rem', display: 'flex', alignItems: 'center', gap: '0.6rem',
-                boxShadow: selectedTrack === 'pop_science' ? '0 8px 20px rgba(190, 18, 60, 0.25)' : '0 2px 6px rgba(0,0,0,0.03)',
-                transition: 'all 0.3s ease'
-              }}
-            >
-              <Video size={18} /> Track 1: Pop Science Videos
-            </button>
+            borderColor: selectedTrack === 'pop_science' ? '#be123c' : '#e2e8f0',
+            background: selectedTrack === 'pop_science' ? '#be123c' : '#ffffff',
+            color: selectedTrack === 'pop_science' ? '#ffffff' : '#475569',
+            cursor: 'pointer', fontWeight: 800, fontSize: '1.02rem', display: 'flex', alignItems: 'center', gap: '0.6rem',
+            boxShadow: selectedTrack === 'pop_science' ? '0 8px 20px rgba(190, 18, 60, 0.25)' : '0 2px 6px rgba(0,0,0,0.03)',
+            transition: 'all 0.3s ease', position: 'relative'
+          }}
+        >
+          <Video size={18} /> Track 1: Pop Science Videos
+          {isCompetitorUser && userTrack === 'pop_science' && (
+            <span style={{
+              background: selectedTrack === 'pop_science' ? 'rgba(255,255,255,0.25)' : '#fef2f2',
+              color: selectedTrack === 'pop_science' ? '#ffffff' : '#be123c',
+              padding: '0.15rem 0.55rem', borderRadius: '10px', fontSize: '0.72rem', fontWeight: 900,
+              border: selectedTrack === 'pop_science' ? '1px solid rgba(255,255,255,0.35)' : '1px solid #fecdd3',
+              whiteSpace: 'nowrap'
+            }}>✓ Your Track</span>
+          )}
+        </button>
 
-            <button
-              className="ft-track-btn"
-              onClick={() => setSelectedTrack('science_journalism')}
-              style={{
-                padding: '0.9rem 2.2rem', borderRadius: '16px', border: '2px solid',
-                borderColor: selectedTrack === 'science_journalism' ? '#2563eb' : '#e2e8f0',
-                background: selectedTrack === 'science_journalism' ? '#2563eb' : '#ffffff',
-                color: selectedTrack === 'science_journalism' ? '#ffffff' : '#475569',
-                cursor: 'pointer', fontWeight: 800, fontSize: '0.98rem', display: 'flex', alignItems: 'center', gap: '0.6rem',
-                boxShadow: selectedTrack === 'science_journalism' ? '0 8px 20px rgba(37, 99, 235, 0.25)' : '0 2px 6px rgba(0,0,0,0.03)',
-                transition: 'all 0.3s ease'
-              }}
-            >
-              <Newspaper size={18} /> Track 2: Science Journalism
-            </button>
-          </>
-        )}
+        <button
+          className="ft-track-btn"
+          onClick={() => setSelectedTrack('science_journalism')}
+          style={{
+            padding: '0.9rem 2.2rem', borderRadius: '16px', border: '2px solid',
+            borderColor: selectedTrack === 'science_journalism' ? '#2563eb' : '#e2e8f0',
+            background: selectedTrack === 'science_journalism' ? '#2563eb' : '#ffffff',
+            color: selectedTrack === 'science_journalism' ? '#ffffff' : '#475569',
+            cursor: 'pointer', fontWeight: 800, fontSize: '0.98rem', display: 'flex', alignItems: 'center', gap: '0.6rem',
+            boxShadow: selectedTrack === 'science_journalism' ? '0 8px 20px rgba(37, 99, 235, 0.25)' : '0 2px 6px rgba(0,0,0,0.03)',
+            transition: 'all 0.3s ease', position: 'relative'
+          }}
+        >
+          <Newspaper size={18} /> Track 2: Science Journalism
+          {isCompetitorUser && userTrack === 'science_journalism' && (
+            <span style={{
+              background: selectedTrack === 'science_journalism' ? 'rgba(255,255,255,0.25)' : '#eff6ff',
+              color: selectedTrack === 'science_journalism' ? '#ffffff' : '#2563eb',
+              padding: '0.15rem 0.55rem', borderRadius: '10px', fontSize: '0.72rem', fontWeight: 900,
+              border: selectedTrack === 'science_journalism' ? '1px solid rgba(255,255,255,0.35)' : '1px solid #bfdbfe',
+              whiteSpace: 'nowrap'
+            }}>✓ Your Track</span>
+          )}
+        </button>
       </div>
 
       {/* CHRONOLOGICAL TIMELINE SECTION — CYBER GLASSMORPHISM HUD */}
