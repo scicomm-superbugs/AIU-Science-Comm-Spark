@@ -526,7 +526,7 @@ export default function FTDashboard() {
           </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div className="ft-dash-creator-credit-wrapper" style={{ display: 'flex', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '1rem' }}>
           {/* Left: Creator Credit Box (Designed & Programmed with ❤️ by Abdullah Amr Maged) */}
           <CanvaTransformBox
             editing={editingPoster}
