@@ -3964,6 +3964,65 @@ body.ft-modal-open {
   overflow-x: auto !important;
 }
 
+/* ─────────────────────────── MOBILE CHAT & STAGE CARDS RESPONSIVE FIXES ─────────────────────────── */
+.ft-mobile-chat-back-btn {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .ft-chat-main-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: calc(100vh - 180px) !important;
+    border-radius: 16px !important;
+  }
+  
+  .ft-chat-sidebar-col {
+    width: 100% !important;
+    border-right: none !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+  }
+
+  .ft-chat-canvas-col {
+    width: 100% !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+  }
+
+  .ft-mobile-hide-chat-col {
+    display: none !important;
+  }
+
+  .ft-mobile-chat-back-btn {
+    display: flex !important;
+  }
+
+  .ft-stage-card-item {
+    padding: 1rem 1.1rem !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .ft-stage-card-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.5rem !important;
+  }
+
+  .ft-stage-action-btn {
+    width: 100% !important;
+    max-width: 100% !important;
+    white-space: normal !important;
+    box-sizing: border-box !important;
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    text-align: center !important;
+  }
+}
+
+
 
 
 

@@ -439,13 +439,20 @@ export default function FTMyCompetition() {
           );
 
           return (
-            <div key={st.id} style={{
+            <div key={st.id} className="ft-stage-card-item" style={{
               background: '#ffffff', borderRadius: '18px', padding: '1.25rem 1.75rem',
               border: `1.5px solid ${isStageActive ? '#a7f3d0' : '#e2e8f0'}`, boxShadow: '0 4px 14px rgba(0,0,0,0.02)',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 900, color: isStageActive ? '#047857' : '#64748b', background: isStageActive ? '#ecfdf5' : '#f1f5f9', padding: '0.25rem 0.75rem', borderRadius: '20px', border: `1px solid ${isStageActive ? '#a7f3d0' : '#cbd5e1'}` }}>
+              <div className="ft-stage-card-header" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <span style={{
+                  fontSize: '0.78rem', fontWeight: 900,
+                  color: isStageActive ? '#047857' : '#64748b',
+                  background: isStageActive ? '#ecfdf5' : '#f1f5f9',
+                  padding: '0.25rem 0.75rem', borderRadius: '20px',
+                  border: `1px solid ${isStageActive ? '#a7f3d0' : '#cbd5e1'}`,
+                  whiteSpace: 'nowrap', flexShrink: 0, display: 'inline-flex', alignItems: 'center'
+                }}>
                   Stage {st.stageId}
                 </span>
                 <div>
@@ -460,7 +467,7 @@ export default function FTMyCompetition() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', maxWidth: '100%' }}>
                 {isStageActive && subFields.map((sf, idx) => {
                   const effDeadline = sf.deadline || st.deadline;
                   const isFieldSubmitted = Boolean(stageSub) && (
@@ -527,7 +534,7 @@ export default function FTMyCompetition() {
                           rawUrl: targetUrl
                         });
                       }}
-                      className="ft-btn"
+                      className="ft-btn ft-stage-action-btn"
                       disabled={isDisabled}
                       style={{
                         background: isShowEvaluated
@@ -539,7 +546,7 @@ export default function FTMyCompetition() {
                               : 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)',
                         color: (isShowEvaluated || isShowUnderEvaluation || !isDisabled) ? '#ffffff' : (isBeforeOpen ? '#92400e' : '#be123c'),
                         fontWeight: 800,
-                        padding: '0.55rem 1.15rem',
+                        padding: '0.55rem 1rem',
                         borderRadius: '12px',
                         fontSize: '0.85rem',
                         border: (isShowEvaluated || isShowUnderEvaluation || !isDisabled)
@@ -557,7 +564,13 @@ export default function FTMyCompetition() {
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '0.45rem',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        maxWidth: '100%',
+                        flexWrap: 'wrap',
+                        whiteSpace: 'normal',
+                        wordBreak: 'break-word',
+                        lineHeight: 1.35,
+                        boxSizing: 'border-box'
                       }}
                     >
                       {isManuallyClosed ? (
@@ -592,7 +605,9 @@ export default function FTMyCompetition() {
                         padding: '0.15rem 0.5rem',
                         borderRadius: '6px',
                         marginLeft: '0.2rem',
-                        fontWeight: 800
+                        fontWeight: 800,
+                        whiteSpace: 'nowrap',
+                        display: 'inline-block'
                       }}>
                         {sf.openDate ? `📅 ${formatUnifiedDate(sf.openDate)} → ${formatUnifiedDate(effDeadline)}` : `⏰ ${formatUnifiedDate(effDeadline)}`}
                       </span>

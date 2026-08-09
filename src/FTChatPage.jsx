@@ -269,14 +269,15 @@ export default function FTChatPage() {
       </div>
 
       {/* Main Chat Layout (Sidebar Contacts + Chat Canvas) */}
-      <div style={{
+      {/* Main Chat Layout (Sidebar Contacts + Chat Canvas) */}
+      <div className="ft-chat-main-grid" style={{
         flex: 1, height: '620px', minHeight: '520px', background: '#ffffff', borderRadius: '24px',
         border: '1.5px solid #e2e8f0', boxShadow: '0 10px 30px rgba(15,23,42,0.04)',
         display: 'grid', gridTemplateColumns: '320px 1fr', overflow: 'hidden', position: 'relative'
       }}>
 
         {/* ── LEFT SIDEBAR: CONVERSATIONS LIST ────────────────── */}
-        <div style={{
+        <div className={`ft-chat-sidebar-col ${activeConvId ? 'ft-mobile-hide-chat-col' : ''}`} style={{
           borderRight: '1px solid #e2e8f0', background: '#f8fafc',
           display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0
         }}>
@@ -387,7 +388,7 @@ export default function FTChatPage() {
 
 
         {/* ── RIGHT CHAT CANVAS ────────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: '#ffffff' }}>
+        <div className={`ft-chat-canvas-col ${!activeConvId ? 'ft-mobile-hide-chat-col' : ''}`} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: '#ffffff' }}>
           
           {activeConv && activeRecipient ? (
             <>
@@ -397,6 +398,21 @@ export default function FTChatPage() {
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                  {/* Mobile Back Button to Conversations */}
+                  <button
+                    type="button"
+                    className="ft-mobile-chat-back-btn"
+                    onClick={() => setActiveConvId(null)}
+                    style={{
+                      background: '#f1f5f9', border: '1.5px solid #cbd5e1', borderRadius: '10px',
+                      padding: '0.35rem 0.65rem', fontSize: '0.8rem', fontWeight: 800, color: '#334155',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0
+                    }}
+                    title="Back to Conversations List"
+                  >
+                    <ChevronLeft size={16} /> Contacts
+                  </button>
+
                   <img
                     src={activeRecipient.avatarUrl || activeRecipient.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeRecipient.username || activeRecipient.name}`}
                     alt={activeRecipient.name}

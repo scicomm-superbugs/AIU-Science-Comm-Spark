@@ -1110,9 +1110,6 @@ export default function FTLayout() {
               <div style={{ fontWeight: 900, fontSize: '0.92rem', color: '#0f172a', fontFamily: "'Outfit', sans-serif" }}>
                 SciComm Spark
               </div>
-              <div style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>
-                Competition Portal
-              </div>
             </div>
           </div>
           <button

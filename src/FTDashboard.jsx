@@ -526,7 +526,7 @@ export default function FTDashboard() {
           </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
           {/* Left: Creator Credit Box (Designed & Programmed with ❤️ by Abdullah Amr Maged) */}
           <CanvaTransformBox
             editing={editingPoster}
@@ -576,23 +576,6 @@ export default function FTDashboard() {
               </div>
             </div>
           </CanvaTransformBox>
-
-          {/* Right SciComm Badge Logo */}
-          <CanvaTransformBox
-            editing={editingPoster}
-            scale={settingsData.dashBadgeScale || 1}
-            rotate={settingsData.dashBadgeRotate || 0}
-            offsetX={settingsData.dashBadgeOffsetX || 0}
-            offsetY={settingsData.dashBadgeOffsetY || 0}
-            onTransformChange={({ scale, rotate, offsetX, offsetY }) => {
-              savePosterSetting({ dashBadgeScale: scale, dashBadgeRotate: rotate, dashBadgeOffsetX: offsetX, dashBadgeOffsetY: offsetY });
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f1f5f9', padding: '0.4rem 1rem', borderRadius: '12px' }}>
-              <span style={{ fontWeight: 800, color: '#be123c', fontSize: '0.9rem' }}>AIU.</span>
-              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e293b' }}>SCI COMM</span>
-            </div>
-          </CanvaTransformBox>
         </div>
 
         <div className="ft-poster-title-container" style={{ margin: '0.5rem 0', textAlign: 'center' }}>
@@ -632,15 +615,15 @@ export default function FTDashboard() {
           <div className="ft-poster-competition">C O M P E T I T I O N</div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap', borderTop: '1px solid #f1f5f9', paddingTop: '1rem', marginTop: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: 700, color: '#1e293b' }}>
-            <Globe size={16} style={{ color: '#2563eb' }} /> ONLINE PLATFORM
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem 1.5rem', flexWrap: 'wrap', borderTop: '1px solid #f1f5f9', paddingTop: '1rem', marginTop: '1.25rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 700, color: '#1e293b' }}>
+            <Globe size={16} style={{ color: '#2563eb', flexShrink: 0 }} /> ONLINE PLATFORM
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: 700, color: '#be123c' }}>
-            <Calendar size={16} /> Deadline: 31 Jul 2026
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 800, color: '#be123c', background: '#fff1f2', padding: '0.35rem 0.85rem', borderRadius: '12px', border: '1px solid #fecdd3' }}>
+            <Calendar size={16} style={{ flexShrink: 0 }} /> Deadline: 31 Jul 2026
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: 700, color: '#475569' }}>
-            <Mail size={16} style={{ color: '#059669' }} /> scmnexus@aiu.edu.eg
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>
+            <Mail size={16} style={{ color: '#059669', flexShrink: 0 }} /> scmnexus@aiu.edu.eg
           </div>
         </div>
       </div>
