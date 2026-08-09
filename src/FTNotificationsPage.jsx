@@ -124,19 +124,22 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
     const isUnread = notif.status === 'unread';
     const badge = getCategoryBadge(notif);
     
-    // Find sender avatar image if senderId exists
-    const senderAcc = notif.senderId ? allAccounts.find(a => String(a.id) === String(notif.senderId) || a.username === notif.senderId) : null;
-    const avatarUrl = notif.avatarUrl || senderAcc?.avatarUrl || senderAcc?.avatar;
+    // Find sender avatar image if senderId exists or parse from notification title/sender
+    const senderId = notif.senderId || notif.senderUsername || (notif.title?.includes('from ') ? notif.title.split('from ')[1]?.trim() : null);
+    const senderAcc = senderId ? allAccounts.find(a => String(a.id) === String(senderId) || a.username === senderId || a.name === senderId) : null;
+    const avatarUrl = notif.avatarUrl || senderAcc?.avatarUrl || senderAcc?.avatar || (
+      senderId ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${senderId}` : null
+    );
 
     return (
       <div
         key={notif.id}
         onClick={() => handleNotificationClick(notif)}
         style={{
-          padding: '1.1rem 1.25rem',
+          padding: '1rem 1.15rem',
           display: 'flex',
           alignItems: 'flex-start',
-          gap: '1rem',
+          gap: '0.85rem',
           cursor: 'pointer',
           transition: 'all 0.2s ease',
           background: isUnread ? '#f8fafc' : '#ffffff',
@@ -153,17 +156,17 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
               src={avatarUrl}
               alt="Profile"
               style={{
-                width: '50px', height: '50px', borderRadius: '50%',
+                width: '46px', height: '46px', borderRadius: '50%',
                 objectFit: 'cover', border: '1.5px solid #e2e8f0',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
               }}
             />
           ) : (
             <div style={{
-              width: '50px', height: '50px', borderRadius: '50%',
+              width: '46px', height: '46px', borderRadius: '50%',
               background: '#f1f5f9', color: '#3b82f6',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.35rem', border: '1.5px solid #e2e8f0'
+              fontSize: '1.25rem', border: '1.5px solid #e2e8f0'
             }}>
               {badge.emoji}
             </div>
@@ -172,10 +175,10 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
           {/* Small reaction/category badge on bottom right */}
           <div style={{
             position: 'absolute', bottom: '-2px', right: '-2px',
-            width: '20px', height: '20px', borderRadius: '50%',
+            width: '19px', height: '19px', borderRadius: '50%',
             background: badge.bg, border: '2px solid #ffffff',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '0.68rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            fontSize: '0.65rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
           }}>
             {badge.emoji}
           </div>
@@ -184,20 +187,20 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
         {/* Content Details */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            fontSize: '0.92rem', fontWeight: 800, color: '#1e293b',
+            fontSize: '0.9rem', fontWeight: 800, color: '#1e293b',
             lineHeight: 1.35, marginBottom: '0.2rem', wordBreak: 'break-word'
           }}>
             {notif.title}
           </div>
 
           <div style={{
-            fontSize: '0.85rem', color: '#64748b', fontWeight: 500,
-            lineHeight: 1.45, marginBottom: '0.35rem', wordBreak: 'break-word'
+            fontSize: '0.82rem', color: '#64748b', fontWeight: 500,
+            lineHeight: 1.4, marginBottom: '0.3rem', wordBreak: 'break-word'
           }}>
             {notif.message}
           </div>
 
-          <div style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 600 }}>
+          <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>
             {formatNotificationDate(notif.createdAt || notif.timestamp)}
           </div>
         </div>
@@ -205,7 +208,7 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
         {/* Unread indicator dot */}
         {isUnread && (
           <div style={{
-            width: '9px', height: '9px', borderRadius: '50%',
+            width: '8px', height: '8px', borderRadius: '50%',
             background: '#3b82f6', marginTop: '0.4rem', flexShrink: 0,
             boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.2)'
           }} />
@@ -222,11 +225,11 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
 
       {/* ── 1. Top Header Card ────────────────────────────────────── */}
       <div style={{
-        background: '#ffffff', borderRadius: '24px', padding: '1.1rem 1.4rem',
+        background: '#ffffff', borderRadius: '24px', padding: '1rem 1.25rem',
         boxShadow: '0 8px 30px rgba(0,0,0,0.03)', border: '1.5px solid #e2e8f0',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.65rem'
       }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
+        <h1 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
           Notifications
         </h1>
 
@@ -234,13 +237,13 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
           onClick={handleMarkAllRead}
           style={{
             background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-            color: '#ffffff', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '30px',
-            fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '0.45rem',
-            boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)', transition: 'all 0.2s ease'
+            color: '#ffffff', border: 'none', padding: '0.45rem 0.9rem', borderRadius: '30px',
+            fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '0.35rem',
+            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)', flexShrink: 0, marginLeft: 'auto'
           }}
         >
-          <Bell size={16} /> Mark all as read
+          <Bell size={14} /> Mark all as read
         </button>
       </div>
 
