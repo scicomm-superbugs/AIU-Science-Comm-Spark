@@ -4136,6 +4136,23 @@ body.ft-modal-open {
 }
 
 @media (max-width: 768px) {
+  /* On mobile chat route: Lock outer page scroll and stretch chat to screen borders */
+  .ft-main.ft-chat-active-main {
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    height: calc(100vh - 65px) !important;
+    height: calc(100dvh - 65px) !important;
+  }
+  .ft-main.ft-chat-active-main > div {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .ft-main.ft-chat-active-main .ft-footer {
+    display: none !important;
+  }
+
   .ft-chat-top-banner.ft-mobile-hide-on-chat {
     display: none !important;
   }
@@ -4147,10 +4164,21 @@ body.ft-modal-open {
   }
   .ft-chat-sidebar {
     width: 100% !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+  .ft-chat-container-main {
+    height: 100% !important;
+    min-height: 100% !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
   }
   .ft-chat-main-card {
-    height: calc(100vh - 140px) !important;
-    border-radius: 16px !important;
+    height: 100% !important;
+    min-height: 100% !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
   }
   .ft-desktop-only-badge {
     display: none !important;

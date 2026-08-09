@@ -1233,7 +1233,7 @@ export default function FTLayout() {
       </aside>
 
       {/* ── Main Content ───────────────────────────────────── */}
-      <main className="ft-main">
+      <main className={`ft-main ${location.pathname.includes('/chat') ? 'ft-chat-active-main' : ''}`}>
         <div style={{ flex: 1 }}>
            {/* Date Conflict Warning Banner */}
            {dateConflicts.length > 0 && !conflictBannerDismissed && (isCompetitorRole(userRole) || userRole === 'user') && (
