@@ -1252,35 +1252,6 @@ export default function FTLayout() {
         </footer>
       </main>
 
-      {/* ── Mobile Bottom Nav ──────────────────────────────── */}
-      <nav className="ft-mobile-nav">
-        {navItems
-          .filter(item => item.path)
-          .map((item) => {
-            const active = isActive(item.path);
-            const shortLabel = item.label === 'Timeline & Tracks' ? 'Timeline'
-              : item.label.includes('Leaderboard') ? 'Team'
-              : item.label === 'Judge & Trainer Portal' ? 'Judge Portal'
-              : item.label === 'Users & Roles' ? 'Users'
-              : item.label === 'Submission Assignments' ? 'Assignments'
-              : item.label === 'Timeline Management' ? 'Schedule'
-              : item.label;
-
-            return (
-              <Link 
-                key={item.path} 
-                to={item.path} 
-                className={`ft-mobile-nav-item ${active ? 'active' : ''}`}
-              >
-                {item.icon}
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {shortLabel}
-                </span>
-              </Link>
-            );
-          })}
-      </nav>
-
       {/* Profile Edit Modal */}
     {showProfileModal && (
       <div className="ft-modal-overlay">

@@ -619,9 +619,6 @@ export default function FTDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 700, color: '#1e293b' }}>
             <Globe size={16} style={{ color: '#2563eb', flexShrink: 0 }} /> ONLINE PLATFORM
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 800, color: '#be123c', background: '#fff1f2', padding: '0.35rem 0.85rem', borderRadius: '12px', border: '1px solid #fecdd3' }}>
-            <Calendar size={16} style={{ flexShrink: 0 }} /> Deadline: 31 Jul 2026
-          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>
             <Mail size={16} style={{ color: '#059669', flexShrink: 0 }} /> scmnexus@aiu.edu.eg
           </div>

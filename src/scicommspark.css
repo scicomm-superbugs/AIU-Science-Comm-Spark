@@ -1671,11 +1671,11 @@ textarea, input {
 
   .ft-main {
     padding: 1.25rem;
-    padding-bottom: 5rem;
+    padding-bottom: 2rem;
   }
 
   .ft-mobile-nav {
-    display: flex;
+    display: none !important;
   }
 
   .ft-places-grid {
