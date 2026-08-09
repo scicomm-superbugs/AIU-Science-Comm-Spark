@@ -47,10 +47,11 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
 
     // 2. Category Tab
     if (filterCategory === 'unread') return n.status === 'unread';
-    if (filterCategory === 'social') return n.type === 'chat' || n.type === 'message' || n.type === 'social';
-    if (filterCategory === 'work') return n.type === 'evaluation' || n.type === 'assignment' || n.type === 'submission';
-    if (filterCategory === 'alert') return n.type === 'stage_deadline_reminder' || n.type === 'alert' || n.type === 'workshop';
-    if (filterCategory === 'admin') return n.type === 'admin' || n.type === 'announcement' || n.type === 'system';
+    if (filterCategory === 'evaluations') return n.type === 'evaluation' || n.type === 'assignment';
+    if (filterCategory === 'submissions') return n.type === 'submission';
+    if (filterCategory === 'chat') return n.type === 'chat' || n.type === 'message' || n.type === 'social';
+    if (filterCategory === 'workshops') return n.type === 'workshop' || n.type === 'stage_deadline_reminder' || n.type === 'schedule';
+    if (filterCategory === 'announcements') return n.type === 'admin' || n.type === 'announcement' || n.type === 'system';
     return true;
   });
 
@@ -247,20 +248,21 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
       <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.2rem' }}>
         {[
           { id: 'all', label: 'All' },
-          { id: 'social', label: 'Social' },
-          { id: 'work', label: 'Work' },
-          { id: 'alert', label: 'Alert' },
-          { id: 'admin', label: 'Admin' }
+          { id: 'evaluations', label: '🏅 Evaluations' },
+          { id: 'submissions', label: '📄 Submissions' },
+          { id: 'chat', label: '💬 Messages' },
+          { id: 'workshops', label: '🎓 Workshops & Dates' },
+          { id: 'announcements', label: '📢 Announcements' }
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setFilterCategory(tab.id)}
             style={{
-              padding: '0.5rem 1.2rem', borderRadius: '25px', fontSize: '0.86rem', fontWeight: 800,
+              padding: '0.5rem 1.15rem', borderRadius: '25px', fontSize: '0.84rem', fontWeight: 800,
               border: 'none', cursor: 'pointer', transition: 'all 0.2s ease', whiteSpace: 'nowrap', flexShrink: 0,
-              background: filterCategory === tab.id ? '#3b82f6' : '#ffffff',
+              background: filterCategory === tab.id ? '#be123c' : '#ffffff',
               color: filterCategory === tab.id ? '#ffffff' : '#64748b',
-              boxShadow: filterCategory === tab.id ? '0 4px 12px rgba(59,130,246,0.3)' : '0 2px 8px rgba(0,0,0,0.02)'
+              boxShadow: filterCategory === tab.id ? '0 4px 12px rgba(190,18,60,0.25)' : '0 2px 8px rgba(0,0,0,0.02)'
             }}
           >
             {tab.label}
