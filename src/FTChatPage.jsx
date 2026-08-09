@@ -162,7 +162,7 @@ export default function FTChatPage({ user: userProp }) {
   const { user: authUser } = useAuth() || {};
   const user = userProp || authUser;
   const [text, setText] = useState('');
-  const [activeRecipient, setActiveRecipient] = useState('global'); // 'global' or userId/username
+  const [activeRecipient, setActiveRecipient] = useState(null); // recipient userId/username
   const [showEmojis, setShowEmojis] = useState(false);
   const [filePreview, setFilePreview] = useState(null);
   const [mobileShowInbox, setMobileShowInbox] = useState(true);
@@ -379,78 +379,50 @@ export default function FTChatPage({ user: userProp }) {
     ? null
     : (allAccounts || []).find(s => String(s.id) === String(activeRecipient) || s.username === activeRecipient);
 
-  // Eligible recipients list for modal & sidebar search
-  const sortedAccounts = (allAccounts || [])
-    .filter(acc => String(acc.id) !== String(myId))
+  // Filter sidebar contacts to ONLY show accounts with recent chat history, active selection, or matching search query
+  const filteredContacts = (allAccounts || [])
+    .filter(acc => {
+      const accId = String(acc.id || acc.username);
+      if (accId === String(myId)) return false;
+
+      const hasHistory = getLastMessageInfo(accId) !== null;
+      const isCurrentlySelected = activeRecipient === accId;
+
+      // If user types in search box, allow searching all contacts
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        return (acc.name || '').toLowerCase().includes(q) || (acc.username || '').toLowerCase().includes(q) || (acc.department || '').toLowerCase().includes(q);
+      }
+
+      // Default sidebar view: Only show accounts with existing chat history or currently opened chat
+      return hasHistory || isCurrentlySelected;
+    })
     .sort((a, b) => {
-      const msgA = getLastMessageInfo(String(a.id));
-      const msgB = getLastMessageInfo(String(b.id));
-      const timeA = msgA ? new Date(msgA.createdAt || 0).getTime() : 0;
-      const timeB = msgB ? new Date(msgB.createdAt || 0).getTime() : 0;
+      const accIdA = String(a.id || a.username);
+      const accIdB = String(b.id || b.username);
+      const msgA = getLastMessageInfo(accIdA);
+      const msgB = getLastMessageInfo(accIdB);
+      const timeA = msgA ? new Date(msgA.createdAt || msgA.timestamp || 0).getTime() : 0;
+      const timeB = msgB ? new Date(msgB.createdAt || msgB.timestamp || 0).getTime() : 0;
       return timeB - timeA;
     });
 
-  const filteredContacts = sortedAccounts.filter(acc => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (acc.name || '').toLowerCase().includes(q) || (acc.username || '').toLowerCase().includes(q) || (acc.department || '').toLowerCase().includes(q);
-  });
-
-  const eligibleModalRecipients = sortedAccounts.filter(acc => {
-    if (selectedRoleFilter !== 'all' && acc.role !== selectedRoleFilter) return false;
-    if (!newChatSearch.trim()) return true;
-    const q = newChatSearch.toLowerCase();
-    return (acc.name || '').toLowerCase().includes(q) || (acc.username || '').toLowerCase().includes(q) || (acc.department || '').toLowerCase().includes(q);
-  });
+  // Modal full personnel list for starting new chats
+  const eligibleModalRecipients = (allAccounts || [])
+    .filter(acc => String(acc.id || acc.username) !== String(myId))
+    .filter(acc => {
+      if (selectedRoleFilter !== 'all' && acc.role !== selectedRoleFilter) return false;
+      if (!newChatSearch.trim()) return true;
+      const q = newChatSearch.toLowerCase();
+      return (acc.name || '').toLowerCase().includes(q) || (acc.username || '').toLowerCase().includes(q) || (acc.department || '').toLowerCase().includes(q);
+    });
 
   return (
-    <div className="ft-chat-container-main" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem' }}>
-
-      {/* ── Top Banner Header (Hidden on active chat mobile) ────────── */}
-      <div
-        className={`ft-chat-top-banner ${!mobileShowInbox ? 'ft-mobile-hide-on-chat' : ''}`}
-        style={{
-          background: 'linear-gradient(135deg, #ffffff 0%, #fff1f2 100%)',
-          padding: '1.15rem 1.4rem', borderRadius: '20px', border: '1.5px solid #fecdd3',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.85rem',
-          boxShadow: '0 4px 15px rgba(190, 18, 60, 0.04)'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <div style={{
-            width: '44px', height: '44px', borderRadius: '14px',
-            background: 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)',
-            color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 6px 16px rgba(190, 18, 60, 0.25)', flexShrink: 0
-          }}>
-            <MessageSquare size={22} />
-          </div>
-          <div>
-            <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
-              Ask & Chat Hub
-            </h1>
-            <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.1rem 0 0 0', fontWeight: 600 }}>
-              Direct inquiry & real-time messaging with Competition Evaluators, Mentors & Staff
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={() => setShowNewChatModal(true)}
-          style={{
-            background: 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
-            color: '#ffffff', border: 'none', padding: '0.6rem 1.15rem', borderRadius: '12px',
-            fontWeight: 800, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem',
-            cursor: 'pointer', boxShadow: '0 4px 14px rgba(190, 18, 60, 0.3)', transition: 'all 0.2s ease', flexShrink: 0
-          }}
-        >
-          <Plus size={17} /> Ask a Judge / Trainer
-        </button>
-      </div>
+    <div className="ft-chat-container-main" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0' }}>
 
       {/* ── Main Chat Card (Sidebar + Chat Area) ──────────────────── */}
       <div className="ft-chat-main-card" style={{
-        flex: 1, height: '620px', minHeight: '480px', background: '#ffffff', borderRadius: '24px',
+        flex: 1, height: '640px', minHeight: '480px', background: '#ffffff', borderRadius: '24px',
         border: '1.5px solid #e2e8f0', boxShadow: '0 10px 30px rgba(15,23,42,0.04)',
         display: 'flex', overflow: 'hidden', position: 'relative'
       }}>
@@ -461,9 +433,9 @@ export default function FTChatPage({ user: userProp }) {
           display: 'flex', flexDirection: 'column', height: '100%', flexShrink: 0
         }}>
           
-          {/* Search Contacts Bar */}
-          <div style={{ padding: '0.85rem 1rem', borderBottom: '1px solid #e2e8f0' }}>
-            <div style={{ position: 'relative' }}>
+          {/* Search Contacts Bar & New Chat Button */}
+          <div style={{ padding: '0.85rem 1rem', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ position: 'relative', flex: 1 }}>
               <Search size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
                 type="text"
@@ -477,47 +449,46 @@ export default function FTChatPage({ user: userProp }) {
                 }}
               />
             </div>
+
+            <button
+              type="button"
+              onClick={() => setShowNewChatModal(true)}
+              style={{
+                background: 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
+                color: '#ffffff', border: 'none', width: '36px', height: '36px', borderRadius: '10px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                boxShadow: '0 3px 10px rgba(190, 18, 60, 0.25)', flexShrink: 0
+              }}
+              title="Start New Chat"
+            >
+              <Plus size={18} />
+            </button>
           </div>
 
           {/* Conversations List */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
-            
-            {/* Global Team Chat Item */}
-            <div
-              onClick={() => {
-                setActiveRecipient('global');
-                setMobileShowInbox(false);
-              }}
-              style={{
-                padding: '0.75rem 0.85rem', borderRadius: '14px', marginBottom: '0.4rem',
-                background: activeRecipient === 'global' ? '#ffffff' : 'transparent',
-                border: activeRecipient === 'global' ? '1.5px solid #cbd5e1' : '1.5px solid transparent',
-                boxShadow: activeRecipient === 'global' ? '0 4px 14px rgba(0,0,0,0.04)' : 'none',
-                cursor: 'pointer', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '0.75rem'
-              }}
-            >
-              <div style={{
-                width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0,
-                background: 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)',
-                color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 10px rgba(190,18,60,0.2)'
-              }}>
-                <Globe size={20} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 900, fontSize: '0.88rem', color: '#0f172a' }}>
-                  🌐 Global Team Chat
-                </div>
-                <div style={{ fontSize: '0.76rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  Public Q&A and announcements
-                </div>
-              </div>
-            </div>
-
-            <div style={{ height: '1px', background: '#e2e8f0', margin: '0.4rem 0.4rem 0.6rem' }} />
 
             {/* Direct Messages List */}
-            {filteredContacts.map(acc => {
+            {filteredContacts.length === 0 ? (
+              <div style={{ padding: '1.5rem 0.85rem', textAlign: 'center', color: '#64748b' }}>
+                <p style={{ fontSize: '0.8rem', margin: '0 0 0.75rem 0', fontWeight: 600, color: '#64748b' }}>
+                  {searchQuery ? 'No contacts match your search query.' : 'No active private chats yet.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowNewChatModal(true)}
+                  style={{
+                    background: 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
+                    color: '#ffffff', border: 'none', padding: '0.5rem 0.9rem',
+                    borderRadius: '10px', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(190,18,60,0.25)'
+                  }}
+                >
+                  + Ask a Judge / Trainer
+                </button>
+              </div>
+            ) : (
+              filteredContacts.map(acc => {
               const accId = String(acc.id || acc.username);
               const isSelected = activeRecipient === accId;
               const lastMsg = getLastMessageInfo(accId);
@@ -585,7 +556,8 @@ export default function FTChatPage({ user: userProp }) {
                   </div>
                 </div>
               );
-            })}
+            })
+          )}
           </div>
         </div>
 
@@ -614,14 +586,7 @@ export default function FTChatPage({ user: userProp }) {
                 <ChevronLeft size={16} /> Contacts
               </button>
 
-              {activeRecipient === 'global' ? (
-                <div style={{
-                  width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)',
-                  color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                }}>
-                  <Globe size={18} />
-                </div>
-              ) : (
+              {activeRecipientAcc ? (
                 <img
                   src={activeRecipientAcc?.avatarUrl || activeRecipientAcc?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeRecipientAcc?.username || activeRecipientAcc?.name}`}
                   alt={activeRecipientAcc?.name}
@@ -630,12 +595,19 @@ export default function FTChatPage({ user: userProp }) {
                     border: `2px solid ${FT_ROLE_COLORS[activeRecipientAcc?.role] || '#2563eb'}`
                   }}
                 />
+              ) : (
+                <div style={{
+                  width: '38px', height: '38px', borderRadius: '50%', background: '#f1f5f9',
+                  color: '#be123c', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                }}>
+                  💬
+                </div>
               )}
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
                   <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 900, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {activeRecipient === 'global' ? '🌐 Global Team Chat' : (activeRecipientAcc?.name || activeRecipientAcc?.username || 'Private Chat')}
+                    {activeRecipientAcc ? (activeRecipientAcc.name || activeRecipientAcc.username) : 'Select a Conversation'}
                   </h3>
                   {activeRecipientAcc && (
                     <span style={{
@@ -649,7 +621,7 @@ export default function FTChatPage({ user: userProp }) {
                   )}
                 </div>
                 <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {activeRecipient === 'global' ? 'Public channel for all competitors and evaluators' : (getCleanAcademicTitle(activeRecipientAcc) || activeRecipientAcc?.department || 'Competition Staff')}
+                  {activeRecipientAcc ? (getCleanAcademicTitle(activeRecipientAcc) || activeRecipientAcc?.department || 'Competition Staff') : 'Select a contact from your recent chats or start a new chat'}
                 </div>
               </div>
             </div>
