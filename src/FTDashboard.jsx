@@ -598,19 +598,43 @@ export default function FTDashboard() {
           <div className="ft-poster-edition">2nd EDITION</div>
           <div className="ft-poster-main-title">
             SCIENCE COMM
-            {/* Cursive Spark word */}
-            <CanvaTransformBox
-              editing={editingPoster}
-              scale={settingsData.dashSparkScale || 1}
-              rotate={settingsData.dashSparkRotate || 0}
-              offsetX={settingsData.dashSparkOffsetX || 0}
-              offsetY={settingsData.dashSparkOffsetY || 0}
-              onTransformChange={({ scale, rotate, offsetX, offsetY }) => {
-                savePosterSetting({ dashSparkScale: scale, dashSparkRotate: rotate, dashSparkOffsetX: offsetX, dashSparkOffsetY: offsetY });
-              }}
-            >
-              <span className="ft-poster-spark">Spark</span>
-            </CanvaTransformBox>
+            {/* Cursive Spark word with separate mobile vs desktop position handling */}
+            {(() => {
+              const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+              const curScale = isMobile ? (settingsData.dashSparkMobileScale ?? settingsData.dashSparkScale ?? 1) : (settingsData.dashSparkScale || 1);
+              const curRotate = isMobile ? (settingsData.dashSparkMobileRotate ?? settingsData.dashSparkRotate ?? 0) : (settingsData.dashSparkRotate || 0);
+              const curOffsetX = isMobile ? (settingsData.dashSparkMobileOffsetX ?? settingsData.dashSparkOffsetX ?? 0) : (settingsData.dashSparkOffsetX || 0);
+              const curOffsetY = isMobile ? (settingsData.dashSparkMobileOffsetY ?? settingsData.dashSparkOffsetY ?? 0) : (settingsData.dashSparkOffsetY || 0);
+
+              return (
+                <CanvaTransformBox
+                  editing={editingPoster}
+                  scale={curScale}
+                  rotate={curRotate}
+                  offsetX={curOffsetX}
+                  offsetY={curOffsetY}
+                  onTransformChange={({ scale, rotate, offsetX, offsetY }) => {
+                    if (isMobile) {
+                      savePosterSetting({
+                        dashSparkMobileScale: scale,
+                        dashSparkMobileRotate: rotate,
+                        dashSparkMobileOffsetX: offsetX,
+                        dashSparkMobileOffsetY: offsetY
+                      });
+                    } else {
+                      savePosterSetting({
+                        dashSparkScale: scale,
+                        dashSparkRotate: rotate,
+                        dashSparkOffsetX: offsetX,
+                        dashSparkOffsetY: offsetY
+                      });
+                    }
+                  }}
+                >
+                  <span className="ft-poster-spark">Spark</span>
+                </CanvaTransformBox>
+              );
+            })()}
           </div>
           <div className="ft-poster-competition">C O M P E T I T I O N</div>
         </div>

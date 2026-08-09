@@ -726,6 +726,47 @@ export function CanvaTransformBox({
     window.addEventListener('mouseup', handleMouseUp);
   };
 
+  const handleTouchStart = (e) => {
+    if (!editing || !onTransformChange) return;
+    if (e.target.isContentEditable || e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+
+    const touch = e.touches[0];
+    if (!touch) return;
+
+    setIsHovered(true);
+    isDraggingRef.current = true;
+    dragStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      initX: offsetX,
+      initY: offsetY
+    };
+
+    const handleTouchMove = (te) => {
+      if (!isDraggingRef.current) return;
+      const t = te.touches[0];
+      if (!t) return;
+      if (te.cancelable) te.preventDefault();
+      const dx = t.clientX - dragStartRef.current.x;
+      const dy = t.clientY - dragStartRef.current.y;
+      onTransformChange({
+        scale,
+        rotate,
+        offsetX: Math.round(dragStartRef.current.initX + dx),
+        offsetY: Math.round(dragStartRef.current.initY + dy)
+      });
+    };
+
+    const handleTouchEnd = () => {
+      isDraggingRef.current = false;
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
+  };
+
   const transformStyle = {
     display: 'inline-block',
     transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale}) rotate(${rotate}deg)`,
@@ -734,6 +775,7 @@ export function CanvaTransformBox({
     position: 'relative',
     userSelect: editing ? 'none' : 'auto',
     cursor: editing ? 'grab' : 'default',
+    touchAction: editing ? 'none' : 'auto',
     ...style
   };
 
@@ -746,6 +788,8 @@ export function CanvaTransformBox({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
+      onClick={() => setIsHovered(true)}
       style={{
         ...transformStyle,
         outline: isHovered ? '2px dashed #a855f7' : '1px dashed rgba(168,85,247,0.3)',

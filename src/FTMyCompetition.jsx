@@ -440,34 +440,46 @@ export default function FTMyCompetition() {
 
           return (
             <div key={st.id} className="ft-stage-card-item" style={{
-              background: '#ffffff', borderRadius: '18px', padding: '1.25rem 1.75rem',
-              border: `1.5px solid ${isStageActive ? '#a7f3d0' : '#e2e8f0'}`, boxShadow: '0 4px 14px rgba(0,0,0,0.02)',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'
+              background: '#ffffff', borderRadius: '20px', padding: '1.25rem 1.4rem',
+              border: `1.5px solid ${isStageActive ? '#a7f3d0' : '#e2e8f0'}`, boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
+              display: 'flex', flexDirection: 'column', gap: '0.85rem', width: '100%', boxSizing: 'border-box'
             }}>
-              <div className="ft-stage-card-header" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <span style={{
-                  fontSize: '0.78rem', fontWeight: 900,
-                  color: isStageActive ? '#047857' : '#64748b',
-                  background: isStageActive ? '#ecfdf5' : '#f1f5f9',
-                  padding: '0.25rem 0.75rem', borderRadius: '20px',
-                  border: `1px solid ${isStageActive ? '#a7f3d0' : '#cbd5e1'}`,
-                  whiteSpace: 'nowrap', flexShrink: 0, display: 'inline-flex', alignItems: 'center'
-                }}>
-                  Stage {st.stageId}
-                </span>
-                <div>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: '#334155', margin: 0, fontFamily: "'Outfit', sans-serif" }}>
-                    {st.title}
-                  </h3>
-                  <div style={{ fontSize: '0.8rem', color: isStageActive ? '#059669' : '#94a3b8', marginTop: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', fontWeight: 700 }}>
-                    <span>{isStageActive ? '🟢 Submissions Open / Active Stage' : '🔒 Submissions Closed / Upcoming Stage'}</span>
-                    <span>·</span>
-                    <span>{st.sub}</span>
-                  </div>
+              {/* Card Header: Stage badge & Title */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <span style={{
+                    fontSize: '0.75rem', fontWeight: 900,
+                    color: isStageActive ? '#047857' : '#475569',
+                    background: isStageActive ? '#ecfdf5' : '#f1f5f9',
+                    padding: '0.25rem 0.65rem', borderRadius: '8px',
+                    border: `1px solid ${isStageActive ? '#a7f3d0' : '#cbd5e1'}`,
+                    whiteSpace: 'nowrap', flexShrink: 0
+                  }}>
+                    Stage {st.stageId}
+                  </span>
+
+                  <span style={{
+                    fontSize: '0.72rem', fontWeight: 800, padding: '0.2rem 0.65rem', borderRadius: '8px',
+                    background: isStageActive ? '#ecfdf5' : '#f1f5f9',
+                    color: isStageActive ? '#059669' : '#64748b',
+                    border: `1px solid ${isStageActive ? '#a7f3d0' : '#cbd5e1'}`,
+                    whiteSpace: 'nowrap', flexShrink: 0
+                  }}>
+                    {isStageActive ? '🟢 Submissions Open / Active Stage' : '🔒 Upcoming Stage'}
+                  </span>
+                </div>
+
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0f172a', margin: '0.2rem 0 0 0', fontFamily: "'Outfit', sans-serif", lineHeight: 1.3 }}>
+                  {st.title}
+                </h3>
+
+                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
+                  {st.sub}
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', maxWidth: '100%' }}>
+              {/* Deliverable Action Buttons & Dates */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', marginTop: '0.25rem' }}>
                 {isStageActive && subFields.map((sf, idx) => {
                   const effDeadline = sf.deadline || st.deadline;
                   const isFieldSubmitted = Boolean(stageSub) && (
@@ -511,107 +523,95 @@ export default function FTMyCompetition() {
                   const isShowUnderEvaluation = (isFieldSubmitted || isEvaluated) && !isShowEvaluated;
 
                   return (
-                    <button
-                      key={sf.id || idx}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (isFieldSubmitted || isEvaluated) {
-                          setOverviewModalData({
+                    <div key={sf.id || idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', width: '100%' }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isFieldSubmitted || isEvaluated) {
+                            setOverviewModalData({
+                              stage: st,
+                              field: sf,
+                              fieldEvals,
+                              totalScore,
+                              stageSub,
+                              isStagePublished: isSubPublished
+                            });
+                            return;
+                          }
+                          if (isDisabled) return;
+                          const targetUrl = sf.googleFormUrl || st.googleFormUrl || 'https://forms.gle/tzgEf9QxBj3nG43S9';
+                          setVirtualBrowserForm({
                             stage: st,
                             field: sf,
-                            fieldEvals,
-                            totalScore,
-                            stageSub,
-                            isStagePublished: isSubPublished
+                            rawUrl: targetUrl
                           });
-                          return;
-                        }
-                        if (isDisabled) return;
-                        const targetUrl = sf.googleFormUrl || st.googleFormUrl || 'https://forms.gle/tzgEf9QxBj3nG43S9';
-                        setVirtualBrowserForm({
-                          stage: st,
-                          field: sf,
-                          rawUrl: targetUrl
-                        });
-                      }}
-                      className="ft-btn ft-stage-action-btn"
-                      disabled={isDisabled}
-                      style={{
-                        background: isShowEvaluated
-                          ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
-                          : isShowUnderEvaluation
-                            ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
-                            : isDisabled
-                              ? isBeforeOpen ? '#fffbeb' : '#fff1f2'
-                              : 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)',
-                        color: (isShowEvaluated || isShowUnderEvaluation || !isDisabled) ? '#ffffff' : (isBeforeOpen ? '#92400e' : '#be123c'),
-                        fontWeight: 800,
-                        padding: '0.55rem 1rem',
-                        borderRadius: '12px',
-                        fontSize: '0.85rem',
-                        border: (isShowEvaluated || isShowUnderEvaluation || !isDisabled)
-                          ? 'none'
-                          : (isBeforeOpen ? '1.5px solid #fde68a' : '1.5px solid #fecdd3'),
-                        boxShadow: isShowEvaluated
-                          ? '0 4px 14px rgba(5, 150, 105, 0.3)'
-                          : isShowUnderEvaluation
-                            ? '0 4px 14px rgba(2, 132, 199, 0.3)'
-                            : isDisabled
-                              ? 'none'
-                              : '0 4px 14px rgba(225, 29, 72, 0.35)',
-                        cursor: isDisabled ? 'not-allowed' : 'pointer',
-                        opacity: isDisabled ? 0.9 : 1,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.45rem',
-                        transition: 'all 0.2s ease',
-                        maxWidth: '100%',
-                        flexWrap: 'wrap',
-                        whiteSpace: 'normal',
-                        wordBreak: 'break-word',
-                        lineHeight: 1.35,
-                        boxSizing: 'border-box'
-                      }}
-                    >
-                      {isManuallyClosed ? (
-                        <>
-                          <span>🛑 Closed:</span> {sf.name || `Stage ${st.stageId}`}
-                        </>
-                      ) : isBeforeOpen && !isAdminOrStaff ? (
-                        <>
-                          <span>⏳ Opens in {daysUntilOpen}d:</span> {sf.name || `Stage ${st.stageId}`}
-                        </>
-                      ) : isAfterClose && !isAdminOrStaff ? (
-                        <>
-                          <span>🛑 Window Closed:</span> {sf.name || `Stage ${st.stageId}`}
-                        </>
-                      ) : isShowEvaluated ? (
-                        <>
-                          <span>⭐ Evaluated:</span> {sf.name || `Stage ${st.stageId}`} ↗
-                        </>
-                      ) : isShowUnderEvaluation ? (
-                        <>
-                          <span>⏳ Under Evaluation:</span> {sf.name || `Stage ${st.stageId}`} ↗
-                        </>
-                      ) : (
-                        <>
-                          <Send size={15} style={{ color: '#ffffff' }} /> Submit {sf.name || `Stage ${st.stageId}`}
-                        </>
-                      )}
-                      <span style={{
-                        fontSize: '0.72rem',
-                        background: (isShowEvaluated || isShowUnderEvaluation || !isDisabled) ? 'rgba(255,255,255,0.22)' : (isBeforeOpen ? 'rgba(146,64,14,0.1)' : 'rgba(190,18,60,0.1)'),
-                        color: (isShowEvaluated || isShowUnderEvaluation || !isDisabled) ? '#ffffff' : (isBeforeOpen ? '#92400e' : '#be123c'),
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '6px',
-                        marginLeft: '0.2rem',
-                        fontWeight: 800,
-                        whiteSpace: 'nowrap',
-                        display: 'inline-block'
+                        }}
+                        className="ft-btn ft-stage-action-btn"
+                        disabled={isDisabled}
+                        style={{
+                          width: '100%',
+                          background: isShowEvaluated
+                            ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                            : isShowUnderEvaluation
+                              ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
+                              : isDisabled
+                                ? isBeforeOpen ? '#fffbeb' : '#fff1f2'
+                                : 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)',
+                          color: (isShowEvaluated || isShowUnderEvaluation || !isDisabled) ? '#ffffff' : (isBeforeOpen ? '#92400e' : '#be123c'),
+                          fontWeight: 800,
+                          padding: '0.65rem 1rem',
+                          borderRadius: '14px',
+                          fontSize: '0.86rem',
+                          border: (isShowEvaluated || isShowUnderEvaluation || !isDisabled)
+                            ? 'none'
+                            : (isBeforeOpen ? '1.5px solid #fde68a' : '1.5px solid #fecdd3'),
+                          boxShadow: isShowEvaluated
+                            ? '0 4px 14px rgba(5, 150, 105, 0.3)'
+                            : isShowUnderEvaluation
+                              ? '0 4px 14px rgba(2, 132, 199, 0.3)'
+                              : isDisabled
+                                ? 'none'
+                                : '0 4px 14px rgba(190, 18, 60, 0.3)',
+                          cursor: isDisabled ? 'not-allowed' : 'pointer',
+                          opacity: isDisabled ? 0.9 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justify: 'center',
+                          textAlign: 'center',
+                          gap: '0.45rem',
+                          transition: 'all 0.2s ease',
+                          boxSizing: 'border-box'
+                        }}
+                      >
+                        {isManuallyClosed ? (
+                          <span>🛑 Closed: {sf.name || `Stage ${st.stageId}`}</span>
+                        ) : isBeforeOpen && !isAdminOrStaff ? (
+                          <span>⏳ Opens in {daysUntilOpen}d: {sf.name || `Stage ${st.stageId}`}</span>
+                        ) : isAfterClose && !isAdminOrStaff ? (
+                          <span>🛑 Window Closed: {sf.name || `Stage ${st.stageId}`}</span>
+                        ) : isShowEvaluated ? (
+                          <span>⭐ Evaluated: {sf.name || `Stage ${st.stageId}`} ↗</span>
+                        ) : isShowUnderEvaluation ? (
+                          <span>⏳ Under Evaluation: {sf.name || `Stage ${st.stageId}`} ↗</span>
+                        ) : (
+                          <>
+                            <Send size={15} style={{ color: '#ffffff' }} /> Submit {sf.name || `Stage ${st.stageId}`}
+                          </>
+                        )}
+                      </button>
+
+                      {/* Date Window Information */}
+                      <div style={{
+                        fontSize: '0.73rem', color: '#64748b', fontWeight: 700,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', flexWrap: 'wrap', textAlign: 'center'
                       }}>
-                        {sf.openDate ? `📅 ${formatUnifiedDate(sf.openDate)} → ${formatUnifiedDate(effDeadline)}` : `⏰ ${formatUnifiedDate(effDeadline)}`}
-                      </span>
-                    </button>
+                        {sf.openDate ? (
+                          <span>📅 Open: {formatUnifiedDate(sf.openDate)} → {formatUnifiedDate(effDeadline)}</span>
+                        ) : (
+                          <span>⏰ Deadline: {formatUnifiedDate(effDeadline)}</span>
+                        )}
+                      </div>
+                    </div>
                   );
                 })}
               </div>

@@ -263,7 +263,7 @@ export default function Login() {
             {completionData ? 'Complete Registration' : resetMode === 'request' ? 'Request Password Reset' : resetMode === 'reset' ? 'Reset Password' : 'SciComm Spark Competition Portal'}
           </h2>
           <div style={{ fontSize: '0.85rem', color: 'var(--ft-text-muted)', fontWeight: 500 }}>
-            {completionData ? 'Fill in your university details to continue' : resetMode === 'request' ? 'Send a reset request to your administrator' : resetMode === 'reset' ? 'Enter approved details to reset password' : 'Alamein University'}
+            {completionData ? 'Fill in your university details to continue' : resetMode === 'request' ? 'Send a reset request to your administrator' : resetMode === 'reset' ? 'Enter approved details to reset password' : ''}
           </div>
         </div>
 
