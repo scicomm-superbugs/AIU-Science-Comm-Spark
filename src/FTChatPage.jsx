@@ -418,11 +418,11 @@ export default function FTChatPage({ user: userProp }) {
     });
 
   return (
-    <div className="ft-chat-container-main" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0' }}>
+    <div className="ft-chat-container-main" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 140px)', minHeight: '620px', gap: '0' }}>
 
       {/* ── Main Chat Card (Sidebar + Chat Area) ──────────────────── */}
       <div className="ft-chat-main-card" style={{
-        flex: 1, height: '640px', minHeight: '480px', background: '#ffffff', borderRadius: '24px',
+        flex: 1, height: '100%', minHeight: '620px', background: '#ffffff', borderRadius: '24px',
         border: '1.5px solid #e2e8f0', boxShadow: '0 10px 30px rgba(15,23,42,0.04)',
         display: 'flex', overflow: 'hidden', position: 'relative'
       }}>
