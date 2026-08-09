@@ -17,6 +17,7 @@ import FTTimelineManagement from './FTTimelineManagement';
 import FTEvaluationManagement from './FTEvaluationManagement';
 import FTTestSection from './FTTestSection';
 import FTChatPage from './FTChatPage';
+import FTNotificationsPage from './FTNotificationsPage';
 import Login from './Login';
 import Register from './Register';
 import Landing from './Landing';
@@ -91,6 +92,7 @@ function App() {
               <Route path="our-team" element={<FTOurTeam />} />
               <Route path="schedule" element={<FTSchedulePage />} />
               <Route path="chat" element={<FTChatPage />} />
+              <Route path="notifications" element={<FTNotificationsPage />} />
 
               {/* Admin/Faculty places */}
               <Route element={<FTProtectedRoute requireRole={['master', 'admin']} />}>

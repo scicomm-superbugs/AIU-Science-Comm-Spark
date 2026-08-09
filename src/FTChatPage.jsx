@@ -1,238 +1,411 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { useAuth } from './context/AuthContext';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { db, useLiveCollection } from './db';
-import { 
-  MessageSquare, Send, User, Search, Plus, X, Clock, Check, CheckCheck, 
-  Sparkles, ChevronLeft, Shield, Award, GraduationCap, HelpCircle, FileText, 
-  MessageCircle, ArrowRight, UserCheck
-} from 'lucide-react';
-import { getCleanAcademicTitle, FT_ROLE_LABELS, FT_ROLE_COLORS, renderFormattedDescription, getUserRoleLabel } from './ftConstants';
-import './scicommspark.css';
+import { Send, User, Users, MessageSquare, Smile, Paperclip, X, FileText, ChevronLeft, MoreVertical, ExternalLink, Download, ZoomIn, ZoomOut, RotateCw, Plus, Search, Check, Globe } from 'lucide-react';
+import { FT_ROLE_COLORS, FT_ROLE_LABELS, getCleanAcademicTitle } from './ftConstants';
 
-export default function FTChatPage() {
-  const { user } = useAuth();
-  const allAccounts = useLiveCollection('scientists') || [];
-  const allConversations = useLiveCollection('ft_conversations') || [];
-  const allMessages = useLiveCollection('ft_messages') || [];
+const getUserRoleLabel = (acc) => {
+  if (!acc) return 'User';
+  return FT_ROLE_LABELS[acc.role] || acc.role || 'Competitor';
+};
 
-  const meDoc = useMemo(() => {
-    return allAccounts.find(s => s.id === user?.id || s.username === user?.username) || user;
-  }, [allAccounts, user]);
+/* ─── URL detection regex ─── */
+const URL_REGEX = /(https?:\/\/[^\s<>"']+)/gi;
 
-  const myId = meDoc?.id || user?.id || user?.username || 'me';
-  const myName = meDoc?.name || user?.name || user?.username || 'User';
-  const myRole = meDoc?.role || user?.role || 'competitor';
+/* ─── LinkPreview sub-component ─── */
+function LinkPreview({ url, isMine }) {
+  const [meta, setMeta] = useState(null);
+  const [error, setError] = useState(false);
 
-  const [activeConvId, setActiveConvId] = useState(null);
-  const [messageText, setMessageText] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    let fallbackMeta = null;
+    try {
+      const u = new URL(url);
+      const domain = u.hostname.replace('www.', '');
+      const favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+      const pathTitle = u.pathname
+        .split('/')
+        .filter(Boolean)
+        .map(s => decodeURIComponent(s).replace(/[-_]/g, ' '))
+        .join(' › ');
+      fallbackMeta = {
+        domain,
+        favicon,
+        title: pathTitle || domain,
+        displayUrl: url.length > 55 ? url.substring(0, 52) + '…' : url
+      };
+      setMeta(fallbackMeta);
+    } catch {
+      setError(true);
+      return;
+    }
+
+    fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`)
+      .then(res => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
+      .then(resData => {
+        if (cancelled) return;
+        if (resData.status === 'success' && resData.data) {
+          const d = resData.data;
+          setMeta({
+            domain: fallbackMeta.domain,
+            favicon: d.logo?.url || d.icon?.url || fallbackMeta.favicon,
+            title: d.title || fallbackMeta.title,
+            description: d.description || '',
+            image: d.image?.url || null,
+            displayUrl: fallbackMeta.displayUrl
+          });
+        }
+      })
+      .catch(() => {
+        // silently fallback
+      });
+
+    return () => { cancelled = true; };
+  }, [url]);
+
+  if (error || !meta) return null;
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`link-preview-card ${isMine ? 'link-preview-mine' : 'link-preview-other'}`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {meta.image && (
+        <div className="link-preview-image-wrapper">
+          <img src={meta.image} alt="" onError={(e) => { e.target.style.display = 'none'; }} />
+        </div>
+      )}
+      <div className="link-preview-container">
+        <div className="link-preview-icon">
+          <img src={meta.favicon} alt="" onError={(e) => { e.target.style.display = 'none'; }} />
+        </div>
+        <div className="link-preview-body">
+          <span className="link-preview-domain">{meta.domain}</span>
+          <span className="link-preview-title">{meta.title}</span>
+          {meta.description && (
+            <span className="link-preview-description">{meta.description}</span>
+          )}
+          <span className="link-preview-url">{meta.displayUrl}</span>
+        </div>
+        <ExternalLink size={14} className="link-preview-arrow" />
+      </div>
+    </a>
+  );
+}
+
+/* ─── Helper: render message text with clickable links & mentions ─── */
+function renderMessageText(text, isMine, accounts) {
+  if (!text) return null;
+
+  const parts = text.split(/(https?:\/\/[^\s<>"']+|@\w+)/gi);
+  const urls = text.match(/(https?:\/\/[^\s<>"']+)/gi) || [];
+  const uniqueUrls = [...new Set(urls)];
+
+  return (
+    <>
+      <div style={{ wordBreak: 'break-word' }}>
+        {parts.map((part, i) => {
+          if (!part) return null;
+          if (/^https?:\/\//i.test(part)) {
+            return (
+              <a
+                key={i}
+                href={part}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`chat-link ${isMine ? 'chat-link-mine' : 'chat-link-other'}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {part}
+              </a>
+            );
+          }
+          if (part.startsWith('@')) {
+            const username = part.slice(1).toLowerCase();
+            const userMatch = (accounts || []).find(s => (s.username || '').toLowerCase() === username || (s.name || '').replace(/\s+/g, '').toLowerCase() === username);
+            if (userMatch) {
+              return (
+                <strong
+                  key={i}
+                  style={{
+                    background: isMine ? 'rgba(255, 255, 255, 0.25)' : 'rgba(190, 18, 60, 0.1)',
+                    color: isMine ? '#ffffff' : '#be123c',
+                    padding: '2px 5px',
+                    borderRadius: '4px',
+                    fontWeight: 800
+                  }}
+                >
+                  {part}
+                </strong>
+              );
+            }
+            return <span key={i} style={{ fontWeight: 600 }}>{part}</span>;
+          }
+          return <span key={i}>{part}</span>;
+        })}
+      </div>
+      {uniqueUrls.map((u, i) => (
+        <LinkPreview key={i} url={u} isMine={isMine} />
+      ))}
+    </>
+  );
+}
+
+export default function FTChatPage({ user }) {
+  const [text, setText] = useState('');
+  const [activeRecipient, setActiveRecipient] = useState('global'); // 'global' or userId/username
+  const [showEmojis, setShowEmojis] = useState(false);
+  const [filePreview, setFilePreview] = useState(null);
+  const [mobileShowInbox, setMobileShowInbox] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatSearch, setNewChatSearch] = useState('');
-  const [selectedRoleFilter, setSelectedRoleFilter] = useState('staff'); // 'staff', 'judge', 'trainer', 'admin', 'all'
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState('all');
+
+  // Lightbox State
+  const [lightbox, setLightbox] = useState(null); // { src, name }
+  const [lightboxZoom, setLightboxZoom] = useState(1);
+  const [lightboxRotation, setLightboxRotation] = useState(0);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+
+  // Mentions State
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [showMentions, setShowMentions] = useState(false);
 
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  // Filter conversations for the logged-in user
-  const myConversations = useMemo(() => {
-    if (!allConversations) return [];
-    return allConversations
-      .filter(c => Array.isArray(c.participantIds) && c.participantIds.includes(myId))
-      .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
-  }, [allConversations, myId]);
+  const myId = user?.id || user?.username || 'user';
+  const myName = user?.name || user?.username || 'User';
 
-  // Auto-select first conversation on load if available
-  useEffect(() => {
-    if (!activeConvId && myConversations.length > 0) {
-      setActiveConvId(myConversations[0].id);
+  const rawMessages = useLiveCollection('ft_messages');
+  const allAccounts = useLiveCollection('scientists');
+
+  const emojis = ['😀','😂','😍','👍','👏','🔬','🧪','✅','❌','🔥','👀','🎉','💡','🚀','💪','❤️','🙏','🤔','😎','⚡'];
+
+  // Handle Input Changes with Mentions
+  const handleChatInputChange = (value) => {
+    setText(value);
+    const atIdx = value.lastIndexOf('@');
+    if (atIdx >= 0) {
+      const afterAt = value.slice(atIdx + 1);
+      if (!afterAt.includes(' ')) {
+        setMentionQuery(afterAt);
+        setShowMentions(true);
+        return;
+      }
     }
-  }, [myConversations, activeConvId]);
+    setMentionQuery('');
+    setShowMentions(false);
+  };
 
-  // Get active conversation object
-  const activeConv = useMemo(() => {
-    return myConversations.find(c => c.id === activeConvId);
-  }, [myConversations, activeConvId]);
+  const insertMention = (person) => {
+    const atIdx = text.lastIndexOf('@');
+    const before = text.slice(0, atIdx);
+    const mention = `@${person.username || person.name.replace(/\s+/g, '')} `;
+    setText(before + mention);
+    setMentionQuery('');
+    setShowMentions(false);
+  };
 
-  // Identify recipient in active conversation
-  const activeRecipientId = useMemo(() => {
-    if (!activeConv || !Array.isArray(activeConv.participantIds)) return null;
-    return activeConv.participantIds.find(id => id !== myId);
-  }, [activeConv, myId]);
+  // Lightbox handlers
+  const openLightbox = useCallback((src, name) => {
+    setLightbox({ src, name });
+    setLightboxZoom(1);
+    setLightboxRotation(0);
+    setPanX(0);
+    setPanY(0);
+  }, []);
 
-  const activeRecipient = useMemo(() => {
-    if (!activeRecipientId) return null;
-    return allAccounts.find(s => s.id === activeRecipientId || s.username === activeRecipientId) || {
-      id: activeRecipientId,
-      name: activeConv?.participantDetails?.[activeRecipientId]?.name || 'User',
-      role: activeConv?.participantDetails?.[activeRecipientId]?.role || 'judge'
-    };
-  }, [allAccounts, activeRecipientId, activeConv]);
+  const closeLightbox = useCallback(() => {
+    setLightbox(null);
+    setLightboxZoom(1);
+    setLightboxRotation(0);
+    setPanX(0);
+    setPanY(0);
+  }, []);
 
-  // Messages for active conversation
-  const currentMessages = useMemo(() => {
-    if (!activeConvId || !allMessages) return [];
-    return allMessages
-      .filter(m => m.conversationId === activeConvId)
-      .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
-  }, [allMessages, activeConvId]);
+  const handleDragStart = (e) => {
+    e.preventDefault();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    dragStartRef.current = { x: clientX - panX, y: clientY - panY };
+    setIsDragging(true);
+  };
 
-  // Scroll to bottom when messages update
+  const handleDragMove = (e) => {
+    if (!isDragging) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    setPanX(clientX - dragStartRef.current.x);
+    setPanY(clientY - dragStartRef.current.y);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
+
+  // Filter messages for active recipient
+  const currentMessages = rawMessages ? [...rawMessages]
+    .filter(msg => {
+      if (activeRecipient === 'global') {
+        return !msg.receiverId || msg.receiverId === 'global';
+      } else {
+        return (String(msg.senderId) === String(myId) && String(msg.receiverId) === String(activeRecipient)) || 
+               (String(msg.senderId) === String(activeRecipient) && String(msg.receiverId) === String(myId));
+      }
+    })
+    .sort((a, b) => new Date(a.createdAt || a.timestamp || 0).getTime() - new Date(b.createdAt || b.timestamp || 0).getTime()) : [];
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [currentMessages]);
+  }, [currentMessages.length]);
 
-  // Clear unread count when opening conversation
-  useEffect(() => {
-    if (activeConvId && activeConv && activeConv.unreadCounts?.[myId] > 0) {
-      const updatedCounts = { ...(activeConv.unreadCounts || {}), [myId]: 0 };
-      db.ft_conversations.update(activeConvId, { unreadCounts: updatedCounts }).catch(console.error);
+  // File Select Handler
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 500 * 1024) {
+      alert('File must be less than 500KB for chat uploads.');
+      return;
     }
-  }, [activeConvId, activeConv, myId]);
 
-  // Send a new message
-  const handleSendMessage = async (textToSend = null) => {
-    const text = (textToSend || messageText).trim();
-    if (!text || !activeConvId || !activeRecipientId) return;
-
-    setMessageText('');
-
-    const now = new Date().toISOString();
-    const msgId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-
-    // Add message
-    await db.ft_messages.add({
-      id: msgId,
-      conversationId: activeConvId,
-      senderId: myId,
-      senderName: myName,
-      senderRole: myRole,
-      recipientId: activeRecipientId,
-      text: text,
-      createdAt: now,
-      status: 'sent'
-    });
-
-    // Update conversation summary
-    const recipientUnread = (activeConv?.unreadCounts?.[activeRecipientId] || 0) + 1;
-    const updatedUnread = {
-      ...(activeConv?.unreadCounts || {}),
-      [myId]: 0,
-      [activeRecipientId]: recipientUnread
-    };
-
-    await db.ft_conversations.update(activeConvId, {
-      lastMessage: text,
-      lastSenderId: myId,
-      updatedAt: now,
-      unreadCounts: updatedUnread
-    });
-
-    // Trigger in-app notification bell for recipient
-    try {
-      await db.ft_notifications.add({
-        userId: activeRecipientId,
-        title: `💬 New Message from ${myName}`,
-        message: text.length > 80 ? text.substring(0, 80) + '...' : text,
-        type: 'chat',
-        status: 'unread',
-        createdAt: now,
-        link: `/dashboard/chat`
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFilePreview({
+        name: file.name,
+        type: file.type,
+        data: reader.result,
+        isImage: file.type.startsWith('image/')
       });
-    } catch (nErr) {
-      console.warn('Chat notification error:', nErr);
-    }
+    };
+    reader.readAsDataURL(file);
   };
 
-  // Start or open conversation with a target user
-  const handleStartChatWithUser = async (targetUser) => {
-    if (!targetUser) return;
-    const targetId = targetUser.id || targetUser.username;
-    
-    // Check if conversation already exists
-    let existing = myConversations.find(c => Array.isArray(c.participantIds) && c.participantIds.includes(targetId));
-    
-    if (existing) {
-      setActiveConvId(existing.id);
-    } else {
-      // Create new conversation
-      const convId = `conv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      const newConv = {
-        id: convId,
-        participantIds: [myId, targetId],
-        participantDetails: {
-          [myId]: { name: myName, role: myRole },
-          [targetId]: { name: targetUser.name || targetUser.username, role: targetUser.role }
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        lastMessage: 'Conversation started',
-        lastSenderId: myId,
-        unreadCounts: { [myId]: 0, [targetId]: 0 }
+  // Send Message Handler
+  const handleSend = async (e) => {
+    if (e) e.preventDefault();
+    if (!text.trim() && !filePreview) return;
+    try {
+      const msgData = {
+        text: text || '',
+        senderId: myId,
+        senderName: myName,
+        receiverId: activeRecipient,
+        createdAt: new Date().toISOString()
       };
 
-      await db.ft_conversations.add(newConv);
-      setActiveConvId(convId);
-    }
+      if (filePreview) {
+        msgData.attachment = {
+          name: filePreview.name,
+          type: filePreview.type,
+          data: filePreview.data,
+          isImage: filePreview.isImage
+        };
+      }
 
-    setShowNewChatModal(false);
+      await db.ft_messages.add(msgData);
+
+      // Trigger notification if private message
+      if (activeRecipient !== 'global') {
+        await db.ft_notifications.add({
+          targetUserId: activeRecipient,
+          title: `💬 New Message from ${myName}`,
+          message: text.length > 60 ? text.slice(0, 57) + '...' : text,
+          type: 'chat',
+          targetTab: 'chat',
+          status: 'unread',
+          createdAt: new Date().toISOString()
+        }).catch(() => {});
+      }
+
+      setText('');
+      setFilePreview(null);
+      setShowEmojis(false);
+      setMentionQuery('');
+      setShowMentions(false);
+    } catch (err) {
+      console.error('Failed to send message', err);
+    }
   };
 
-  // Contacts list for starting new chat
-  const eligibleRecipients = useMemo(() => {
-    return allAccounts.filter(acc => {
-      const accId = acc.id || acc.username;
-      if (accId === myId) return false;
-
-      const r = acc.role;
-      const isStaffRole = ['master', 'admin', 'judge', 'trainer', 'academic_judge', 'scicomm_judge', 'trainer_judge'].includes(r);
-
-      if (selectedRoleFilter === 'staff') return isStaffRole;
-      if (selectedRoleFilter === 'judge') return ['judge', 'academic_judge', 'scicomm_judge', 'trainer_judge'].includes(r);
-      if (selectedRoleFilter === 'trainer') return ['trainer', 'trainer_judge'].includes(r);
-      if (selectedRoleFilter === 'admin') return ['master', 'admin'].includes(r);
-      if (selectedRoleFilter === 'competitors') return ['competitor', 'user'].includes(r);
-
-      return true;
-    }).filter(acc => {
-      if (!newChatSearch.trim()) return true;
-      const q = newChatSearch.toLowerCase();
-      return (
-        (acc.name || '').toLowerCase().includes(q) ||
-        (acc.username || '').toLowerCase().includes(q) ||
-        (acc.department || '').toLowerCase().includes(q) ||
-        (acc.institutionName || '').toLowerCase().includes(q)
-      );
+  // Helper to fetch the last message info
+  const getLastMessageInfo = (recipId) => {
+    if (!rawMessages) return null;
+    const msgs = rawMessages.filter(msg => {
+      if (recipId === 'global') {
+        return !msg.receiverId || msg.receiverId === 'global';
+      } else {
+        return (String(msg.senderId) === String(myId) && String(msg.receiverId) === String(recipId)) || 
+               (String(msg.senderId) === String(recipId) && String(msg.receiverId) === String(myId));
+      }
     });
-  }, [allAccounts, myId, selectedRoleFilter, newChatSearch]);
+    if (msgs.length === 0) return null;
+    const sorted = [...msgs].sort((a,b) => new Date(a.createdAt || a.timestamp || 0).getTime() - new Date(b.createdAt || b.timestamp || 0).getTime());
+    return sorted[sorted.length - 1];
+  };
 
-  // Filtered sidebar conversations
-  const filteredConversations = useMemo(() => {
-    if (!searchQuery.trim()) return myConversations;
+  // Unread Count helper per contact
+  const getUnreadCount = (recipId) => {
+    if (!rawMessages || !user) return 0;
+    const unread = rawMessages.filter(m => {
+      const isIncoming = recipId === 'global' 
+        ? (!m.receiverId || m.receiverId === 'global') && String(m.senderId) !== String(myId)
+        : String(m.senderId) === String(recipId) && String(m.receiverId) === String(myId);
+      return isIncoming && m.status === 'unread';
+    });
+    return unread.length;
+  };
+
+  // Active recipient account details
+  const activeRecipientAcc = activeRecipient === 'global'
+    ? null
+    : (allAccounts || []).find(s => String(s.id) === String(activeRecipient) || s.username === activeRecipient);
+
+  // Eligible recipients list for modal & sidebar search
+  const sortedAccounts = (allAccounts || [])
+    .filter(acc => String(acc.id) !== String(myId))
+    .sort((a, b) => {
+      const msgA = getLastMessageInfo(String(a.id));
+      const msgB = getLastMessageInfo(String(b.id));
+      const timeA = msgA ? new Date(msgA.createdAt || 0).getTime() : 0;
+      const timeB = msgB ? new Date(msgB.createdAt || 0).getTime() : 0;
+      return timeB - timeA;
+    });
+
+  const filteredContacts = sortedAccounts.filter(acc => {
+    if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
-    return myConversations.filter(c => {
-      const otherId = c.participantIds?.find(id => id !== myId);
-      const otherAcc = allAccounts.find(s => s.id === otherId || s.username === otherId);
-      const name = otherAcc?.name || otherAcc?.username || '';
-      return name.toLowerCase().includes(q) || (c.lastMessage || '').toLowerCase().includes(q);
-    });
-  }, [myConversations, searchQuery, myId, allAccounts]);
+    return (acc.name || '').toLowerCase().includes(q) || (acc.username || '').toLowerCase().includes(q) || (acc.department || '').toLowerCase().includes(q);
+  });
 
-  const presetQuestions = [
-    "📋 Question about Stage 1 requirements & deliverable guidelines",
-    "⚖️ Clarification needed on Evaluation criteria breakdown",
-    "🎓 Requesting mentorship & feedback on my submission",
-    "🛠️ Technical question regarding upload formats & deadlines"
-  ];
+  const eligibleModalRecipients = sortedAccounts.filter(acc => {
+    if (selectedRoleFilter !== 'all' && acc.role !== selectedRoleFilter) return false;
+    if (!newChatSearch.trim()) return true;
+    const q = newChatSearch.toLowerCase();
+    return (acc.name || '').toLowerCase().includes(q) || (acc.username || '').toLowerCase().includes(q) || (acc.department || '').toLowerCase().includes(q);
+  });
 
   return (
-    <div className="ft-chat-page-root" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem' }}>
-      
-      {/* ── Top Header Banner (Hidden on mobile when viewing active chat) ──── */}
-      <div 
-        className={`ft-chat-top-banner ${activeConvId ? 'ft-mobile-hide-on-chat' : ''}`}
+    <div className="ft-chat-container-main" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem' }}>
+
+      {/* ── Top Banner Header (Hidden on active chat mobile) ────────── */}
+      <div
+        className={`ft-chat-top-banner ${!mobileShowInbox ? 'ft-mobile-hide-on-chat' : ''}`}
         style={{
           background: 'linear-gradient(135deg, #ffffff 0%, #fff1f2 100%)',
           padding: '1.15rem 1.4rem', borderRadius: '20px', border: '1.5px solid #fecdd3',
@@ -254,7 +427,7 @@ export default function FTChatPage() {
               Ask & Chat Hub
             </h1>
             <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.1rem 0 0 0', fontWeight: 600 }}>
-              Direct inquiry & real-time messaging with Competition Judges, Trainers & Staff
+              Direct inquiry & real-time messaging with Competition Evaluators, Mentors & Staff
             </p>
           </div>
         </div>
@@ -272,25 +445,26 @@ export default function FTChatPage() {
         </button>
       </div>
 
-      {/* ── Main Chat Layout (Sidebar Contacts + Chat Canvas) ──────── */}
-      <div className="ft-chat-main-grid" style={{
-        flex: 1, height: '620px', minHeight: '500px', background: '#ffffff', borderRadius: '24px',
+      {/* ── Main Chat Card (Sidebar + Chat Area) ──────────────────── */}
+      <div className="ft-chat-main-card" style={{
+        flex: 1, height: '620px', minHeight: '480px', background: '#ffffff', borderRadius: '24px',
         border: '1.5px solid #e2e8f0', boxShadow: '0 10px 30px rgba(15,23,42,0.04)',
-        display: 'grid', gridTemplateColumns: '320px 1fr', overflow: 'hidden', position: 'relative'
+        display: 'flex', overflow: 'hidden', position: 'relative'
       }}>
 
-        {/* ── LEFT SIDEBAR: CONVERSATIONS LIST ────────────────── */}
-        <div className={`ft-chat-sidebar-col ${activeConvId ? 'ft-mobile-hide-chat-col' : ''}`} style={{
-          borderRight: '1px solid #e2e8f0', background: '#f8fafc',
-          display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0
+        {/* ── LEFT SIDEBAR: CONTACTS & CHATS LIST ──────────────── */}
+        <div className={`ft-chat-sidebar ${!mobileShowInbox ? 'ft-mobile-hide-sidebar' : ''}`} style={{
+          width: '320px', borderRight: '1px solid #e2e8f0', background: '#f8fafc',
+          display: 'flex', flexDirection: 'column', height: '100%', flexShrink: 0
         }}>
-          {/* Search Bar */}
+          
+          {/* Search Contacts Bar */}
           <div style={{ padding: '0.85rem 1rem', borderBottom: '1px solid #e2e8f0' }}>
             <div style={{ position: 'relative' }}>
               <Search size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
                 type="text"
-                placeholder="Search conversations..."
+                placeholder="Search contacts..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
@@ -303,319 +477,437 @@ export default function FTChatPage() {
           </div>
 
           {/* Conversations List */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '0.65rem' }}>
-            {filteredConversations.length === 0 ? (
-              <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: '#64748b' }}>
-                <MessageCircle size={36} style={{ color: '#cbd5e1', marginBottom: '0.5rem' }} />
-                <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a' }}>No Conversations Yet</div>
-                <div style={{ fontSize: '0.78rem', marginTop: '0.25rem', color: '#64748b' }}>
-                  Click "Ask a Judge / Trainer" to start your inquiry.
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
+            
+            {/* Global Team Chat Item */}
+            <div
+              onClick={() => {
+                setActiveRecipient('global');
+                setMobileShowInbox(false);
+              }}
+              style={{
+                padding: '0.75rem 0.85rem', borderRadius: '14px', marginBottom: '0.4rem',
+                background: activeRecipient === 'global' ? '#ffffff' : 'transparent',
+                border: activeRecipient === 'global' ? '1.5px solid #cbd5e1' : '1.5px solid transparent',
+                boxShadow: activeRecipient === 'global' ? '0 4px 14px rgba(0,0,0,0.04)' : 'none',
+                cursor: 'pointer', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '0.75rem'
+              }}
+            >
+              <div style={{
+                width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0,
+                background: 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)',
+                color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 10px rgba(190,18,60,0.2)'
+              }}>
+                <Globe size={20} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 900, fontSize: '0.88rem', color: '#0f172a' }}>
+                  🌐 Global Team Chat
+                </div>
+                <div style={{ fontSize: '0.76rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  Public Q&A and announcements
                 </div>
               </div>
-            ) : (
-              filteredConversations.map(conv => {
-                const otherId = conv.participantIds?.find(id => id !== myId);
-                const otherAcc = allAccounts.find(s => s.id === otherId || s.username === otherId) || {
-                  name: conv.participantDetails?.[otherId]?.name || 'User',
-                  role: conv.participantDetails?.[otherId]?.role || 'judge'
-                };
+            </div>
 
-                const isSelected = conv.id === activeConvId;
-                const unreadCount = conv.unreadCounts?.[myId] || 0;
-                const roleColor = FT_ROLE_COLORS[otherAcc.role] || '#2563eb';
+            <div style={{ height: '1px', background: '#e2e8f0', margin: '0.4rem 0.4rem 0.6rem' }} />
+
+            {/* Direct Messages List */}
+            {filteredContacts.map(acc => {
+              const accId = String(acc.id || acc.username);
+              const isSelected = activeRecipient === accId;
+              const lastMsg = getLastMessageInfo(accId);
+              const unread = getUnreadCount(accId);
+              const roleColor = FT_ROLE_COLORS[acc.role] || '#2563eb';
+
+              return (
+                <div
+                  key={accId}
+                  onClick={() => {
+                    setActiveRecipient(accId);
+                    setMobileShowInbox(false);
+                  }}
+                  style={{
+                    padding: '0.75rem 0.85rem', borderRadius: '14px', marginBottom: '0.4rem',
+                    background: isSelected ? '#ffffff' : 'transparent',
+                    border: isSelected ? '1.5px solid #cbd5e1' : '1.5px solid transparent',
+                    boxShadow: isSelected ? '0 4px 14px rgba(0,0,0,0.04)' : 'none',
+                    cursor: 'pointer', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '0.75rem'
+                  }}
+                >
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <img
+                      src={acc.avatarUrl || acc.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${acc.username || acc.name}`}
+                      alt={acc.name}
+                      style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${roleColor}` }}
+                    />
+                    <span style={{
+                      position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px',
+                      borderRadius: '50%', background: '#22c55e', border: '2px solid #ffffff'
+                    }} />
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.15rem' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.86rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {acc.name || acc.username}
+                      </div>
+                      {lastMsg && (
+                        <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 600, flexShrink: 0, marginLeft: '0.3rem' }}>
+                          {new Date(lastMsg.createdAt || lastMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
+                      <div style={{
+                        fontSize: '0.76rem', color: unread > 0 ? '#0f172a' : '#64748b',
+                        fontWeight: unread > 0 ? 800 : 500,
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1
+                      }}>
+                        {lastMsg ? (lastMsg.text || (lastMsg.attachment ? '📁 Attachment' : 'Message...')) : 'Tap to start inquiry...'}
+                      </div>
+
+                      {unread > 0 && (
+                        <span style={{
+                          background: '#be123c', color: '#ffffff', fontSize: '0.68rem',
+                          fontWeight: 900, borderRadius: '9999px', padding: '0.1rem 0.4rem', minWidth: '18px', height: '18px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                        }}>
+                          {unread}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── RIGHT CHAT CANVAS AREA ──────────────────────────── */}
+        <div className={`ft-chat-area ${mobileShowInbox ? 'ft-mobile-hide-chat' : ''}`} style={{
+          flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minWidth: 0, background: '#ffffff'
+        }}>
+          
+          {/* Header Bar */}
+          <div style={{
+            padding: '0.75rem 1rem', borderBottom: '1px solid #e2e8f0', background: '#ffffff',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: 1, minWidth: 0 }}>
+              {/* Mobile Back Button */}
+              <button
+                type="button"
+                className="ft-mobile-chat-back-btn"
+                onClick={() => setMobileShowInbox(true)}
+                style={{
+                  background: '#f1f5f9', border: '1.5px solid #cbd5e1', borderRadius: '10px',
+                  padding: '0.35rem 0.6rem', fontSize: '0.8rem', fontWeight: 800, color: '#334155',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem', flexShrink: 0
+                }}
+              >
+                <ChevronLeft size={16} /> Contacts
+              </button>
+
+              {activeRecipient === 'global' ? (
+                <div style={{
+                  width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)',
+                  color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                }}>
+                  <Globe size={18} />
+                </div>
+              ) : (
+                <img
+                  src={activeRecipientAcc?.avatarUrl || activeRecipientAcc?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeRecipientAcc?.username || activeRecipientAcc?.name}`}
+                  alt={activeRecipientAcc?.name}
+                  style={{
+                    width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0,
+                    border: `2px solid ${FT_ROLE_COLORS[activeRecipientAcc?.role] || '#2563eb'}`
+                  }}
+                />
+              )}
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
+                  <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 900, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {activeRecipient === 'global' ? '🌐 Global Team Chat' : (activeRecipientAcc?.name || activeRecipientAcc?.username || 'Private Chat')}
+                  </h3>
+                  {activeRecipientAcc && (
+                    <span style={{
+                      fontSize: '0.65rem', fontWeight: 800, padding: '0.1rem 0.45rem', borderRadius: '6px', flexShrink: 0,
+                      background: `${FT_ROLE_COLORS[activeRecipientAcc.role] || '#2563eb'}15`,
+                      color: FT_ROLE_COLORS[activeRecipientAcc.role] || '#2563eb',
+                      border: `1px solid ${FT_ROLE_COLORS[activeRecipientAcc.role] || '#2563eb'}40`
+                    }}>
+                      {getUserRoleLabel(activeRecipientAcc)}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {activeRecipient === 'global' ? 'Public channel for all competitors and evaluators' : (getCleanAcademicTitle(activeRecipientAcc) || activeRecipientAcc?.department || 'Competition Staff')}
+                </div>
+              </div>
+            </div>
+
+            <span style={{
+              fontSize: '0.72rem', color: '#059669', background: '#ecfdf5',
+              padding: '0.2rem 0.55rem', borderRadius: '8px', border: '1.5px solid #a7f3d0',
+              fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap', flexShrink: 0
+            }}>
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', flexShrink: 0 }} /> Active Thread
+            </span>
+          </div>
+
+          {/* Messages Scroll Feed */}
+          <div style={{
+            flex: 1, minHeight: 0, overflowY: 'auto', padding: '1.15rem 1.25rem',
+            background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)',
+            display: 'flex', flexDirection: 'column', gap: '0.85rem'
+          }}>
+            {currentMessages.length === 0 ? (
+              <div style={{ margin: 'auto', textAlign: 'center', maxWidth: '420px', padding: '2rem 1rem' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>💬</div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.3rem 0' }}>
+                  {activeRecipient === 'global' ? 'Welcome to Global Team Chat' : `Start your inquiry with ${activeRecipientAcc?.name || 'User'}`}
+                </h3>
+                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
+                  Ask questions regarding stage deliverables, evaluation criteria, or guidance. Share links, images, or documents.
+                </p>
+              </div>
+            ) : (
+              currentMessages.map(msg => {
+                const isMe = String(msg.senderId) === String(myId);
 
                 return (
                   <div
-                    key={conv.id}
-                    onClick={() => setActiveConvId(conv.id)}
+                    key={msg.id}
                     style={{
-                      padding: '0.75rem 0.85rem', borderRadius: '14px', marginBottom: '0.4rem',
-                      background: isSelected ? '#ffffff' : 'transparent',
-                      border: isSelected ? '1.5px solid #cbd5e1' : '1.5px solid transparent',
-                      boxShadow: isSelected ? '0 4px 14px rgba(0,0,0,0.04)' : 'none',
-                      cursor: 'pointer', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '0.75rem'
+                      display: 'flex', flexDirection: 'column',
+                      alignItems: isMe ? 'flex-end' : 'flex-start',
+                      maxWidth: '85%', alignSelf: isMe ? 'flex-end' : 'flex-start'
                     }}
                   >
-                    {/* Avatar */}
-                    <div style={{ position: 'relative', flexShrink: 0 }}>
-                      <img
-                        src={otherAcc.avatarUrl || otherAcc.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${otherAcc.username || otherAcc.name}`}
-                        alt={otherAcc.name}
-                        style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${roleColor}` }}
-                      />
-                      <span style={{
-                        position: 'absolute', bottom: 0, right: 0, width: '11px', height: '11px',
-                        borderRadius: '50%', background: '#22c55e', border: '2px solid #ffffff'
-                      }} />
+                    <div style={{
+                      fontSize: '0.7rem', color: '#64748b', fontWeight: 700,
+                      marginBottom: '0.15rem', padding: '0 0.3rem'
+                    }}>
+                      {isMe ? 'You' : (msg.senderName || 'Staff')}
                     </div>
 
-                    {/* Meta */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.15rem' }}>
-                        <div style={{ fontWeight: 800, fontSize: '0.86rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {otherAcc.name || otherAcc.username}
+                    <div
+                      dir="auto"
+                      style={{
+                        padding: '0.75rem 1rem', borderRadius: '16px',
+                        borderBottomRightRadius: isMe ? '3px' : '16px',
+                        borderBottomLeftRadius: isMe ? '16px' : '3px',
+                        background: isMe
+                          ? 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)'
+                          : '#ffffff',
+                        color: isMe ? '#ffffff' : '#0f172a',
+                        border: isMe ? 'none' : '1.5px solid #e2e8f0',
+                        boxShadow: isMe
+                          ? '0 4px 14px rgba(190, 18, 60, 0.22)'
+                          : '0 2px 8px rgba(0,0,0,0.03)',
+                        fontSize: '0.88rem', lineHeight: 1.5, fontWeight: 500
+                      }}
+                    >
+                      {/* Message Attachment */}
+                      {msg.attachment && (
+                        <div style={{ marginBottom: msg.text ? '0.6rem' : 0 }}>
+                          {msg.attachment.isImage ? (
+                            <img
+                              src={msg.attachment.data}
+                              alt={msg.attachment.name}
+                              onClick={() => openLightbox(msg.attachment.data, msg.attachment.name)}
+                              style={{
+                                maxWidth: '100%', maxHeight: '220px', borderRadius: '12px',
+                                cursor: 'pointer', border: '1px solid rgba(0,0,0,0.1)'
+                              }}
+                            />
+                          ) : (
+                            <a
+                              href={msg.attachment.data}
+                              download={msg.attachment.name}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                background: isMe ? 'rgba(255,255,255,0.2)' : '#f1f5f9',
+                                color: isMe ? '#ffffff' : '#0f172a', padding: '0.5rem 0.75rem',
+                                borderRadius: '10px', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 700
+                              }}
+                            >
+                              <FileText size={18} />
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {msg.attachment.name}
+                              </span>
+                              <Download size={14} />
+                            </a>
+                          )}
                         </div>
-                        {conv.updatedAt && (
-                          <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 600, flexShrink: 0, marginLeft: '0.3rem' }}>
-                            {new Date(conv.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                        )}
-                      </div>
+                      )}
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
-                        <div style={{
-                          fontSize: '0.76rem', color: unreadCount > 0 ? '#0f172a' : '#64748b',
-                          fontWeight: unreadCount > 0 ? 800 : 500,
-                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1
-                        }}>
-                          {conv.lastMessage || 'Start conversation...'}
-                        </div>
+                      {/* Render text with clickable links & mentions */}
+                      {renderMessageText(msg.text, isMe, allAccounts)}
+                    </div>
 
-                        {unreadCount > 0 && (
-                          <span style={{
-                            background: '#be123c', color: '#ffffff', fontSize: '0.68rem',
-                            fontWeight: 900, borderRadius: '9999px', padding: '0.1rem 0.4rem', minWidth: '18px', height: '18px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                          }}>
-                            {unreadCount}
-                          </span>
-                        )}
-                      </div>
+                    <div style={{
+                      fontSize: '0.66rem', color: '#94a3b8', fontWeight: 600,
+                      marginTop: '0.2rem', padding: '0 0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem'
+                    }}>
+                      {new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {isMe && <Check size={12} style={{ color: '#be123c' }} />}
                     </div>
                   </div>
                 );
               })
             )}
+            <div ref={messagesEndRef} />
           </div>
-        </div>
 
-
-        {/* ── RIGHT CHAT CANVAS ────────────────────────────────── */}
-        <div className={`ft-chat-canvas-col ${!activeConvId ? 'ft-mobile-hide-chat-col' : ''}`} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: '#ffffff' }}>
-          
-          {activeConv && activeRecipient ? (
-            <>
-              {/* Compact Recipient Header */}
-              <div style={{
-                padding: '0.75rem 1rem', borderBottom: '1px solid #e2e8f0', background: '#ffffff',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: 1, minWidth: 0 }}>
-                  {/* Mobile Back Button to Conversations */}
-                  <button
-                    type="button"
-                    className="ft-mobile-chat-back-btn"
-                    onClick={() => setActiveConvId(null)}
-                    style={{
-                      background: '#f1f5f9', border: '1.5px solid #cbd5e1', borderRadius: '10px',
-                      padding: '0.35rem 0.6rem', fontSize: '0.8rem', fontWeight: 800, color: '#334155',
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem', flexShrink: 0
-                    }}
-                    title="Back to Conversations List"
-                  >
-                    <ChevronLeft size={16} /> Contacts
-                  </button>
-
-                  <img
-                    src={activeRecipient.avatarUrl || activeRecipient.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeRecipient.username || activeRecipient.name}`}
-                    alt={activeRecipient.name}
-                    style={{
-                      width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0,
-                      border: `2px solid ${FT_ROLE_COLORS[activeRecipient.role] || '#2563eb'}`
-                    }}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
-                      <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 900, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {activeRecipient.name || activeRecipient.username}
-                      </h3>
-                      <span style={{
-                        fontSize: '0.65rem', fontWeight: 800, padding: '0.1rem 0.45rem', borderRadius: '6px', flexShrink: 0,
-                        background: `${FT_ROLE_COLORS[activeRecipient.role] || '#2563eb'}15`,
-                        color: FT_ROLE_COLORS[activeRecipient.role] || '#2563eb',
-                        border: `1px solid ${FT_ROLE_COLORS[activeRecipient.role] || '#2563eb'}40`
-                      }}>
-                        {getUserRoleLabel(activeRecipient)}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {getCleanAcademicTitle(activeRecipient) || activeRecipient.department || 'Competition Staff'}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ flexShrink: 0 }}>
-                  <span style={{
-                    fontSize: '0.72rem', color: '#059669', background: '#ecfdf5',
-                    padding: '0.2rem 0.55rem', borderRadius: '8px', border: '1px solid #a7f3d0',
-                    fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap'
-                  }}>
-                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', flexShrink: 0 }} /> Active Thread
-                  </span>
-                </div>
-              </div>
-
-              {/* Messages Body Scroll Box */}
-              <div style={{
-                flex: 1, minHeight: 0, overflowY: 'auto', padding: '1.15rem 1.25rem',
-                background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)',
-                display: 'flex', flexDirection: 'column', gap: '0.85rem'
-              }}>
-                {currentMessages.length === 0 ? (
-                  <div style={{ margin: 'auto', textAlign: 'center', maxWidth: '420px', padding: '1.5rem 1rem' }}>
-                    <div style={{ fontSize: '2.2rem', marginBottom: '0.5rem' }}>💬</div>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.3rem 0' }}>
-                      Start your inquiry with {activeRecipient.name}
-                    </h3>
-                    <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
-                      Ask questions regarding stage deliverables, evaluation criteria, or guidance. Tap a quick question below or type your custom message.
-                    </p>
-
-                    {/* Quick Presets */}
-                    <div style={{ marginTop: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      {presetQuestions.map((pq, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => handleSendMessage(pq)}
-                          style={{
-                            background: '#ffffff', border: '1.5px solid #cbd5e1', padding: '0.55rem 0.85rem',
-                            borderRadius: '12px', fontSize: '0.8rem', fontWeight: 700, color: '#334155',
-                            cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s ease',
-                            boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#be123c'; e.currentTarget.style.color = '#be123c'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#334155'; }}
-                        >
-                          {pq}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+          {/* Attachment Preview Box before sending */}
+          {filePreview && (
+            <div style={{
+              padding: '0.5rem 1rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                {filePreview.isImage ? (
+                  <img src={filePreview.data} alt="Preview" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover' }} />
                 ) : (
-                  currentMessages.map(msg => {
-                    const isMe = msg.senderId === myId;
-
-                    return (
-                      <div
-                        key={msg.id}
-                        style={{
-                          display: 'flex', flexDirection: 'column',
-                          alignItems: isMe ? 'flex-end' : 'flex-start',
-                          maxWidth: '85%', alignSelf: isMe ? 'flex-end' : 'flex-start'
-                        }}
-                      >
-                        <div style={{
-                          fontSize: '0.7rem', color: '#64748b', fontWeight: 700,
-                          marginBottom: '0.15rem', padding: '0 0.3rem'
-                        }}>
-                          {isMe ? 'You' : msg.senderName}
-                        </div>
-
-                        <div
-                          dir="auto"
-                          style={{
-                            padding: '0.75rem 1rem', borderRadius: '16px',
-                            borderBottomRightRadius: isMe ? '3px' : '16px',
-                            borderBottomLeftRadius: isMe ? '16px' : '3px',
-                            background: isMe
-                              ? 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)'
-                              : '#ffffff',
-                            color: isMe ? '#ffffff' : '#0f172a',
-                            border: isMe ? 'none' : '1.5px solid #e2e8f0',
-                            boxShadow: isMe
-                              ? '0 4px 14px rgba(190, 18, 60, 0.22)'
-                              : '0 2px 8px rgba(0,0,0,0.03)',
-                            fontSize: '0.88rem', lineHeight: 1.5, fontWeight: 500,
-                            wordBreak: 'break-word'
-                          }}
-                        >
-                          {renderFormattedDescription(msg.text)}
-                        </div>
-
-                        <div style={{
-                          fontSize: '0.66rem', color: '#94a3b8', fontWeight: 600,
-                          marginTop: '0.2rem', padding: '0 0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem'
-                        }}>
-                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          {isMe && <Check size={12} style={{ color: '#be123c' }} />}
-                        </div>
-                      </div>
-                    );
-                  })
+                  <FileText size={22} style={{ color: '#be123c' }} />
                 )}
-                <div ref={messagesEndRef} />
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>
+                  {filePreview.name}
+                </span>
               </div>
-
-              {/* Message Input Form */}
-              <div style={{ padding: '0.85rem 1rem', borderTop: '1px solid #e2e8f0', background: '#ffffff' }}>
-                <form
-                  onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-                  style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}
-                >
-                  <textarea
-                    rows={1}
-                    dir="auto"
-                    placeholder={`Message ${activeRecipient.name}...`}
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    style={{
-                      flex: 1, padding: '0.65rem 0.85rem', borderRadius: '14px',
-                      border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none',
-                      resize: 'none', fontFamily: 'inherit', color: '#0f172a', fontWeight: 500,
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    disabled={!messageText.trim()}
-                    style={{
-                      background: messageText.trim()
-                        ? 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)'
-                        : '#cbd5e1',
-                      color: '#ffffff', border: 'none', width: '42px', height: '42px', borderRadius: '12px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: messageText.trim() ? 'pointer' : 'not-allowed',
-                      boxShadow: messageText.trim() ? '0 4px 14px rgba(190, 18, 60, 0.3)' : 'none',
-                      transition: 'all 0.2s ease', flexShrink: 0
-                    }}
-                  >
-                    <Send size={17} />
-                  </button>
-                </form>
-              </div>
-            </>
-          ) : (
-            <div style={{ margin: 'auto', textAlign: 'center', padding: '2.5rem 1.25rem', color: '#64748b' }}>
-              <div style={{
-                width: '60px', height: '60px', borderRadius: '18px', background: '#fff1f2',
-                color: '#be123c', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                marginBottom: '0.85rem', border: '1.5px solid #fecdd3'
-              }}>
-                <MessageSquare size={28} />
-              </div>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.3rem 0' }}>
-                Select an Inquiry Thread
-              </h2>
-              <p style={{ fontSize: '0.84rem', color: '#64748b', maxWidth: '380px', margin: '0 auto 1.25rem', lineHeight: 1.5 }}>
-                Choose a conversation from the sidebar or tap the button below to start a new chat with a Judge, Trainer, or Admin.
-              </p>
               <button
-                onClick={() => setShowNewChatModal(true)}
-                style={{
-                  background: '#be123c', color: '#ffffff', border: 'none', padding: '0.65rem 1.25rem',
-                  borderRadius: '12px', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer',
-                  display: 'inline-flex', alignItems: 'center', gap: '0.4rem', boxShadow: '0 4px 14px rgba(190,18,60,0.25)'
-                }}
+                onClick={() => setFilePreview(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
               >
-                <Plus size={17} /> Ask a Judge / Trainer
+                <X size={16} />
               </button>
             </div>
           )}
+
+          {/* Emoji Drawer Picker */}
+          {showEmojis && (
+            <div style={{
+              padding: '0.6rem 1rem', background: '#ffffff', borderTop: '1px solid #e2e8f0',
+              display: 'flex', gap: '0.5rem', flexWrap: 'wrap'
+            }}>
+              {emojis.map((emoji, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => { setText(prev => prev + emoji); setShowEmojis(false); }}
+                  style={{
+                    background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer',
+                    padding: '0.2rem', borderRadius: '6px'
+                  }}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Bottom Message Input Bar */}
+          <div style={{ padding: '0.85rem 1rem', borderTop: '1px solid #e2e8f0', background: '#ffffff', position: 'relative' }}>
+            
+            {/* Mention Auto-Complete Popup */}
+            {showMentions && (
+              <div style={{
+                position: 'absolute', bottom: '100%', left: '1rem', right: '1rem',
+                background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: '14px',
+                boxShadow: '0 -6px 20px rgba(0,0,0,0.1)', maxHeight: '160px', overflowY: 'auto',
+                zIndex: 100, padding: '0.35rem'
+              }}>
+                {(allAccounts || []).filter(s => (s.name || '').toLowerCase().includes(mentionQuery.toLowerCase()) || (s.username || '').toLowerCase().includes(mentionQuery.toLowerCase())).map(person => (
+                  <div
+                    key={person.id}
+                    onClick={() => insertMention(person)}
+                    style={{
+                      padding: '0.45rem 0.75rem', borderRadius: '8px', cursor: 'pointer',
+                      fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#fff1f2'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+                  >
+                    <span>👤 {person.name || person.username}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <form
+              onSubmit={handleSend}
+              style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}
+            >
+              {/* Attachment Button */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '0.4rem' }}
+                title="Attach file or photo"
+              >
+                <Paperclip size={19} />
+              </button>
+
+              {/* Emoji Drawer Button */}
+              <button
+                type="button"
+                onClick={() => setShowEmojis(prev => !prev)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '0.4rem' }}
+                title="Emojis"
+              >
+                <Smile size={19} />
+              </button>
+
+              {/* Text Input */}
+              <textarea
+                rows={1}
+                dir="auto"
+                placeholder={activeRecipient === 'global' ? 'Type @ to mention or message global team...' : `Message ${activeRecipientAcc?.name || 'User'}...`}
+                value={text}
+                onChange={(e) => handleChatInputChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                style={{
+                  flex: 1, padding: '0.65rem 0.85rem', borderRadius: '14px',
+                  border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none',
+                  resize: 'none', fontFamily: 'inherit', color: '#0f172a', fontWeight: 500,
+                  boxSizing: 'border-box'
+                }}
+              />
+
+              {/* Send Button */}
+              <button
+                type="submit"
+                disabled={!text.trim() && !filePreview}
+                style={{
+                  background: (text.trim() || filePreview)
+                    ? 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)'
+                    : '#cbd5e1',
+                  color: '#ffffff', border: 'none', width: '42px', height: '42px', borderRadius: '12px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: (text.trim() || filePreview) ? 'pointer' : 'not-allowed',
+                  boxShadow: (text.trim() || filePreview) ? '0 4px 14px rgba(190, 18, 60, 0.3)' : 'none',
+                  transition: 'all 0.2s ease', flexShrink: 0
+                }}
+              >
+                <Send size={17} />
+              </button>
+            </form>
+          </div>
         </div>
       </div>
 
@@ -655,7 +947,7 @@ export default function FTChatPage() {
             <div style={{ padding: '1rem 1.5rem 0.5rem', borderBottom: '1px solid #f1f5f9' }}>
               <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
                 {[
-                  { id: 'staff', label: 'All Personnel' },
+                  { id: 'all', label: 'All Personnel' },
                   { id: 'judge', label: '⚖️ Judges' },
                   { id: 'trainer', label: '🎓 Trainers' },
                   { id: 'admin', label: '👑 Admins' }
@@ -680,12 +972,12 @@ export default function FTChatPage() {
                 <Search size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                 <input
                   type="text"
-                  placeholder="Search by name, department, or specialty..."
+                  placeholder="Search by name or department..."
                   value={newChatSearch}
                   onChange={(e) => setNewChatSearch(e.target.value)}
                   style={{
                     width: '100%', padding: '0.55rem 0.85rem 0.55rem 2.4rem', borderRadius: '12px',
-                    border: '1.5px solid #cbd5e1', fontSize: '0.85rem', outline: 'none', color: '#0f172a', fontWeight: 600
+                    border: '1.5px solid #cbd5e1', fontSize: '0.85rem', outline: 'none', color: '#0f172a', fontWeight: 600, boxSizing: 'border-box'
                   }}
                 />
               </div>
@@ -693,19 +985,23 @@ export default function FTChatPage() {
 
             {/* Recipients list */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem 1.5rem 1.5rem' }}>
-              {eligibleRecipients.length === 0 ? (
+              {eligibleModalRecipients.length === 0 ? (
                 <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
                   No personnel found matching the selected filter.
                 </div>
               ) : (
-                eligibleRecipients.map(acc => {
+                eligibleModalRecipients.map(acc => {
                   const roleColor = FT_ROLE_COLORS[acc.role] || '#2563eb';
                   const title = getCleanAcademicTitle(acc) || acc.department || 'Competition Evaluator';
 
                   return (
                     <div
                       key={acc.id || acc.username}
-                      onClick={() => handleStartChatWithUser(acc)}
+                      onClick={() => {
+                        setActiveRecipient(String(acc.id || acc.username));
+                        setShowNewChatModal(false);
+                        setMobileShowInbox(false);
+                      }}
                       style={{
                         padding: '0.85rem 1rem', borderRadius: '16px', border: '1.5px solid #e2e8f0',
                         marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -741,6 +1037,53 @@ export default function FTChatPage() {
                 })
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── LIGHTBOX MODAL FOR IMAGE ATTACHMENTS ────────────────── */}
+      {lightbox && (
+        <div
+          onClick={closeLightbox}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 999999, background: 'rgba(15,23,42,0.92)',
+            backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            padding: '1rem'
+          }}
+        >
+          {/* Controls Bar */}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'absolute', top: '1rem', right: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
+              background: '#0f172a', padding: '0.4rem 0.8rem', borderRadius: '20px', zIndex: 2
+            }}
+          >
+            <button onClick={() => setLightboxZoom(z => Math.min(z + 0.25, 3))} style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer' }}><ZoomIn size={18} /></button>
+            <button onClick={() => setLightboxZoom(z => Math.max(z - 0.25, 0.5))} style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer' }}><ZoomOut size={18} /></button>
+            <button onClick={() => setLightboxRotation(r => (r + 90) % 360)} style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer' }}><RotateCw size={18} /></button>
+            <button onClick={closeLightbox} style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', marginLeft: '0.4rem' }}><X size={20} /></button>
+          </div>
+
+          <div
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={handleDragStart}
+            onMouseMove={handleDragMove}
+            onMouseUp={handleDragEnd}
+            onTouchStart={handleDragStart}
+            onTouchMove={handleDragMove}
+            onTouchEnd={handleDragEnd}
+            style={{ cursor: isDragging ? 'grabbing' : 'grab', maxRect: '90vw 85vh', overflow: 'hidden' }}
+          >
+            <img
+              src={lightbox.src}
+              alt={lightbox.name}
+              style={{
+                maxWidth: '90vw', maxHeight: '80vh', objectFit: 'contain',
+                transform: `translate(${panX}px, ${panY}px) scale(${lightboxZoom}) rotate(${lightboxRotation}deg)`,
+                transition: isDragging ? 'none' : 'transform 0.2s ease', borderRadius: '12px'
+              }}
+            />
           </div>
         </div>
       )}

@@ -159,6 +159,13 @@ export default function FTLayout() {
   const resetRequests = useLiveCollection('ft_reset_requests');
   const notifications = useLiveCollection('ft_notifications');
   const teams = useLiveCollection('ft_teams') || [];
+  const rawMessages = useLiveCollection('ft_messages');
+
+  const unreadChatCount = useMemo(() => {
+    if (!rawMessages || !user?.id) return 0;
+    const myId = String(user.id);
+    return rawMessages.filter(m => String(m.receiverId) === myId && m.status === 'unread').length;
+  }, [rawMessages, user?.id]);
 
   // Determine if competitor is in a team & calculate effective code
   const myTeam = useMemo(() => {
@@ -906,12 +913,27 @@ export default function FTLayout() {
         )}
 
         <div className="ft-navbar-actions">
+          {/* Chat Icon Button beside Notification Bell */}
+          <button 
+            className="ft-theme-toggle" 
+            onClick={() => navigate('/dashboard/chat')} 
+            title="Ask & Chat Hub"
+            style={{ position: 'relative' }}
+          >
+            <MessageSquare size={16} />
+            {unreadChatCount > 0 && (
+              <span className="ft-bell-badge" style={{ background: '#be123c' }}>
+                {unreadChatCount}
+              </span>
+            )}
+          </button>
+
           {/* Notification Bell */}
           <div style={{ position: 'relative' }}>
             <button 
               className="ft-theme-toggle" 
-              onClick={() => setShowNotifications(!showNotifications)} 
-              title="Notifications"
+              onClick={() => navigate('/dashboard/notifications')} 
+              title="Notifications Dashboard"
               style={{ position: 'relative' }}
             >
               <Bell size={16} />
@@ -927,14 +949,22 @@ export default function FTLayout() {
                 <div className="ft-notifications-dropdown">
                   <div className="ft-notifications-header">
                     <h3>Notifications</h3>
-                    {unreadCount > 0 && (
-                      <button 
-                        onClick={handleMarkAllRead}
-                        style={{ background: 'none', border: 'none', color: 'var(--ft-primary)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <button
+                        onClick={() => { setShowNotifications(false); navigate('/dashboard/notifications'); }}
+                        style={{ background: 'none', border: 'none', color: '#be123c', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', padding: 0 }}
                       >
-                        Mark all read
+                        View Dashboard
                       </button>
-                    )}
+                      {unreadCount > 0 && (
+                        <button 
+                          onClick={handleMarkAllRead}
+                          style={{ background: 'none', border: 'none', color: 'var(--ft-primary)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                        >
+                          Mark read
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="ft-notifications-list">
                     {myNotifications.length === 0 ? (
@@ -944,7 +974,10 @@ export default function FTLayout() {
                         <div 
                           key={notif.id} 
                           className={`ft-notifications-item ${notif.status}`}
-                          onClick={() => handleNotificationClick(notif)}
+                          onClick={() => {
+                            setShowNotifications(false);
+                            handleNotificationClick(notif);
+                          }}
                         >
                           <div className="ft-notifications-item-icon">
                             {notif.type === 'evaluation' ? '🏅' :
@@ -965,6 +998,14 @@ export default function FTLayout() {
                         </div>
                       ))
                     )}
+                  </div>
+                  <div style={{ padding: '0.5rem', textAlign: 'center', borderTop: '1px solid var(--ft-border-light)' }}>
+                    <button
+                      onClick={() => { setShowNotifications(false); navigate('/dashboard/notifications'); }}
+                      style={{ background: 'none', border: 'none', color: '#be123c', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer' }}
+                    >
+                      🔔 Open Full Notifications Dashboard →
+                    </button>
                   </div>
                 </div>
               </>
