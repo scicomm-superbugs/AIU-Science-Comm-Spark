@@ -191,7 +191,27 @@ export default function FTChatPage({ user: userProp }) {
   const myName = user?.name || user?.username || 'User';
 
   const rawMessages = useLiveCollection('ft_messages');
-  const allAccounts = useLiveCollection('scientists');
+  const rawAccounts = useLiveCollection('scientists') || [];
+
+  // Default fallback system admin account if not present in collection
+  const defaultAdmin = useMemo(() => ({
+    id: 'admin_sys',
+    username: 'admin_sys',
+    name: 'Abdullah Amr Maged',
+    role: 'master',
+    title: 'System Administrator & Coordinator',
+    department: 'SciComm Spark Steering Committee',
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AbdullahAmrMaged'
+  }), []);
+
+  const allAccounts = useMemo(() => {
+    const list = [...rawAccounts];
+    const hasAdmin = list.some(a => a.role === 'admin' || a.role === 'master' || a.role === 'super_admin' || a.isAdmin || a.isMaster);
+    if (!hasAdmin) {
+      list.push(defaultAdmin);
+    }
+    return list;
+  }, [rawAccounts, defaultAdmin]);
 
   const emojis = ['😀','😂','😍','👍','👏','🔬','🧪','✅','❌','🔥','👀','🎉','💡','🚀','💪','❤️','🙏','🤔','😎','⚡'];
 
@@ -415,7 +435,7 @@ export default function FTChatPage({ user: userProp }) {
         const isJudgeOrTrainer = acc.role === 'judge' || acc.role === 'trainer' || acc.role === 'judge_trainer' || acc.role?.includes('judge') || acc.role?.includes('trainer');
         if (!isJudgeOrTrainer) return false;
       } else if (selectedRoleFilter === 'admin') {
-        const isAdmin = acc.role === 'admin' || acc.role === 'super_admin';
+        const isAdmin = acc.role === 'admin' || acc.role === 'master' || acc.role === 'super_admin' || acc.isAdmin || acc.isMaster || acc.role?.includes('admin') || acc.role?.includes('master') || acc.title?.toLowerCase().includes('admin') || acc.title?.toLowerCase().includes('system');
         if (!isAdmin) return false;
       } else if (selectedRoleFilter !== 'all' && acc.role !== selectedRoleFilter) {
         return false;
@@ -493,7 +513,7 @@ export default function FTChatPage({ user: userProp }) {
                     boxShadow: '0 4px 12px rgba(190,18,60,0.25)'
                   }}
                 >
-                  + Ask a Judge / Trainer
+                  + Start New Chat
                 </button>
               </div>
             ) : (
@@ -916,10 +936,10 @@ export default function FTChatPage({ user: userProp }) {
             }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 900, color: '#0f172a' }}>
-                  Ask a Judge, Trainer, or Admin
+                  Start a New Chat
                 </h3>
                 <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
-                  Select an evaluator or mentor to start a direct inquiry thread
+                  Select any competitor, evaluator, trainer, or admin to start direct messaging
                 </div>
               </div>
               <button
