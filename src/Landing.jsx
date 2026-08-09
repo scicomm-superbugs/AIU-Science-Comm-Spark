@@ -1124,7 +1124,16 @@ export default function Landing() {
     editModeRef.current = editMode;
   }, [editMode]);
 
-  const isMobile = false; // Forced Desktop layout on all devices
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [savedContent, setSavedContent] = useState(null); // snapshot before editing
   const [saving, setSaving] = useState(false);
   const [scrolled, setScrolled] = useState(false);
