@@ -411,7 +411,16 @@ export default function FTChatPage({ user: userProp }) {
   const eligibleModalRecipients = (allAccounts || [])
     .filter(acc => String(acc.id || acc.username) !== String(myId))
     .filter(acc => {
-      if (selectedRoleFilter !== 'all' && acc.role !== selectedRoleFilter) return false;
+      if (selectedRoleFilter === 'judges_trainers') {
+        const isJudgeOrTrainer = acc.role === 'judge' || acc.role === 'trainer' || acc.role === 'judge_trainer' || acc.role?.includes('judge') || acc.role?.includes('trainer');
+        if (!isJudgeOrTrainer) return false;
+      } else if (selectedRoleFilter === 'admin') {
+        const isAdmin = acc.role === 'admin' || acc.role === 'super_admin';
+        if (!isAdmin) return false;
+      } else if (selectedRoleFilter !== 'all' && acc.role !== selectedRoleFilter) {
+        return false;
+      }
+
       if (!newChatSearch.trim()) return true;
       const q = newChatSearch.toLowerCase();
       return (acc.name || '').toLowerCase().includes(q) || (acc.username || '').toLowerCase().includes(q) || (acc.department || '').toLowerCase().includes(q);
@@ -923,8 +932,7 @@ export default function FTChatPage({ user: userProp }) {
               <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
                 {[
                   { id: 'all', label: 'All Personnel' },
-                  { id: 'judge', label: '⚖️ Judges' },
-                  { id: 'trainer', label: '🎓 Trainers' },
+                  { id: 'judges_trainers', label: '⚖️🎓 Judges & Trainers' },
                   { id: 'admin', label: '👑 Admins' }
                 ].map(f => (
                   <button
