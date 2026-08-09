@@ -132,6 +132,9 @@ const rawDb = {
     update: async (id, data) => {
       await updateDoc(doc(firestore, getCollectionName('scientists'), String(id)), data);
     },
+    set: async (id, data) => {
+      await setDoc(doc(firestore, getCollectionName('scientists'), String(id)), data, { merge: true });
+    },
     delete: async (id) => {
       await deleteDoc(doc(firestore, getCollectionName('scientists'), String(id)));
     },
