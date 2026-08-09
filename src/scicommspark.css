@@ -4196,29 +4196,30 @@ body.ft-modal-open {
   }
   .ft-dash-creator-credit-wrapper {
     justify-content: center !important;
-    margin-bottom: 0.4rem !important;
+    margin-bottom: 0.5rem !important;
   }
   .ft-dash-creator-credit-box {
-    padding: 0.35rem 0.65rem !important;
-    border-radius: 12px !important;
+    padding: 0.35rem 0.75rem !important;
+    border-radius: 9999px !important;
     gap: 0.5rem !important;
-    max-width: 92% !important;
+    max-width: 98% !important;
   }
   .ft-dash-creator-avatar {
-    width: 32px !important;
-    height: 32px !important;
-    border-width: 1.5px !important;
+    width: 34px !important;
+    height: 34px !important;
+    border-width: 2px !important;
   }
   .ft-dash-creator-title {
-    font-size: 0.72rem !important;
+    font-size: 0.74rem !important;
     gap: 0.2rem !important;
+    line-height: 1.25 !important;
   }
   .ft-dash-creator-title span {
-    font-size: 0.72rem !important;
+    font-size: 0.74rem !important;
   }
   .ft-dash-creator-subtitle {
-    font-size: 0.63rem !important;
-    margin-top: 0.05rem !important;
+    font-size: 0.64rem !important;
+    margin-top: 0.02rem !important;
   }
 }
 

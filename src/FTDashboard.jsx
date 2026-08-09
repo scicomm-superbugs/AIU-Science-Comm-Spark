@@ -529,10 +529,10 @@ export default function FTDashboard() {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.85rem',
+                gap: '0.75rem',
                 background: 'linear-gradient(135deg, #ffffff 0%, #fff1f2 100%)',
-                padding: '0.6rem 1rem',
-                borderRadius: '16px',
+                padding: '0.5rem 0.95rem',
+                borderRadius: '9999px',
                 border: '1.5px solid #fecdd3',
                 boxShadow: '0 4px 15px rgba(190, 18, 60, 0.08)'
               }}
