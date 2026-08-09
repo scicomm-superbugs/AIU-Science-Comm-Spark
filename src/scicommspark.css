@@ -4020,6 +4020,9 @@ body.ft-modal-open {
     flex-wrap: wrap !important;
     text-align: center !important;
   }
+  .ft-chat-top-banner.ft-mobile-hide-on-chat {
+    display: none !important;
+  }
 }
 
 

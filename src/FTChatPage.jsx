@@ -228,29 +228,33 @@ export default function FTChatPage() {
   ];
 
   return (
-    <div className="ft-chat-wrapper" style={{ padding: '0.5rem', minHeight: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
+    <div className="ft-chat-page-root" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem' }}>
       
-      {/* Top Header Banner Card */}
-      <div style={{
-        background: '#ffffff', borderRadius: '20px', padding: '1.2rem 1.6rem', marginBottom: '1rem',
-        border: '1.5px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'
-      }}>
+      {/* ── Top Header Banner (Hidden on mobile when viewing active chat) ──── */}
+      <div 
+        className={`ft-chat-top-banner ${activeConvId ? 'ft-mobile-hide-on-chat' : ''}`}
+        style={{
+          background: 'linear-gradient(135deg, #ffffff 0%, #fff1f2 100%)',
+          padding: '1.15rem 1.4rem', borderRadius: '20px', border: '1.5px solid #fecdd3',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.85rem',
+          boxShadow: '0 4px 15px rgba(190, 18, 60, 0.04)'
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
           <div style={{
-            width: '46px', height: '46px', borderRadius: '14px',
+            width: '44px', height: '44px', borderRadius: '14px',
             background: 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)',
             color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 6px 16px rgba(190, 18, 60, 0.25)'
+            boxShadow: '0 6px 16px rgba(190, 18, 60, 0.25)', flexShrink: 0
           }}>
-            <MessageSquare size={24} />
+            <MessageSquare size={22} />
           </div>
           <div>
-            <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
+            <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
               Ask & Chat Hub
             </h1>
-            <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '0.15rem 0 0 0', fontWeight: 600 }}>
-              Direct inquiry & real-time messaging with Competition Judges, Trainers & Administrators
+            <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0.1rem 0 0 0', fontWeight: 600 }}>
+              Direct inquiry & real-time messaging with Competition Judges, Trainers & Staff
             </p>
           </div>
         </div>
@@ -259,19 +263,18 @@ export default function FTChatPage() {
           onClick={() => setShowNewChatModal(true)}
           style={{
             background: 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
-            color: '#ffffff', border: 'none', padding: '0.65rem 1.25rem', borderRadius: '12px',
-            fontWeight: 800, fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.45rem',
-            cursor: 'pointer', boxShadow: '0 4px 14px rgba(190, 18, 60, 0.3)', transition: 'all 0.2s ease'
+            color: '#ffffff', border: 'none', padding: '0.6rem 1.15rem', borderRadius: '12px',
+            fontWeight: 800, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem',
+            cursor: 'pointer', boxShadow: '0 4px 14px rgba(190, 18, 60, 0.3)', transition: 'all 0.2s ease', flexShrink: 0
           }}
         >
-          <Plus size={18} /> Ask a Judge / Trainer
+          <Plus size={17} /> Ask a Judge / Trainer
         </button>
       </div>
 
-      {/* Main Chat Layout (Sidebar Contacts + Chat Canvas) */}
-      {/* Main Chat Layout (Sidebar Contacts + Chat Canvas) */}
+      {/* ── Main Chat Layout (Sidebar Contacts + Chat Canvas) ──────── */}
       <div className="ft-chat-main-grid" style={{
-        flex: 1, height: '620px', minHeight: '520px', background: '#ffffff', borderRadius: '24px',
+        flex: 1, height: '620px', minHeight: '500px', background: '#ffffff', borderRadius: '24px',
         border: '1.5px solid #e2e8f0', boxShadow: '0 10px 30px rgba(15,23,42,0.04)',
         display: 'grid', gridTemplateColumns: '320px 1fr', overflow: 'hidden', position: 'relative'
       }}>
@@ -282,7 +285,7 @@ export default function FTChatPage() {
           display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0
         }}>
           {/* Search Bar */}
-          <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0' }}>
+          <div style={{ padding: '0.85rem 1rem', borderBottom: '1px solid #e2e8f0' }}>
             <div style={{ position: 'relative' }}>
               <Search size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
@@ -293,7 +296,7 @@ export default function FTChatPage() {
                 style={{
                   width: '100%', padding: '0.55rem 0.85rem 0.55rem 2.4rem', borderRadius: '12px',
                   border: '1.5px solid #cbd5e1', fontSize: '0.84rem', background: '#ffffff',
-                  outline: 'none', color: '#0f172a', fontWeight: 600
+                  outline: 'none', color: '#0f172a', fontWeight: 600, boxSizing: 'border-box'
                 }}
               />
             </div>
@@ -326,7 +329,7 @@ export default function FTChatPage() {
                     key={conv.id}
                     onClick={() => setActiveConvId(conv.id)}
                     style={{
-                      padding: '0.85rem 0.95rem', borderRadius: '16px', marginBottom: '0.4rem',
+                      padding: '0.75rem 0.85rem', borderRadius: '14px', marginBottom: '0.4rem',
                       background: isSelected ? '#ffffff' : 'transparent',
                       border: isSelected ? '1.5px solid #cbd5e1' : '1.5px solid transparent',
                       boxShadow: isSelected ? '0 4px 14px rgba(0,0,0,0.04)' : 'none',
@@ -338,41 +341,41 @@ export default function FTChatPage() {
                       <img
                         src={otherAcc.avatarUrl || otherAcc.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${otherAcc.username || otherAcc.name}`}
                         alt={otherAcc.name}
-                        style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${roleColor}` }}
+                        style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${roleColor}` }}
                       />
                       <span style={{
-                        position: 'absolute', bottom: 0, right: 0, width: '12px', height: '12px',
+                        position: 'absolute', bottom: 0, right: 0, width: '11px', height: '11px',
                         borderRadius: '50%', background: '#22c55e', border: '2px solid #ffffff'
                       }} />
                     </div>
 
                     {/* Meta */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
-                        <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.15rem' }}>
+                        <div style={{ fontWeight: 800, fontSize: '0.86rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {otherAcc.name || otherAcc.username}
                         </div>
                         {conv.updatedAt && (
-                          <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>
+                          <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 600, flexShrink: 0, marginLeft: '0.3rem' }}>
                             {new Date(conv.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         )}
                       </div>
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
                         <div style={{
-                          fontSize: '0.78rem', color: unreadCount > 0 ? '#0f172a' : '#64748b',
+                          fontSize: '0.76rem', color: unreadCount > 0 ? '#0f172a' : '#64748b',
                           fontWeight: unreadCount > 0 ? 800 : 500,
-                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '170px'
+                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1
                         }}>
                           {conv.lastMessage || 'Start conversation...'}
                         </div>
 
                         {unreadCount > 0 && (
                           <span style={{
-                            background: '#be123c', color: '#ffffff', fontSize: '0.7rem',
-                            fontWeight: 900, borderRadius: '9999px', padding: '0.1rem 0.45rem', minWidth: '18px', height: '18px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            background: '#be123c', color: '#ffffff', fontSize: '0.68rem',
+                            fontWeight: 900, borderRadius: '9999px', padding: '0.1rem 0.4rem', minWidth: '18px', height: '18px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                           }}>
                             {unreadCount}
                           </span>
@@ -392,12 +395,12 @@ export default function FTChatPage() {
           
           {activeConv && activeRecipient ? (
             <>
-              {/* Recipient Header */}
+              {/* Compact Recipient Header */}
               <div style={{
-                padding: '1rem 1.4rem', borderBottom: '1px solid #e2e8f0', background: '#ffffff',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem'
+                padding: '0.75rem 1rem', borderBottom: '1px solid #e2e8f0', background: '#ffffff',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: 1, minWidth: 0 }}>
                   {/* Mobile Back Button to Conversations */}
                   <button
                     type="button"
@@ -405,8 +408,8 @@ export default function FTChatPage() {
                     onClick={() => setActiveConvId(null)}
                     style={{
                       background: '#f1f5f9', border: '1.5px solid #cbd5e1', borderRadius: '10px',
-                      padding: '0.35rem 0.65rem', fontSize: '0.8rem', fontWeight: 800, color: '#334155',
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0
+                      padding: '0.35rem 0.6rem', fontSize: '0.8rem', fontWeight: 800, color: '#334155',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem', flexShrink: 0
                     }}
                     title="Back to Conversations List"
                   >
@@ -417,17 +420,17 @@ export default function FTChatPage() {
                     src={activeRecipient.avatarUrl || activeRecipient.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeRecipient.username || activeRecipient.name}`}
                     alt={activeRecipient.name}
                     style={{
-                      width: '46px', height: '46px', borderRadius: '50%', objectFit: 'cover',
-                      border: `2.5px solid ${FT_ROLE_COLORS[activeRecipient.role] || '#2563eb'}`
+                      width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0,
+                      border: `2px solid ${FT_ROLE_COLORS[activeRecipient.role] || '#2563eb'}`
                     }}
                   />
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#0f172a' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
+                      <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 900, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {activeRecipient.name || activeRecipient.username}
                       </h3>
                       <span style={{
-                        fontSize: '0.7rem', fontWeight: 800, padding: '0.15rem 0.55rem', borderRadius: '6px',
+                        fontSize: '0.65rem', fontWeight: 800, padding: '0.1rem 0.45rem', borderRadius: '6px', flexShrink: 0,
                         background: `${FT_ROLE_COLORS[activeRecipient.role] || '#2563eb'}15`,
                         color: FT_ROLE_COLORS[activeRecipient.role] || '#2563eb',
                         border: `1px solid ${FT_ROLE_COLORS[activeRecipient.role] || '#2563eb'}40`
@@ -435,41 +438,41 @@ export default function FTChatPage() {
                         {getUserRoleLabel(activeRecipient)}
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
-                      {getCleanAcademicTitle(activeRecipient) || activeRecipient.department || 'SciComm Competition Staff'}
+                    <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {getCleanAcademicTitle(activeRecipient) || activeRecipient.department || 'Competition Staff'}
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ flexShrink: 0 }}>
                   <span style={{
-                    fontSize: '0.75rem', color: '#059669', background: '#ecfdf5',
-                    padding: '0.25rem 0.65rem', borderRadius: '10px', border: '1px solid #a7f3d0',
-                    fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem'
+                    fontSize: '0.72rem', color: '#059669', background: '#ecfdf5',
+                    padding: '0.2rem 0.55rem', borderRadius: '8px', border: '1px solid #a7f3d0',
+                    fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap'
                   }}>
-                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981' }} /> Active Inquiry Thread
+                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', flexShrink: 0 }} /> Active Thread
                   </span>
                 </div>
               </div>
 
               {/* Messages Body Scroll Box */}
               <div style={{
-                flex: 1, minHeight: 0, overflowY: 'auto', padding: '1.4rem 1.6rem',
+                flex: 1, minHeight: 0, overflowY: 'auto', padding: '1.15rem 1.25rem',
                 background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)',
-                display: 'flex', flexDirection: 'column', gap: '1rem'
+                display: 'flex', flexDirection: 'column', gap: '0.85rem'
               }}>
                 {currentMessages.length === 0 ? (
-                  <div style={{ margin: 'auto', textAlign: 'center', maxWidth: '420px', padding: '2rem 1rem' }}>
-                    <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>💬</div>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.4rem 0' }}>
+                  <div style={{ margin: 'auto', textAlign: 'center', maxWidth: '420px', padding: '1.5rem 1rem' }}>
+                    <div style={{ fontSize: '2.2rem', marginBottom: '0.5rem' }}>💬</div>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.3rem 0' }}>
                       Start your inquiry with {activeRecipient.name}
                     </h3>
-                    <p style={{ fontSize: '0.84rem', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
-                      Ask questions regarding stage deliverables, evaluation criteria, or guidance. Choose a quick template below or type your custom message.
+                    <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
+                      Ask questions regarding stage deliverables, evaluation criteria, or guidance. Tap a quick question below or type your custom message.
                     </p>
 
                     {/* Quick Presets */}
-                    <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                    <div style={{ marginTop: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       {presetQuestions.map((pq, idx) => (
                         <button
                           key={idx}
@@ -498,12 +501,12 @@ export default function FTChatPage() {
                         style={{
                           display: 'flex', flexDirection: 'column',
                           alignItems: isMe ? 'flex-end' : 'flex-start',
-                          maxWidth: '82%', alignSelf: isMe ? 'flex-end' : 'flex-start'
+                          maxWidth: '85%', alignSelf: isMe ? 'flex-end' : 'flex-start'
                         }}
                       >
                         <div style={{
-                          fontSize: '0.72rem', color: '#64748b', fontWeight: 700,
-                          marginBottom: '0.2rem', padding: '0 0.3rem'
+                          fontSize: '0.7rem', color: '#64748b', fontWeight: 700,
+                          marginBottom: '0.15rem', padding: '0 0.3rem'
                         }}>
                           {isMe ? 'You' : msg.senderName}
                         </div>
@@ -511,18 +514,18 @@ export default function FTChatPage() {
                         <div
                           dir="auto"
                           style={{
-                            padding: '0.85rem 1.1rem', borderRadius: '18px',
-                            borderBottomRightRadius: isMe ? '4px' : '18px',
-                            borderBottomLeftRadius: isMe ? '18px' : '4px',
+                            padding: '0.75rem 1rem', borderRadius: '16px',
+                            borderBottomRightRadius: isMe ? '3px' : '16px',
+                            borderBottomLeftRadius: isMe ? '16px' : '3px',
                             background: isMe
                               ? 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)'
                               : '#ffffff',
                             color: isMe ? '#ffffff' : '#0f172a',
                             border: isMe ? 'none' : '1.5px solid #e2e8f0',
                             boxShadow: isMe
-                              ? '0 4px 14px rgba(190, 18, 60, 0.25)'
+                              ? '0 4px 14px rgba(190, 18, 60, 0.22)'
                               : '0 2px 8px rgba(0,0,0,0.03)',
-                            fontSize: '0.92rem', lineHeight: 1.55, fontWeight: 500,
+                            fontSize: '0.88rem', lineHeight: 1.5, fontWeight: 500,
                             wordBreak: 'break-word'
                           }}
                         >
@@ -530,8 +533,8 @@ export default function FTChatPage() {
                         </div>
 
                         <div style={{
-                          fontSize: '0.68rem', color: '#94a3b8', fontWeight: 600,
-                          marginTop: '0.25rem', padding: '0 0.3rem', display: 'flex', alignItems: 'center', gap: '0.25rem'
+                          fontSize: '0.66rem', color: '#94a3b8', fontWeight: 600,
+                          marginTop: '0.2rem', padding: '0 0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem'
                         }}>
                           {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           {isMe && <Check size={12} style={{ color: '#be123c' }} />}
@@ -544,15 +547,15 @@ export default function FTChatPage() {
               </div>
 
               {/* Message Input Form */}
-              <div style={{ padding: '1rem 1.4rem', borderTop: '1px solid #e2e8f0', background: '#ffffff' }}>
+              <div style={{ padding: '0.85rem 1rem', borderTop: '1px solid #e2e8f0', background: '#ffffff' }}>
                 <form
                   onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-                  style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}
+                  style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}
                 >
                   <textarea
                     rows={1}
                     dir="auto"
-                    placeholder={`Message ${activeRecipient.name}... (Press Enter to send)`}
+                    placeholder={`Message ${activeRecipient.name}...`}
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     onKeyDown={(e) => {
@@ -562,9 +565,10 @@ export default function FTChatPage() {
                       }
                     }}
                     style={{
-                      flex: 1, padding: '0.75rem 1rem', borderRadius: '14px',
-                      border: '1.5px solid #cbd5e1', fontSize: '0.9rem', outline: 'none',
-                      resize: 'none', fontFamily: 'inherit', color: '#0f172a', fontWeight: 500
+                      flex: 1, padding: '0.65rem 0.85rem', borderRadius: '14px',
+                      border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none',
+                      resize: 'none', fontFamily: 'inherit', color: '#0f172a', fontWeight: 500,
+                      boxSizing: 'border-box'
                     }}
                   />
                   <button
@@ -574,41 +578,41 @@ export default function FTChatPage() {
                       background: messageText.trim()
                         ? 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)'
                         : '#cbd5e1',
-                      color: '#ffffff', border: 'none', width: '46px', height: '46px', borderRadius: '14px',
+                      color: '#ffffff', border: 'none', width: '42px', height: '42px', borderRadius: '12px',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: messageText.trim() ? 'pointer' : 'not-allowed',
                       boxShadow: messageText.trim() ? '0 4px 14px rgba(190, 18, 60, 0.3)' : 'none',
                       transition: 'all 0.2s ease', flexShrink: 0
                     }}
                   >
-                    <Send size={18} />
+                    <Send size={17} />
                   </button>
                 </form>
               </div>
             </>
           ) : (
-            <div style={{ margin: 'auto', textAlign: 'center', padding: '3rem 1.5rem', color: '#64748b' }}>
+            <div style={{ margin: 'auto', textAlign: 'center', padding: '2.5rem 1.25rem', color: '#64748b' }}>
               <div style={{
-                width: '64px', height: '64px', borderRadius: '20px', background: '#fff1f2',
+                width: '60px', height: '60px', borderRadius: '18px', background: '#fff1f2',
                 color: '#be123c', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                marginBottom: '1rem', border: '1.5px solid #fecdd3'
+                marginBottom: '0.85rem', border: '1.5px solid #fecdd3'
               }}>
-                <MessageSquare size={32} />
+                <MessageSquare size={28} />
               </div>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.4rem 0' }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.3rem 0' }}>
                 Select an Inquiry Thread
               </h2>
-              <p style={{ fontSize: '0.88rem', color: '#64748b', maxWidth: '420px', margin: '0 auto 1.5rem', lineHeight: 1.5 }}>
-                Choose a conversation from the left sidebar or click the button below to start a new chat with a Judge, Trainer, or Administrator.
+              <p style={{ fontSize: '0.84rem', color: '#64748b', maxWidth: '380px', margin: '0 auto 1.25rem', lineHeight: 1.5 }}>
+                Choose a conversation from the sidebar or tap the button below to start a new chat with a Judge, Trainer, or Admin.
               </p>
               <button
                 onClick={() => setShowNewChatModal(true)}
                 style={{
-                  background: '#be123c', color: '#ffffff', border: 'none', padding: '0.7rem 1.4rem',
-                  borderRadius: '12px', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer',
+                  background: '#be123c', color: '#ffffff', border: 'none', padding: '0.65rem 1.25rem',
+                  borderRadius: '12px', fontWeight: 800, fontSize: '0.88rem', cursor: 'pointer',
                   display: 'inline-flex', alignItems: 'center', gap: '0.4rem', boxShadow: '0 4px 14px rgba(190,18,60,0.25)'
                 }}
               >
-                <Plus size={18} /> Ask a Judge / Trainer
+                <Plus size={17} /> Ask a Judge / Trainer
               </button>
             </div>
           )}
