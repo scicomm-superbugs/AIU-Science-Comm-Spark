@@ -244,31 +244,7 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
         </button>
       </div>
 
-      {/* ── 2. Category Filter Chips ──────────────────────────────── */}
-      <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.2rem' }}>
-        {[
-          { id: 'all', label: 'All' },
-          { id: 'evaluations', label: '🏅 Evaluations' },
-          { id: 'submissions', label: '📄 Submissions' },
-          { id: 'chat', label: '💬 Messages' },
-          { id: 'workshops', label: '🎓 Workshops & Dates' },
-          { id: 'announcements', label: '📢 Announcements' }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setFilterCategory(tab.id)}
-            style={{
-              padding: '0.5rem 1.15rem', borderRadius: '25px', fontSize: '0.84rem', fontWeight: 800,
-              border: 'none', cursor: 'pointer', transition: 'all 0.2s ease', whiteSpace: 'nowrap', flexShrink: 0,
-              background: filterCategory === tab.id ? '#be123c' : '#ffffff',
-              color: filterCategory === tab.id ? '#ffffff' : '#64748b',
-              boxShadow: filterCategory === tab.id ? '0 4px 12px rgba(190,18,60,0.25)' : '0 2px 8px rgba(0,0,0,0.02)'
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+
 
       {/* ── 3. Main Notifications Card Container ──────────────────── */}
       <div style={{
