@@ -4196,34 +4196,37 @@ body.ft-modal-open {
   }
   .ft-dash-creator-credit-wrapper {
     justify-content: center !important;
-    margin-bottom: 0.35rem !important;
+    margin-bottom: 0.75rem !important;
+    width: 100% !important;
   }
   .ft-dash-creator-credit-box {
-    padding: 0.25rem 0.5rem !important;
-    border-radius: 6px !important;
-    gap: 0.4rem !important;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
+    padding: 0.45rem 0.65rem !important;
+    border-radius: 10px !important;
+    gap: 0.5rem !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-left: 3px solid #be123c !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
     max-width: 100% !important;
+    text-align: left !important;
   }
   .ft-dash-creator-avatar {
-    width: 24px !important;
-    height: 24px !important;
+    width: 28px !important;
+    height: 28px !important;
     border-width: 1.5px !important;
   }
   .ft-dash-creator-title {
-    font-size: 0.7rem !important;
+    font-size: 0.72rem !important;
     gap: 0.2rem !important;
     line-height: 1.2 !important;
   }
   .ft-dash-creator-title span {
-    font-size: 0.7rem !important;
+    font-size: 0.72rem !important;
   }
   .ft-dash-creator-subtitle {
-    font-size: 0.6rem !important;
+    font-size: 0.62rem !important;
     margin-top: 0.05rem !important;
-    line-height: 1.15 !important;
+    line-height: 1.2 !important;
   }
 }
 
