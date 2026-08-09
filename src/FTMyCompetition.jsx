@@ -434,14 +434,60 @@ export default function FTMyCompetition() {
                       : [{ id: 'sub_def_2', name: 'Science Article PDF Document', type: 'file', deadline: st.deadline, question: 'Upload your formatted science article PDF document:' }])
                   : []));
 
-          const isStageActive = subFields.length > 0 && st.acceptSubmissions !== false && (
-            Number(st.stageId) === 1 || st.status === 'Active Stage' || st.status === 'Active' || st.acceptSubmissions === true || Boolean(stageSub) || stageEvals.length > 0
+          const now = new Date();
+          const todayStr = now.toISOString().slice(0, 10);
+
+          const isAnyFieldOpenNow = subFields.some(sf => {
+            const effDeadline = sf.deadline || st.deadline;
+            const isBeforeOpen = sf.openDate && todayStr < sf.openDate;
+            const isAfterClose = effDeadline && todayStr > effDeadline;
+            return !isBeforeOpen && !isAfterClose && sf.isOpen !== false;
+          });
+
+          const isBeforeAllOpen = subFields.length > 0 && subFields.every(sf => sf.openDate && todayStr < sf.openDate);
+          const isAfterAllClose = subFields.length > 0 && subFields.every(sf => {
+            const effDeadline = sf.deadline || st.deadline;
+            return effDeadline && todayStr > effDeadline;
+          });
+
+          const isStageActive = isAnyFieldOpenNow || (
+            subFields.length > 0 && st.acceptSubmissions !== false && (st.status === 'Active Stage' || st.status === 'Active' || Boolean(stageSub) || stageEvals.length > 0)
           );
+
+          // Calculate synced status badge label and styles based on actual submission dates
+          let statusText = '🔒 Upcoming Stage';
+          let statusBg = '#f1f5f9';
+          let statusColor = '#64748b';
+          let statusBorder = '#cbd5e1';
+
+          if (isAnyFieldOpenNow) {
+            statusText = '🟢 Submissions Open / Active Stage';
+            statusBg = '#ecfdf5';
+            statusColor = '#059669';
+            statusBorder = '#a7f3d0';
+          } else if (isBeforeAllOpen) {
+            const firstOpen = subFields[0]?.openDate;
+            const daysUntil = firstOpen ? Math.ceil((new Date(firstOpen) - now) / 86400000) : 0;
+            statusText = `⏳ Opens in ${daysUntil}d (${formatUnifiedDate(firstOpen)})`;
+            statusBg = '#fffbeb';
+            statusColor = '#b45309';
+            statusBorder = '#fde68a';
+          } else if (isAfterAllClose) {
+            statusText = '🔒 Submissions Closed';
+            statusBg = '#fff1f2';
+            statusColor = '#be123c';
+            statusBorder = '#fecdd3';
+          } else if (stageSub || stageEvals.length > 0) {
+            statusText = '⭐ Stage Completed / Under Evaluation';
+            statusBg = '#eff6ff';
+            statusColor = '#2563eb';
+            statusBorder = '#bfdbfe';
+          }
 
           return (
             <div key={st.id} className="ft-stage-card-item" style={{
               background: '#ffffff', borderRadius: '20px', padding: '1.25rem 1.4rem',
-              border: `1.5px solid ${isStageActive ? '#a7f3d0' : '#e2e8f0'}`, boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
+              border: `1.5px solid ${isAnyFieldOpenNow ? '#a7f3d0' : statusBorder}`, boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
               display: 'flex', flexDirection: 'column', gap: '0.85rem', width: '100%', boxSizing: 'border-box'
             }}>
               {/* Card Header: Stage badge & Title */}
@@ -449,10 +495,10 @@ export default function FTMyCompetition() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
                   <span style={{
                     fontSize: '0.75rem', fontWeight: 900,
-                    color: isStageActive ? '#047857' : '#475569',
-                    background: isStageActive ? '#ecfdf5' : '#f1f5f9',
+                    color: isAnyFieldOpenNow ? '#047857' : '#475569',
+                    background: isAnyFieldOpenNow ? '#ecfdf5' : '#f1f5f9',
                     padding: '0.25rem 0.65rem', borderRadius: '8px',
-                    border: `1px solid ${isStageActive ? '#a7f3d0' : '#cbd5e1'}`,
+                    border: `1px solid ${isAnyFieldOpenNow ? '#a7f3d0' : '#cbd5e1'}`,
                     whiteSpace: 'nowrap', flexShrink: 0
                   }}>
                     Stage {st.stageId}
@@ -460,12 +506,12 @@ export default function FTMyCompetition() {
 
                   <span style={{
                     fontSize: '0.72rem', fontWeight: 800, padding: '0.2rem 0.65rem', borderRadius: '8px',
-                    background: isStageActive ? '#ecfdf5' : '#f1f5f9',
-                    color: isStageActive ? '#059669' : '#64748b',
-                    border: `1px solid ${isStageActive ? '#a7f3d0' : '#cbd5e1'}`,
+                    background: statusBg,
+                    color: statusColor,
+                    border: `1px solid ${statusBorder}`,
                     whiteSpace: 'nowrap', flexShrink: 0
                   }}>
-                    {isStageActive ? '🟢 Submissions Open / Active Stage' : '🔒 Upcoming Stage'}
+                    {statusText}
                   </span>
                 </div>
 
