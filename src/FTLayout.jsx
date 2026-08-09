@@ -886,30 +886,6 @@ export default function FTLayout() {
               </select>
             </div>
 
-            <button
-              onClick={handleResetTestData}
-              disabled={resettingTestData}
-              title="Reset all test user submissions, scores, comments, and notifications"
-              style={{
-                background: 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)',
-                color: '#be123c',
-                border: '1.5px solid #fecdd3',
-                padding: '0.35rem 0.85rem',
-                borderRadius: '12px',
-                fontSize: '0.8rem',
-                fontWeight: 800,
-                cursor: resettingTestData ? 'not-allowed' : 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                boxShadow: '0 2px 6px rgba(190, 18, 60, 0.08)',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <RotateCcw size={14} style={{ animation: resettingTestData ? 'spin 1s linear infinite' : 'none' }} />
-              {resettingTestData ? 'Resetting Test Data...' : '🔄 Reset Test Users & Submissions'}
-            </button>
 
             {/* Admin Poster Edit Toggle in Top Bar */}
             <button
