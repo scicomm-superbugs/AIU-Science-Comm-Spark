@@ -193,25 +193,48 @@ export default function FTChatPage({ user: userProp }) {
   const rawMessages = useLiveCollection('ft_messages');
   const rawAccounts = useLiveCollection('scientists') || [];
 
-  // Default fallback system admin account if not present in collection
-  const defaultAdmin = useMemo(() => ({
-    id: 'admin_sys',
-    username: 'admin_sys',
-    name: 'Abdullah Amr Maged',
-    role: 'master',
-    title: 'System Administrator & Coordinator',
-    department: 'SciComm Spark Steering Committee',
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AbdullahAmrMaged'
-  }), []);
+  // Default fallback system admin accounts if not present in collection
+  const defaultAdmins = useMemo(() => [
+    {
+      id: 'admin_sys_1',
+      username: 'admin_sys_1',
+      name: 'Abdullah Amr Maged',
+      role: 'master',
+      title: 'System Administrator & Coordinator',
+      department: 'SciComm Spark Steering Committee',
+      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AbdullahAmrMaged'
+    },
+    {
+      id: 'admin_sys_2',
+      username: 'admin_sys_2',
+      name: 'SciComm Spark Helpdesk',
+      role: 'admin',
+      title: 'Official Support & Technical Inquiries',
+      department: 'Competition Support Team',
+      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=SciCommHelpdesk'
+    },
+    {
+      id: 'admin_sys_3',
+      username: 'admin_sys_3',
+      name: 'Organizing Committee Admin',
+      role: 'admin',
+      title: 'Competition Executive Admin',
+      department: 'Alamein International University',
+      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=OrganizingCommittee'
+    }
+  ], []);
 
   const allAccounts = useMemo(() => {
     const list = [...rawAccounts];
-    const hasAdmin = list.some(a => a.role === 'admin' || a.role === 'master' || a.role === 'super_admin' || a.isAdmin || a.isMaster);
-    if (!hasAdmin) {
-      list.push(defaultAdmin);
-    }
+    // Ensure all default system admins exist in list if missing
+    defaultAdmins.forEach(defAdmin => {
+      const exists = list.some(a => String(a.id || a.username) === String(defAdmin.id) || a.username === defAdmin.username || a.name === defAdmin.name);
+      if (!exists) {
+        list.push(defAdmin);
+      }
+    });
     return list;
-  }, [rawAccounts, defaultAdmin]);
+  }, [rawAccounts, defaultAdmins]);
 
   const emojis = ['😀','😂','😍','👍','👏','🔬','🧪','✅','❌','🔥','👀','🎉','💡','🚀','💪','❤️','🙏','🤔','😎','⚡'];
 
@@ -429,8 +452,11 @@ export default function FTChatPage({ user: userProp }) {
 
   // Modal full personnel list for starting new chats
   const eligibleModalRecipients = (allAccounts || [])
-    .filter(acc => String(acc.id || acc.username) !== String(myId))
     .filter(acc => {
+      // Don't hide account if user is testing admin filter
+      const isMe = String(acc.id || acc.username) === String(myId);
+      if (isMe && selectedRoleFilter !== 'admin') return false;
+
       if (selectedRoleFilter === 'judges_trainers') {
         const isJudgeOrTrainer = acc.role === 'judge' || acc.role === 'trainer' || acc.role === 'judge_trainer' || acc.role?.includes('judge') || acc.role?.includes('trainer');
         if (!isJudgeOrTrainer) return false;

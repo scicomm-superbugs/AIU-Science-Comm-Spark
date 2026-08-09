@@ -142,12 +142,13 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
           gap: '0.85rem',
           cursor: 'pointer',
           transition: 'all 0.2s ease',
-          background: isUnread ? '#f8fafc' : '#ffffff',
+          background: isUnread ? '#ffffff' : '#f8fafc',
+          opacity: isUnread ? 1 : 0.65,
           borderBottom: '1px solid #f1f5f9',
           position: 'relative'
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = isUnread ? '#f8fafc' : '#ffffff'; }}
+        onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = '#f1f5f9'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.opacity = isUnread ? '1' : '0.65'; e.currentTarget.style.background = isUnread ? '#ffffff' : '#f8fafc'; }}
       >
         {/* Avatar / Profile Picture Image with Icon Overlay */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -158,13 +159,15 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
               style={{
                 width: '46px', height: '46px', borderRadius: '50%',
                 objectFit: 'cover', border: '1.5px solid #e2e8f0',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                filter: isUnread ? 'none' : 'grayscale(15%)'
               }}
             />
           ) : (
             <div style={{
               width: '46px', height: '46px', borderRadius: '50%',
-              background: '#f1f5f9', color: '#3b82f6',
+              background: isUnread ? '#eff6ff' : '#f1f5f9',
+              color: isUnread ? '#3b82f6' : '#94a3b8',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '1.25rem', border: '1.5px solid #e2e8f0'
             }}>
@@ -176,7 +179,7 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
           <div style={{
             position: 'absolute', bottom: '-2px', right: '-2px',
             width: '19px', height: '19px', borderRadius: '50%',
-            background: badge.bg, border: '2px solid #ffffff',
+            background: isUnread ? badge.bg : '#f1f5f9', border: '2px solid #ffffff',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '0.65rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
           }}>
@@ -187,20 +190,21 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
         {/* Content Details */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            fontSize: '0.9rem', fontWeight: 800, color: '#1e293b',
+            fontSize: '0.9rem', fontWeight: isUnread ? 800 : 600,
+            color: isUnread ? '#0f172a' : '#64748b',
             lineHeight: 1.35, marginBottom: '0.2rem', wordBreak: 'break-word'
           }}>
             {notif.title}
           </div>
 
           <div style={{
-            fontSize: '0.82rem', color: '#64748b', fontWeight: 500,
-            lineHeight: 1.4, marginBottom: '0.3rem', wordBreak: 'break-word'
+            fontSize: '0.82rem', color: isUnread ? '#475569' : '#94a3b8',
+            fontWeight: 500, lineHeight: 1.4, marginBottom: '0.3rem', wordBreak: 'break-word'
           }}>
             {notif.message}
           </div>
 
-          <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>
+          <div style={{ fontSize: '0.72rem', color: isUnread ? '#64748b' : '#cbd5e1', fontWeight: 600 }}>
             {formatNotificationDate(notif.createdAt || notif.timestamp)}
           </div>
         </div>
