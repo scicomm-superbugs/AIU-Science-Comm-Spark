@@ -4216,12 +4216,14 @@ body.ft-modal-open {
     border-width: 1.5px !important;
   }
   .ft-dash-creator-title {
-    font-size: 0.72rem !important;
-    gap: 0.2rem !important;
+    font-size: 0.64rem !important;
+    gap: 0.15rem !important;
     line-height: 1.2 !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
   }
   .ft-dash-creator-title span {
-    font-size: 0.72rem !important;
+    font-size: 0.64rem !important;
   }
   .ft-dash-creator-subtitle {
     font-size: 0.62rem !important;
