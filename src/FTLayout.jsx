@@ -491,7 +491,7 @@ export default function FTLayout() {
         updates.passwordHash = await bcrypt.hash(profileForm.password, salt);
       }
 
-      await db.scientists.update(user.id, updates);
+      await db.scientists.set({ id: user.id, ...updates });
       
       // Update local state meDoc & auth user details
       setMeDoc(prev => ({ ...prev, ...updates }));
