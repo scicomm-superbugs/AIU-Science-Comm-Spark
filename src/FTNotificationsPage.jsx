@@ -1,17 +1,24 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
 import { db, useLiveCollection } from './db';
 import { Bell, CheckCircle, Trash2, Filter, Search, Check, Sparkles, ArrowRight, Shield, Award, Calendar, MessageSquare, AlertCircle } from 'lucide-react';
 
-export default function FTNotificationsPage({ user, setActiveTab }) {
+export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
+  const { user: authUser } = useAuth() || {};
+  const user = userProp || authUser;
+  const navigate = useNavigate();
+
   const [filterCategory, setFilterCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const allNotifications = useLiveCollection('ft_notifications');
+  const rawNotifications = useLiveCollection('ft_notifications');
+  const allNotifications = rawNotifications || [];
 
-  if (!user || !allNotifications) {
+  if (!user) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
-        Loading notifications...
+      <div style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#64748b', fontFamily: "'Outfit', sans-serif" }}>
+        Loading user account...
       </div>
     );
   }
@@ -78,10 +85,12 @@ export default function FTNotificationsPage({ user, setActiveTab }) {
 
     if (notif.targetTab && setActiveTab) {
       setActiveTab(notif.targetTab);
+    } else if (notif.targetTab) {
+      navigate(`/dashboard/${notif.targetTab.replace('_', '-')}`);
     } else if (notif.type === 'chat' || notif.type === 'message') {
-      setActiveTab('chat');
+      navigate('/dashboard/chat');
     } else if (notif.type === 'evaluation' || notif.type === 'submission') {
-      setActiveTab('my_competition');
+      navigate('/dashboard/my-competition');
     }
   };
 

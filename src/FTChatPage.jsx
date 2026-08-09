@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useAuth } from './context/AuthContext';
 import { db, useLiveCollection } from './db';
 import { Send, User, Users, MessageSquare, Smile, Paperclip, X, FileText, ChevronLeft, MoreVertical, ExternalLink, Download, ZoomIn, ZoomOut, RotateCw, Plus, Search, Check, Globe } from 'lucide-react';
 import { FT_ROLE_COLORS, FT_ROLE_LABELS, getCleanAcademicTitle } from './ftConstants';
@@ -157,7 +158,9 @@ function renderMessageText(text, isMine, accounts) {
   );
 }
 
-export default function FTChatPage({ user }) {
+export default function FTChatPage({ user: userProp }) {
+  const { user: authUser } = useAuth() || {};
+  const user = userProp || authUser;
   const [text, setText] = useState('');
   const [activeRecipient, setActiveRecipient] = useState('global'); // 'global' or userId/username
   const [showEmojis, setShowEmojis] = useState(false);
