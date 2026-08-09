@@ -27,6 +27,7 @@ export default function FTOurTeam() {
     const tr = user?.registeredTrack || 'pop_science';
     return (tr === 'science_journalism' || tr === 'journalism') ? 'journalism' : 'pop_science';
   });
+  const [expandedLeaderboardId, setExpandedLeaderboardId] = useState(null);
 
   // Find the current user's scientist doc
   const meDoc = useMemo(() => {
@@ -147,13 +148,25 @@ export default function FTOurTeam() {
         sub.teamId === team.id
       );
 
+      const memberDetails = (team.members || []).map(m => {
+        const sci = allScientists.find(s => s.id === m.userId || s.username === m.username);
+        return {
+          userId: m.userId,
+          username: m.username || sci?.username,
+          name: sci?.name || m.name || m.username || 'Member',
+          avatar: sci?.avatarUrl || sci?.avatar || null,
+          isLeader: m.userId === team.leaderId || m.username === team.leaderUsername
+        };
+      });
+
       return {
         id: team.id,
         name: team.name,
-        type: 'team', // 'team' | 'individual'
+        type: 'team',
         code: teamCode,
         track: team.track,
         membersCount: (team.members || []).length,
+        memberDetails,
         totalPoints,
         submissionsCount: teamSubmissions.length
       };
@@ -891,54 +904,105 @@ export default function FTOurTeam() {
             ) : (
               popScienceLeaderboard.map((item, idx) => {
                 const isMeOrMyTeam = myTeam ? item.id === myTeam.id : item.id === user.id;
+                const isExpanded = expandedLeaderboardId === item.id;
 
                 return (
-                  <div key={item.id} style={{
-                    padding: '0.85rem 1rem', borderRadius: '16px',
-                    background: isMeOrMyTeam ? '#fff1f2' : '#f8fafc',
-                    border: isMeOrMyTeam ? '2px solid #be123c' : '1px solid #e2e8f0',
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem',
-                    boxShadow: isMeOrMyTeam ? '0 4px 14px rgba(190, 18, 60, 0.12)' : '0 2px 6px rgba(0,0,0,0.02)'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
-                      <span style={{
-                        width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
-                        background: idx === 0 ? '#fef3c7' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#ffedd5' : '#f1f5f9',
-                        color: idx === 0 ? '#b45309' : idx === 1 ? '#475569' : idx === 2 ? '#c2410c' : '#64748b',
-                        fontWeight: 900, fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                      }}>
-                        #{idx + 1}
-                      </span>
-
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                          fontWeight: 900, fontSize: '0.9rem', color: '#0f172a',
-                          lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap',
-                          wordBreak: 'break-word'
+                  <div key={item.id} style={{ cursor: 'pointer' }} onClick={() => setExpandedLeaderboardId(isExpanded ? null : item.id)}>
+                    <div style={{
+                      padding: '0.85rem 1rem', borderRadius: isExpanded ? '16px 16px 0 0' : '16px',
+                      background: isMeOrMyTeam ? '#fff1f2' : '#f8fafc',
+                      border: isMeOrMyTeam ? '2px solid #be123c' : '1px solid #e2e8f0',
+                      borderBottom: isExpanded ? 'none' : undefined,
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem',
+                      boxShadow: isMeOrMyTeam ? '0 4px 14px rgba(190, 18, 60, 0.12)' : '0 2px 6px rgba(0,0,0,0.02)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+                        <span style={{
+                          width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
+                          background: idx === 0 ? '#fef3c7' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#ffedd5' : '#f1f5f9',
+                          color: idx === 0 ? '#b45309' : idx === 1 ? '#475569' : idx === 2 ? '#c2410c' : '#64748b',
+                          fontWeight: 900, fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'center'
                         }}>
-                          <span style={{ wordBreak: 'break-word' }}>{item.name}</span>
-                          {isMeOrMyTeam && <span style={{ color: '#be123c', fontSize: '0.75rem', fontWeight: 800, flexShrink: 0 }}>(You)</span>}
-                        </div>
+                          #{idx + 1}
+                        </span>
 
-                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '0.1rem 0.4rem', borderRadius: '6px', background: item.type === 'team' ? '#fff1f2' : '#eff6ff', color: item.type === 'team' ? '#be123c' : '#2563eb', border: `1px solid ${item.type === 'team' ? '#fecdd3' : '#bfdbfe'}`, whiteSpace: 'nowrap' }}>
-                            {item.type === 'team' ? `👥 Team (${item.membersCount})` : '👤 Solo'}
-                          </span>
-                          <span style={{ background: '#ffffff', padding: '0.05rem 0.35rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontWeight: 800, color: '#334155', whiteSpace: 'nowrap' }}>
-                            🏷️ {item.code}
-                          </span>
+                        {/* Solo avatar */}
+                        {item.type === 'individual' && item.avatar && (
+                          <img src={item.avatar} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0', flexShrink: 0 }} />
+                        )}
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            fontWeight: 900, fontSize: '0.9rem', color: '#0f172a',
+                            lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap',
+                            wordBreak: 'break-word'
+                          }}>
+                            <span style={{ wordBreak: 'break-word' }}>{item.name}</span>
+                            {isMeOrMyTeam && <span style={{ color: '#be123c', fontSize: '0.75rem', fontWeight: 800, flexShrink: 0 }}>(You)</span>}
+                          </div>
+
+                          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '0.1rem 0.4rem', borderRadius: '6px', background: item.type === 'team' ? '#fff1f2' : '#eff6ff', color: item.type === 'team' ? '#be123c' : '#2563eb', border: `1px solid ${item.type === 'team' ? '#fecdd3' : '#bfdbfe'}`, whiteSpace: 'nowrap' }}>
+                              {item.type === 'team' ? `👥 Team (${item.membersCount})` : '👤 Solo'}
+                            </span>
+                            <span style={{ background: '#ffffff', padding: '0.05rem 0.35rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontWeight: 800, color: '#334155', whiteSpace: 'nowrap' }}>
+                              🏷️ {item.code}
+                            </span>
+                            <span style={{ fontSize: '0.62rem', color: '#94a3b8', marginLeft: 'auto' }}>{isExpanded ? '▲' : '▼'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '0.5rem' }}>
+                        <div style={{ fontWeight: 900, fontSize: '1.1rem', color: '#0f172a', whiteSpace: 'nowrap' }}>
+                          {item.totalPoints || 0} pts
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                          {item.submissionsCount} sub(s)
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '0.5rem' }}>
-                      <div style={{ fontWeight: 900, fontSize: '1.1rem', color: '#0f172a', whiteSpace: 'nowrap' }}>
-                        {item.totalPoints || 0} pts
+                    {/* Expandable Members Panel */}
+                    {isExpanded && (
+                      <div style={{
+                        padding: '0.65rem 1rem', borderRadius: '0 0 16px 16px',
+                        background: isMeOrMyTeam ? '#fff5f6' : '#f1f5f9',
+                        border: isMeOrMyTeam ? '2px solid #be123c' : '1px solid #e2e8f0',
+                        borderTop: `1px dashed ${isMeOrMyTeam ? '#fecdd3' : '#cbd5e1'}`,
+                        display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center'
+                      }}>
+                        {item.type === 'team' && item.memberDetails?.length > 0 ? (
+                          item.memberDetails.map((mem, mIdx) => (
+                            <div key={mIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#ffffff', padding: '0.3rem 0.6rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                              {mem.avatar ? (
+                                <img src={mem.avatar} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #cbd5e1' }} />
+                              ) : (
+                                <span style={{ width: 26, height: 26, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: '#64748b', fontWeight: 800 }}>
+                                  {(mem.name || '?')[0].toUpperCase()}
+                                </span>
+                              )}
+                              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', whiteSpace: 'nowrap' }}>{mem.name}</span>
+                              {mem.isLeader && <span style={{ fontSize: '0.6rem', color: '#f59e0b' }} title="Team Leader">⭐</span>}
+                            </div>
+                          ))
+                        ) : item.type === 'individual' ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            {item.avatar ? (
+                              <img src={item.avatar} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #cbd5e1' }} />
+                            ) : (
+                              <span style={{ width: 30, height: 30, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', color: '#64748b', fontWeight: 800 }}>
+                                {(item.name || '?')[0].toUpperCase()}
+                              </span>
+                            )}
+                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>{item.name}</span>
+                            <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>Solo Competitor</span>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>No member details available</span>
+                        )}
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap' }}>
-                        {item.submissionsCount} sub(s)
-                      </div>
-                    </div>
+                    )}
                   </div>
                 );
               })
@@ -971,54 +1035,105 @@ export default function FTOurTeam() {
             ) : (
               journalismLeaderboard.map((item, idx) => {
                 const isMeOrMyTeam = myTeam ? item.id === myTeam.id : item.id === user.id;
+                const isExpanded = expandedLeaderboardId === item.id;
 
                 return (
-                  <div key={item.id} style={{
-                    padding: '0.85rem 1rem', borderRadius: '16px',
-                    background: isMeOrMyTeam ? '#eff6ff' : '#f8fafc',
-                    border: isMeOrMyTeam ? '2px solid #2563eb' : '1px solid #e2e8f0',
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem',
-                    boxShadow: isMeOrMyTeam ? '0 4px 14px rgba(37, 99, 235, 0.12)' : '0 2px 6px rgba(0,0,0,0.02)'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
-                      <span style={{
-                        width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
-                        background: idx === 0 ? '#fef3c7' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#ffedd5' : '#f1f5f9',
-                        color: idx === 0 ? '#b45309' : idx === 1 ? '#475569' : idx === 2 ? '#c2410c' : '#64748b',
-                        fontWeight: 900, fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                      }}>
-                        #{idx + 1}
-                      </span>
-
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                          fontWeight: 900, fontSize: '0.9rem', color: '#0f172a',
-                          lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap',
-                          wordBreak: 'break-word'
+                  <div key={item.id} style={{ cursor: 'pointer' }} onClick={() => setExpandedLeaderboardId(isExpanded ? null : item.id)}>
+                    <div style={{
+                      padding: '0.85rem 1rem', borderRadius: isExpanded ? '16px 16px 0 0' : '16px',
+                      background: isMeOrMyTeam ? '#eff6ff' : '#f8fafc',
+                      border: isMeOrMyTeam ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                      borderBottom: isExpanded ? 'none' : undefined,
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem',
+                      boxShadow: isMeOrMyTeam ? '0 4px 14px rgba(37, 99, 235, 0.12)' : '0 2px 6px rgba(0,0,0,0.02)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+                        <span style={{
+                          width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
+                          background: idx === 0 ? '#fef3c7' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#ffedd5' : '#f1f5f9',
+                          color: idx === 0 ? '#b45309' : idx === 1 ? '#475569' : idx === 2 ? '#c2410c' : '#64748b',
+                          fontWeight: 900, fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'center'
                         }}>
-                          <span style={{ wordBreak: 'break-word' }}>{item.name}</span>
-                          {isMeOrMyTeam && <span style={{ color: '#2563eb', fontSize: '0.75rem', fontWeight: 800, flexShrink: 0 }}>(You)</span>}
-                        </div>
+                          #{idx + 1}
+                        </span>
 
-                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '0.1rem 0.4rem', borderRadius: '6px', background: item.type === 'team' ? '#fff1f2' : '#eff6ff', color: item.type === 'team' ? '#be123c' : '#2563eb', border: `1px solid ${item.type === 'team' ? '#fecdd3' : '#bfdbfe'}`, whiteSpace: 'nowrap' }}>
-                            {item.type === 'team' ? `👥 Team (${item.membersCount})` : '👤 Solo'}
-                          </span>
-                          <span style={{ background: '#ffffff', padding: '0.05rem 0.35rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontWeight: 800, color: '#334155', whiteSpace: 'nowrap' }}>
-                            🏷️ {item.code}
-                          </span>
+                        {/* Solo avatar */}
+                        {item.type === 'individual' && item.avatar && (
+                          <img src={item.avatar} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0', flexShrink: 0 }} />
+                        )}
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            fontWeight: 900, fontSize: '0.9rem', color: '#0f172a',
+                            lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap',
+                            wordBreak: 'break-word'
+                          }}>
+                            <span style={{ wordBreak: 'break-word' }}>{item.name}</span>
+                            {isMeOrMyTeam && <span style={{ color: '#2563eb', fontSize: '0.75rem', fontWeight: 800, flexShrink: 0 }}>(You)</span>}
+                          </div>
+
+                          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '0.1rem 0.4rem', borderRadius: '6px', background: item.type === 'team' ? '#fff1f2' : '#eff6ff', color: item.type === 'team' ? '#be123c' : '#2563eb', border: `1px solid ${item.type === 'team' ? '#fecdd3' : '#bfdbfe'}`, whiteSpace: 'nowrap' }}>
+                              {item.type === 'team' ? `👥 Team (${item.membersCount})` : '👤 Solo'}
+                            </span>
+                            <span style={{ background: '#ffffff', padding: '0.05rem 0.35rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontWeight: 800, color: '#334155', whiteSpace: 'nowrap' }}>
+                              🏷️ {item.code}
+                            </span>
+                            <span style={{ fontSize: '0.62rem', color: '#94a3b8', marginLeft: 'auto' }}>{isExpanded ? '▲' : '▼'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '0.5rem' }}>
+                        <div style={{ fontWeight: 900, fontSize: '1.1rem', color: '#0f172a', whiteSpace: 'nowrap' }}>
+                          {item.totalPoints || 0} pts
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                          {item.submissionsCount} sub(s)
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '0.5rem' }}>
-                      <div style={{ fontWeight: 900, fontSize: '1.1rem', color: '#0f172a', whiteSpace: 'nowrap' }}>
-                        {item.totalPoints || 0} pts
+                    {/* Expandable Members Panel */}
+                    {isExpanded && (
+                      <div style={{
+                        padding: '0.65rem 1rem', borderRadius: '0 0 16px 16px',
+                        background: isMeOrMyTeam ? '#f0f5ff' : '#f1f5f9',
+                        border: isMeOrMyTeam ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                        borderTop: `1px dashed ${isMeOrMyTeam ? '#bfdbfe' : '#cbd5e1'}`,
+                        display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center'
+                      }}>
+                        {item.type === 'team' && item.memberDetails?.length > 0 ? (
+                          item.memberDetails.map((mem, mIdx) => (
+                            <div key={mIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#ffffff', padding: '0.3rem 0.6rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                              {mem.avatar ? (
+                                <img src={mem.avatar} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #cbd5e1' }} />
+                              ) : (
+                                <span style={{ width: 26, height: 26, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: '#64748b', fontWeight: 800 }}>
+                                  {(mem.name || '?')[0].toUpperCase()}
+                                </span>
+                              )}
+                              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', whiteSpace: 'nowrap' }}>{mem.name}</span>
+                              {mem.isLeader && <span style={{ fontSize: '0.6rem', color: '#f59e0b' }} title="Team Leader">⭐</span>}
+                            </div>
+                          ))
+                        ) : item.type === 'individual' ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            {item.avatar ? (
+                              <img src={item.avatar} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #cbd5e1' }} />
+                            ) : (
+                              <span style={{ width: 30, height: 30, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', color: '#64748b', fontWeight: 800 }}>
+                                {(item.name || '?')[0].toUpperCase()}
+                              </span>
+                            )}
+                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>{item.name}</span>
+                            <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>Solo Competitor</span>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>No member details available</span>
+                        )}
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap' }}>
-                        {item.submissionsCount} sub(s)
-                      </div>
-                    </div>
+                    )}
                   </div>
                 );
               })
