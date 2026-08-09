@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { db, useLiveCollection } from './db';
-import { Bell, CheckCircle, Trash2, Filter, Search, Check, Sparkles, ArrowRight, Shield, Award, Calendar, MessageSquare, AlertCircle } from 'lucide-react';
+import { Bell, CheckCircle, Trash2, Filter, Search, Check, Sparkles, ArrowRight, Shield, Award, Calendar, MessageSquare, AlertCircle, Briefcase, UserCheck } from 'lucide-react';
 
 export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
   const { user: authUser } = useAuth() || {};
@@ -13,6 +13,7 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const rawNotifications = useLiveCollection('ft_notifications');
+  const allAccounts = useLiveCollection('scientists') || [];
   const allNotifications = rawNotifications || [];
 
   if (!user) {
@@ -29,7 +30,7 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
       const isForMe = !n.targetUserId || n.targetUserId === user.id || n.targetUserId === 'all' || (Array.isArray(n.targetRoles) && n.targetRoles.includes(user.role));
       return isForMe;
     })
-    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    .sort((a, b) => new Date(b.createdAt || b.timestamp || 0).getTime() - new Date(a.createdAt || a.timestamp || 0).getTime());
 
   const unreadNotifications = myNotifications.filter(n => n.status === 'unread');
   const unreadCount = unreadNotifications.length;
@@ -46,11 +47,25 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
 
     // 2. Category Tab
     if (filterCategory === 'unread') return n.status === 'unread';
-    if (filterCategory === 'evaluation') return n.type === 'evaluation' || n.type === 'assignment';
-    if (filterCategory === 'submission') return n.type === 'submission';
-    if (filterCategory === 'workshop') return n.type === 'workshop' || n.type === 'stage_deadline_reminder';
-    if (filterCategory === 'chat') return n.type === 'chat' || n.type === 'message';
+    if (filterCategory === 'social') return n.type === 'chat' || n.type === 'message' || n.type === 'social';
+    if (filterCategory === 'work') return n.type === 'evaluation' || n.type === 'assignment' || n.type === 'submission';
+    if (filterCategory === 'alert') return n.type === 'stage_deadline_reminder' || n.type === 'alert' || n.type === 'workshop';
+    if (filterCategory === 'admin') return n.type === 'admin' || n.type === 'announcement' || n.type === 'system';
     return true;
+  });
+
+  // Split into TODAY and EARLIER sections
+  const now = new Date();
+  const todayStr = now.toDateString();
+
+  const todayNotifications = filteredNotifications.filter(n => {
+    if (!n.createdAt && !n.timestamp) return false;
+    return new Date(n.createdAt || n.timestamp).toDateString() === todayStr;
+  });
+
+  const earlierNotifications = filteredNotifications.filter(n => {
+    if (!n.createdAt && !n.timestamp) return true;
+    return new Date(n.createdAt || n.timestamp).toDateString() !== todayStr;
   });
 
   // Batch Action: Mark All Read
@@ -62,18 +77,6 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
       }
     } catch (err) {
       console.error('Failed to mark notifications read', err);
-    }
-  };
-
-  // Batch Action: Clear Read Notifications
-  const handleClearRead = async () => {
-    try {
-      const readList = myNotifications.filter(n => n.status === 'read');
-      for (const notif of readList) {
-        await db.ft_notifications.delete(notif.id);
-      }
-    } catch (err) {
-      console.error('Failed to clear read notifications', err);
     }
   };
 
@@ -94,261 +97,229 @@ export default function FTNotificationsPage({ user: userProp, setActiveTab }) {
     }
   };
 
-  // Helper function for relative timestamp
-  const formatTimeAgo = (dateStr) => {
+  // Helper function for formatted date (e.g. 6/17/2026 or 10:31 AM)
+  const formatNotificationDate = (dateStr) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
-    const now = new Date();
-    const diffSec = Math.floor((now - date) / 1000);
-
-    if (diffSec < 60) return 'Just now';
-    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
-    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
-    if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`;
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    if (isNaN(date.getTime())) return String(dateStr);
+    
+    if (date.toDateString() === todayStr) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
   };
 
-  // Helper for notification type styling
-  const getTypeMeta = (type) => {
-    switch (type) {
-      case 'evaluation':
-      case 'assignment':
-        return { icon: '🏅', bg: '#ecfdf5', color: '#059669', border: '#a7f3d0', label: 'Evaluation' };
-      case 'submission':
-        return { icon: '📤', bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe', label: 'Submission' };
-      case 'workshop':
-        return { icon: '🎓', bg: '#faf5ff', color: '#7e22ce', border: '#e9d5ff', label: 'Workshop' };
-      case 'stage_deadline_reminder':
-        return { icon: '⏳', bg: '#fffbeb', color: '#d97706', border: '#fde68a', label: 'Deadline' };
-      case 'chat':
-      case 'message':
-        return { icon: '💬', bg: '#fff1f2', color: '#be123c', border: '#fecdd3', label: 'Message' };
-      default:
-        return { icon: '📢', bg: '#f1f5f9', color: '#475569', border: '#cbd5e1', label: 'Update' };
-    }
+  // Helper for category badge icons
+  const getCategoryBadge = (notif) => {
+    if (notif.type === 'chat' || notif.type === 'message') return { emoji: '💬', color: '#be123c', bg: '#ffe4e6' };
+    if (notif.type === 'evaluation') return { emoji: '🏅', color: '#059669', bg: '#d1fae5' };
+    if (notif.type === 'submission') return { emoji: '📤', color: '#2563eb', bg: '#dbeafe' };
+    if (notif.type === 'stage_deadline_reminder') return { emoji: '⏳', color: '#d97706', bg: '#fef3c7' };
+    return { emoji: '💼', color: '#3b82f6', bg: '#eff6ff' };
+  };
+
+  // Render a single notification item row
+  const renderNotificationRow = (notif) => {
+    const isUnread = notif.status === 'unread';
+    const badge = getCategoryBadge(notif);
+    
+    // Find sender avatar image if senderId exists
+    const senderAcc = notif.senderId ? allAccounts.find(a => String(a.id) === String(notif.senderId) || a.username === notif.senderId) : null;
+    const avatarUrl = notif.avatarUrl || senderAcc?.avatarUrl || senderAcc?.avatar;
+
+    return (
+      <div
+        key={notif.id}
+        onClick={() => handleNotificationClick(notif)}
+        style={{
+          padding: '1.1rem 1.25rem',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '1rem',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          background: isUnread ? '#f8fafc' : '#ffffff',
+          borderBottom: '1px solid #f1f5f9',
+          position: 'relative'
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = isUnread ? '#f8fafc' : '#ffffff'; }}
+      >
+        {/* Avatar / Profile Picture Image with Icon Overlay */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt="Profile"
+              style={{
+                width: '50px', height: '50px', borderRadius: '50%',
+                objectFit: 'cover', border: '1.5px solid #e2e8f0',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+              }}
+            />
+          ) : (
+            <div style={{
+              width: '50px', height: '50px', borderRadius: '50%',
+              background: '#f1f5f9', color: '#3b82f6',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.35rem', border: '1.5px solid #e2e8f0'
+            }}>
+              {badge.emoji}
+            </div>
+          )}
+
+          {/* Small reaction/category badge on bottom right */}
+          <div style={{
+            position: 'absolute', bottom: '-2px', right: '-2px',
+            width: '20px', height: '20px', borderRadius: '50%',
+            background: badge.bg, border: '2px solid #ffffff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '0.68rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          }}>
+            {badge.emoji}
+          </div>
+        </div>
+
+        {/* Content Details */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontSize: '0.92rem', fontWeight: 800, color: '#1e293b',
+            lineHeight: 1.35, marginBottom: '0.2rem', wordBreak: 'break-word'
+          }}>
+            {notif.title}
+          </div>
+
+          <div style={{
+            fontSize: '0.85rem', color: '#64748b', fontWeight: 500,
+            lineHeight: 1.45, marginBottom: '0.35rem', wordBreak: 'break-word'
+          }}>
+            {notif.message}
+          </div>
+
+          <div style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 600 }}>
+            {formatNotificationDate(notif.createdAt || notif.timestamp)}
+          </div>
+        </div>
+
+        {/* Unread indicator dot */}
+        {isUnread && (
+          <div style={{
+            width: '9px', height: '9px', borderRadius: '50%',
+            background: '#3b82f6', marginTop: '0.4rem', flexShrink: 0,
+            boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.2)'
+          }} />
+        )}
+      </div>
+    );
   };
 
   return (
-    <div className="ft-notifications-page" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      
-      {/* ── Top Header Banner Card ────────────────────────────────── */}
+    <div style={{
+      maxWidth: '680px', margin: '0 auto', padding: '0.5rem 0.25rem 2.5rem',
+      display: 'flex', flexDirection: 'column', gap: '1rem', fontFamily: "'Outfit', sans-serif"
+    }}>
+
+      {/* ── 1. Top Header Card ────────────────────────────────────── */}
       <div style={{
-        background: 'linear-gradient(135deg, #ffffff 0%, #fff1f2 100%)',
-        padding: '1.25rem 1.6rem', borderRadius: '24px', border: '1.5px solid #fecdd3',
-        boxShadow: '0 4px 20px rgba(190, 18, 60, 0.05)',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'
+        background: '#ffffff', borderRadius: '24px', padding: '1.1rem 1.4rem',
+        boxShadow: '0 8px 30px rgba(0,0,0,0.03)', border: '1.5px solid #e2e8f0',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <div style={{
-            width: '46px', height: '46px', borderRadius: '16px',
-            background: 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)',
-            color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 6px 16px rgba(190, 18, 60, 0.25)', flexShrink: 0
-          }}>
-            <Bell size={22} />
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
-                Notifications Dashboard
-              </h1>
-              {unreadCount > 0 && (
-                <span style={{
-                  background: '#be123c', color: '#ffffff', fontSize: '0.72rem', fontWeight: 900,
-                  padding: '0.15rem 0.55rem', borderRadius: '9999px', boxShadow: '0 2px 8px rgba(190,18,60,0.3)'
-                }}>
-                  {unreadCount} New
-                </span>
-              )}
-            </div>
-            <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0.15rem 0 0 0', fontWeight: 600 }}>
-              Stay up-to-date with your stage evaluations, feedback, deadlines, and announcement updates
-            </p>
-          </div>
-        </div>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
+          Notifications
+        </h1>
 
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-          {unreadCount > 0 && (
-            <button
-              onClick={handleMarkAllRead}
-              style={{
-                background: '#ffffff', border: '1.5px solid #cbd5e1', color: '#334155',
-                padding: '0.5rem 0.9rem', borderRadius: '12px', fontSize: '0.82rem', fontWeight: 800,
-                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                transition: 'all 0.2s ease', boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
-              }}
-            >
-              <CheckCircle size={15} style={{ color: '#059669' }} /> Mark All Read
-            </button>
-          )}
-
-          {myNotifications.some(n => n.status === 'read') && (
-            <button
-              onClick={handleClearRead}
-              style={{
-                background: '#ffffff', border: '1.5px solid #fecdd3', color: '#be123c',
-                padding: '0.5rem 0.9rem', borderRadius: '12px', fontSize: '0.82rem', fontWeight: 800,
-                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                transition: 'all 0.2s ease', boxShadow: '0 2px 6px rgba(190,18,60,0.02)'
-              }}
-            >
-              <Trash2 size={15} /> Clear Read
-            </button>
-          )}
-        </div>
+        <button
+          onClick={handleMarkAllRead}
+          style={{
+            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+            color: '#ffffff', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '30px',
+            fontSize: '0.85rem', fontWeight: 800, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '0.45rem',
+            boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)', transition: 'all 0.2s ease'
+          }}
+        >
+          <Bell size={16} /> Mark all as read
+        </button>
       </div>
 
-      {/* ── Main Notifications Card Wrapper ──────────────────────── */}
+      {/* ── 2. Category Filter Chips ──────────────────────────────── */}
+      <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.2rem' }}>
+        {[
+          { id: 'all', label: 'All' },
+          { id: 'social', label: 'Social' },
+          { id: 'work', label: 'Work' },
+          { id: 'alert', label: 'Alert' },
+          { id: 'admin', label: 'Admin' }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setFilterCategory(tab.id)}
+            style={{
+              padding: '0.5rem 1.2rem', borderRadius: '25px', fontSize: '0.86rem', fontWeight: 800,
+              border: 'none', cursor: 'pointer', transition: 'all 0.2s ease', whiteSpace: 'nowrap', flexShrink: 0,
+              background: filterCategory === tab.id ? '#3b82f6' : '#ffffff',
+              color: filterCategory === tab.id ? '#ffffff' : '#64748b',
+              boxShadow: filterCategory === tab.id ? '0 4px 12px rgba(59,130,246,0.3)' : '0 2px 8px rgba(0,0,0,0.02)'
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── 3. Main Notifications Card Container ──────────────────── */}
       <div style={{
         background: '#ffffff', borderRadius: '24px', border: '1.5px solid #e2e8f0',
-        padding: '1.25rem', boxShadow: '0 8px 30px rgba(15,23,42,0.03)',
-        display: 'flex', flexDirection: 'column', gap: '1rem'
+        boxShadow: '0 8px 30px rgba(0,0,0,0.03)', overflow: 'hidden'
       }}>
-        
-        {/* Search & Filter Bar */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-          
-          {/* Search Box */}
-          <div style={{ position: 'relative', width: '100%' }}>
-            <Search size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-            <input
-              type="text"
-              placeholder="Search notifications by title, keyword, or evaluator..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%', padding: '0.65rem 0.85rem 0.65rem 2.4rem', borderRadius: '14px',
-                border: '1.5px solid #cbd5e1', fontSize: '0.86rem', outline: 'none',
-                color: '#0f172a', fontWeight: 600, boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
-          {/* Filter Category Chips */}
-          <div style={{ display: 'flex', gap: '0.45rem', overflowX: 'auto', paddingBottom: '0.2rem' }}>
-            {[
-              { id: 'all', label: `All (${myNotifications.length})` },
-              { id: 'unread', label: `Unread (${unreadCount})` },
-              { id: 'evaluation', label: '🏅 Evaluations' },
-              { id: 'submission', label: '📤 Submissions' },
-              { id: 'workshop', label: '🎓 Workshops & Dates' },
-              { id: 'chat', label: '💬 Messages' }
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setFilterCategory(tab.id)}
-                style={{
-                  padding: '0.4rem 0.85rem', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 800,
-                  border: `1.5px solid ${filterCategory === tab.id ? '#be123c' : '#cbd5e1'}`,
-                  background: filterCategory === tab.id ? '#be123c' : '#ffffff',
-                  color: filterCategory === tab.id ? '#ffffff' : '#475569',
-                  cursor: 'pointer', transition: 'all 0.2s ease', whiteSpace: 'nowrap', flexShrink: 0
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Notifications Graphical List ────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '0.25rem' }}>
-          {filteredNotifications.length === 0 ? (
-            <div style={{ padding: '3.5rem 1rem', textAlign: 'center', color: '#64748b' }}>
-              <div style={{
-                width: '56px', height: '56px', borderRadius: '18px', background: '#f1f5f9',
-                color: '#94a3b8', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                marginBottom: '0.85rem'
-              }}>
-                <Bell size={26} />
-              </div>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.3rem 0' }}>
-                No Notifications Found
-              </h3>
-              <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
-                {searchQuery ? 'Try clearing your search terms or changing filter category.' : 'You are all caught up! New notifications will appear here.'}
-              </p>
+        {filteredNotifications.length === 0 ? (
+          <div style={{ padding: '4rem 1.5rem', textAlign: 'center', color: '#64748b' }}>
+            <div style={{
+              width: '60px', height: '60px', borderRadius: '50%', background: '#eff6ff',
+              color: '#3b82f6', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              marginBottom: '1rem', fontSize: '1.6rem'
+            }}>
+              🔔
             </div>
-          ) : (
-            filteredNotifications.map(notif => {
-              const meta = getTypeMeta(notif.type);
-              const isUnread = notif.status === 'unread';
-
-              return (
-                <div
-                  key={notif.id}
-                  onClick={() => handleNotificationClick(notif)}
-                  style={{
-                    padding: '1rem 1.15rem', borderRadius: '18px',
-                    background: isUnread ? '#fff1f2' : '#f8fafc',
-                    border: `1.5px solid ${isUnread ? '#fecdd3' : '#e2e8f0'}`,
-                    display: 'flex', alignItems: 'flex-start', gap: '0.85rem',
-                    cursor: 'pointer', transition: 'all 0.2s ease', position: 'relative',
-                    boxShadow: isUnread ? '0 4px 14px rgba(190,18,60,0.06)' : 'none'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#be123c';
-                    if (!isUnread) e.currentTarget.style.background = '#ffffff';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = isUnread ? '#fecdd3' : '#e2e8f0';
-                    if (!isUnread) e.currentTarget.style.background = '#f8fafc';
-                  }}
-                >
-                  {/* Category Icon Badge */}
-                  <div style={{
-                    width: '42px', height: '42px', borderRadius: '14px',
-                    background: meta.bg, color: meta.color, border: `1.5px solid ${meta.border}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '1.25rem', flexShrink: 0
-                  }}>
-                    {meta.icon}
-                  </div>
-
-                  {/* Notification Details */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', minWidth: 0 }}>
-                        <span style={{
-                          fontSize: '0.68rem', fontWeight: 800, padding: '0.1rem 0.45rem', borderRadius: '6px',
-                          background: meta.bg, color: meta.color, border: `1px solid ${meta.border}`, flexShrink: 0
-                        }}>
-                          {meta.label}
-                        </span>
-                        <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 900, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {notif.title}
-                        </h4>
-                      </div>
-
-                      <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700, flexShrink: 0 }}>
-                        {formatTimeAgo(notif.createdAt)}
-                      </span>
-                    </div>
-
-                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.84rem', color: '#475569', fontWeight: 500, lineHeight: 1.5, wordBreak: 'break-word' }}>
-                      {notif.message}
-                    </p>
-
-                    {/* Action link indicator */}
-                    <div style={{ marginTop: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.74rem', fontWeight: 800, color: '#be123c' }}>
-                      <span>View Details</span> <ArrowRight size={13} />
-                    </div>
-                  </div>
-
-                  {/* Green pulse unread indicator dot */}
-                  {isUnread && (
-                    <span style={{
-                      position: 'absolute', top: '1rem', right: '1rem',
-                      width: '9px', height: '9px', borderRadius: '50%', background: '#be123c',
-                      boxShadow: '0 0 0 3px rgba(190,18,60,0.2)'
-                    }} />
-                  )}
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.35rem 0' }}>
+              No Notifications
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>
+              You are all caught up! New notifications will appear here.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* TODAY SECTION */}
+            {todayNotifications.length > 0 && (
+              <div>
+                <div style={{
+                  fontSize: '0.78rem', fontWeight: 900, color: '#64748b', letterSpacing: '0.08em',
+                  textTransform: 'uppercase', padding: '1rem 1.25rem 0.5rem', background: '#f8fafc',
+                  borderBottom: '1px solid #f1f5f9'
+                }}>
+                  TODAY
                 </div>
-              );
-            })
-          )}
-        </div>
+                {todayNotifications.map(renderNotificationRow)}
+              </div>
+            )}
+
+            {/* EARLIER SECTION */}
+            {earlierNotifications.length > 0 && (
+              <div>
+                <div style={{
+                  fontSize: '0.78rem', fontWeight: 900, color: '#64748b', letterSpacing: '0.08em',
+                  textTransform: 'uppercase', padding: '1rem 1.25rem 0.5rem', background: '#f8fafc',
+                  borderBottom: '1px solid #f1f5f9'
+                }}>
+                  EARLIER
+                </div>
+                {earlierNotifications.map(renderNotificationRow)}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
     </div>
