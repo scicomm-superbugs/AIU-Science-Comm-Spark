@@ -504,25 +504,13 @@ export default function FTChatPage({ user: userProp }) {
     setIsDragging(false);
   };
 
-  // Filter messages for active recipient
-  const currentMessages = rawMessages ? [...rawMessages]
-    .filter(msg => {
-      if (activeRecipient === 'global') {
-        return !msg.receiverId || msg.receiverId === 'global';
-      } else {
-        return (String(msg.senderId) === String(myId) && String(msg.receiverId) === String(activeRecipient)) || 
-               (String(msg.senderId) === String(activeRecipient) && String(msg.receiverId) === String(myId));
-      }
-    })
-    .sort((a, b) => new Date(a.createdAt || a.timestamp || 0).getTime() - new Date(b.createdAt || b.timestamp || 0).getTime()) : [];
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [currentMessages.length]);
+  }, [currentMessages?.length]);
 
   // File Select Handler
   const handleFileSelect = (e) => {
@@ -628,17 +616,68 @@ export default function FTChatPage({ user: userProp }) {
     }
   };
 
+  // Helper to get all possible identifiers for the current user
+  const getMyAllIdentifiers = useCallback(() => {
+    if (!user) return [];
+    const ids = new Set();
+    if (user.id) ids.add(String(user.id).toLowerCase());
+    if (user.username) ids.add(String(user.username).toLowerCase());
+    if (user.name) ids.add(String(user.name).toLowerCase());
+    if (user.role === 'master' || user.role === 'admin' || user.isAdmin || user.isMaster) {
+      ids.add('admin_sys_1');
+      ids.add('abdullah.amr');
+      ids.add('admin');
+      ids.add('master');
+    }
+    return Array.from(ids);
+  }, [user]);
+
+  // Helper to get all possible identifiers for any contact
+  const getContactAllIdentifiers = useCallback((contactIdOrAcc) => {
+    if (!contactIdOrAcc) return [];
+    if (contactIdOrAcc === 'global') return ['global'];
+    const acc = typeof contactIdOrAcc === 'object'
+      ? contactIdOrAcc
+      : (allAccounts || []).find(a => String(a.id) === String(contactIdOrAcc) || String(a.username) === String(contactIdOrAcc) || a.name === contactIdOrAcc);
+
+    const ids = new Set();
+    if (typeof contactIdOrAcc === 'string') ids.add(contactIdOrAcc.toLowerCase());
+    if (acc) {
+      if (acc.id) ids.add(String(acc.id).toLowerCase());
+      if (acc.username) ids.add(String(acc.username).toLowerCase());
+      if (acc.name) ids.add(String(acc.name).toLowerCase());
+      if (acc.role === 'master' || acc.role === 'admin' || acc.name === 'Abdullah Amr Maged' || acc.username === 'abdullah.amr') {
+        ids.add('admin_sys_1');
+        ids.add('abdullah.amr');
+        ids.add('admin');
+        ids.add('master');
+      }
+    }
+    return Array.from(ids);
+  }, [allAccounts]);
+
+  // Helper to check if a message belongs to conversation between current user and contact
+  const isMessageWithContact = useCallback((msg, contactId) => {
+    if (!msg || !user) return false;
+    if (contactId === 'global') {
+      return !msg.receiverId || msg.receiverId === 'global';
+    }
+    const myIds = getMyAllIdentifiers();
+    const contactIds = getContactAllIdentifiers(contactId);
+
+    const s = String(msg.senderId || '').toLowerCase();
+    const r = String(msg.receiverId || '').toLowerCase();
+
+    const fromContactToMe = contactIds.includes(s) && (myIds.includes(r) || !msg.receiverId);
+    const fromMeToContact = myIds.includes(s) && contactIds.includes(r);
+
+    return fromContactToMe || fromMeToContact;
+  }, [getMyAllIdentifiers, getContactAllIdentifiers, user]);
+
   // Helper to fetch the last message info
   const getLastMessageInfo = (recipId) => {
     if (!rawMessages) return null;
-    const msgs = rawMessages.filter(msg => {
-      if (recipId === 'global') {
-        return !msg.receiverId || msg.receiverId === 'global';
-      } else {
-        return (String(msg.senderId) === String(myId) && String(msg.receiverId) === String(recipId)) || 
-               (String(msg.senderId) === String(recipId) && String(msg.receiverId) === String(myId));
-      }
-    });
+    const msgs = rawMessages.filter(msg => isMessageWithContact(msg, recipId));
     if (msgs.length === 0) return null;
     const sorted = [...msgs].sort((a,b) => new Date(a.createdAt || a.timestamp || 0).getTime() - new Date(b.createdAt || b.timestamp || 0).getTime());
     return sorted[sorted.length - 1];
@@ -647,44 +686,46 @@ export default function FTChatPage({ user: userProp }) {
   // Robust Unread Count helper per contact
   const getUnreadCount = (recipId) => {
     if (!rawMessages || !user) return 0;
-    const myIdStr = String(user.id || user.username || '');
-    const myUserStr = String(user.username || '');
+    const myIds = getMyAllIdentifiers();
+    const contactIds = getContactAllIdentifiers(recipId);
+
     const unread = rawMessages.filter(m => {
       if (m.status !== 'unread') return false;
-      const isForMe = (myIdStr && String(m.receiverId) === myIdStr) || (myUserStr && String(m.receiverId) === myUserStr);
-      const isFromMe = (myIdStr && String(m.senderId) === myIdStr) || (myUserStr && String(m.senderId) === myUserStr);
-      if (isFromMe || !isForMe) return false;
-      if (recipId === 'global') {
-        return !m.receiverId || m.receiverId === 'global';
-      }
-      return String(m.senderId) === String(recipId);
+      const s = String(m.senderId || '').toLowerCase();
+      const r = String(m.receiverId || '').toLowerCase();
+
+      const isFromContact = contactIds.includes(s);
+      const isForMe = myIds.includes(r) || (!m.receiverId && recipId === 'global');
+      const isFromMe = myIds.includes(s);
+
+      return isFromContact && isForMe && !isFromMe;
     });
     return unread.length;
   };
 
-  // Total unread messages across all 1-on-1 conversations
+  // Total unread messages across all conversations
   const totalUnreadMessages = useMemo(() => {
     if (!rawMessages || !user) return 0;
-    const myIdStr = String(user.id || user.username || '');
-    const myUserStr = String(user.username || '');
+    const myIds = getMyAllIdentifiers();
     return rawMessages.filter(m => {
       if (m.status !== 'unread') return false;
-      const isForMe = (myIdStr && String(m.receiverId) === myIdStr) || (myUserStr && String(m.receiverId) === myUserStr);
-      const isFromMe = (myIdStr && String(m.senderId) === myIdStr) || (myUserStr && String(m.senderId) === myUserStr);
+      const s = String(m.senderId || '').toLowerCase();
+      const r = String(m.receiverId || '').toLowerCase();
+      const isForMe = myIds.includes(r);
+      const isFromMe = myIds.includes(s);
       return isForMe && !isFromMe;
     }).length;
-  }, [rawMessages, user]);
+  }, [rawMessages, user, getMyAllIdentifiers]);
 
   // Mark all unread incoming messages & chat notifications as read
   const handleMarkAllMessagesRead = async () => {
     if (!rawMessages || !user) return;
-    const myIdStr = String(user.id || user.username || '');
-    const myUserStr = String(user.username || '');
+    const myIds = getMyAllIdentifiers();
     const unreadForMe = rawMessages.filter(m => {
       if (m.status !== 'unread') return false;
-      const isForMe = (myIdStr && String(m.receiverId) === myIdStr) || (myUserStr && String(m.receiverId) === myUserStr);
-      const isFromMe = (myIdStr && String(m.senderId) === myIdStr) || (myUserStr && String(m.senderId) === myUserStr);
-      return isForMe && !isFromMe;
+      const s = String(m.senderId || '').toLowerCase();
+      const r = String(m.receiverId || '').toLowerCase();
+      return myIds.includes(r) && !myIds.includes(s);
     });
     for (const m of unreadForMe) {
       try {
@@ -694,7 +735,7 @@ export default function FTChatPage({ user: userProp }) {
     const chatNotifs = (notifications || []).filter(n =>
       n.status === 'unread' &&
       (n.type === 'chat' || n.targetTab === 'chat') &&
-      ((myIdStr && n.targetUserId === myIdStr) || (myUserStr && n.targetUserId === myUserStr))
+      myIds.includes(String(n.targetUserId || '').toLowerCase())
     );
     for (const n of chatNotifs) {
       try {
@@ -703,21 +744,23 @@ export default function FTChatPage({ user: userProp }) {
     }
   };
 
+  // Filter messages for active recipient
+  const currentMessages = useMemo(() => {
+    if (!rawMessages || !activeRecipient) return [];
+    return [...rawMessages]
+      .filter(msg => isMessageWithContact(msg, activeRecipient))
+      .sort((a, b) => new Date(a.createdAt || a.timestamp || 0).getTime() - new Date(b.createdAt || b.timestamp || 0).getTime());
+  }, [rawMessages, activeRecipient, isMessageWithContact]);
+
   // Automatically mark incoming messages from active conversation as read
   useEffect(() => {
-    if (!rawMessages || !user || !activeRecipient) return;
-    const myIdStr = String(user.id || user.username || '');
-    const myUserStr = String(user.username || '');
+    if (!currentMessages || currentMessages.length === 0 || !user) return;
+    const myIds = getMyAllIdentifiers();
 
-    const unreadInActiveThread = rawMessages.filter(m => {
+    const unreadInActiveThread = currentMessages.filter(m => {
       if (m.status !== 'unread') return false;
-      const isForMe = (myIdStr && String(m.receiverId) === myIdStr) || (myUserStr && String(m.receiverId) === myUserStr);
-      const isFromMe = (myIdStr && String(m.senderId) === myIdStr) || (myUserStr && String(m.senderId) === myUserStr);
-      if (isFromMe || !isForMe) return false;
-      if (activeRecipient === 'global') {
-        return !m.receiverId || m.receiverId === 'global';
-      }
-      return String(m.senderId) === String(activeRecipient);
+      const s = String(m.senderId || '').toLowerCase();
+      return !myIds.includes(s);
     });
 
     if (unreadInActiveThread.length > 0) {
@@ -728,22 +771,22 @@ export default function FTChatPage({ user: userProp }) {
           console.warn('Failed to mark message as read:', err);
         }
       });
-    }
 
-    // Clear matching chat notifications
-    const chatNotifs = (notifications || []).filter(n =>
-      n.status === 'unread' &&
-      (n.type === 'chat' || n.targetTab === 'chat') &&
-      ((myIdStr && n.targetUserId === myIdStr) || (myUserStr && n.targetUserId === myUserStr))
-    );
-    if (chatNotifs.length > 0) {
-      chatNotifs.forEach(async (n) => {
-        try {
-          await db.ft_notifications.update(n.id, { status: 'read' });
-        } catch (e) {}
-      });
+      // Clear matching chat notifications
+      const chatNotifs = (notifications || []).filter(n =>
+        n.status === 'unread' &&
+        (n.type === 'chat' || n.targetTab === 'chat') &&
+        myIds.includes(String(n.targetUserId || '').toLowerCase())
+      );
+      if (chatNotifs.length > 0) {
+        chatNotifs.forEach(async (n) => {
+          try {
+            await db.ft_notifications.update(n.id, { status: 'read' });
+          } catch (e) {}
+        });
+      }
     }
-  }, [activeRecipient, rawMessages, user, notifications]);
+  }, [currentMessages, user, notifications, getMyAllIdentifiers]);
 
   // Active recipient account details
   const activeRecipientAcc = activeRecipient === 'global'
@@ -777,6 +820,13 @@ export default function FTChatPage({ user: userProp }) {
       const timeB = msgB ? new Date(msgB.createdAt || msgB.timestamp || 0).getTime() : 0;
       return timeB - timeA;
     });
+
+  // Automatically select the first contact with chat history if none is currently active
+  useEffect(() => {
+    if (!activeRecipient && filteredContacts.length > 0) {
+      setActiveRecipient(String(filteredContacts[0].id || filteredContacts[0].username));
+    }
+  }, [activeRecipient, filteredContacts]);
 
   // Modal full personnel list for starting new chats
   const eligibleModalRecipients = (allAccounts || [])
@@ -946,6 +996,20 @@ export default function FTChatPage({ user: userProp }) {
                   onClick={() => {
                     setActiveRecipient(accId);
                     setMobileShowInbox(false);
+                    // Immediately mark any unread messages from this contact as read in Firestore
+                    const myIds = getMyAllIdentifiers();
+                    const contactIds = getContactAllIdentifiers(acc);
+                    const unreadFromAcc = (rawMessages || []).filter(m => {
+                      if (m.status !== 'unread') return false;
+                      const s = String(m.senderId || '').toLowerCase();
+                      const r = String(m.receiverId || '').toLowerCase();
+                      return contactIds.includes(s) && (myIds.includes(r) || !m.receiverId);
+                    });
+                    unreadFromAcc.forEach(async (m) => {
+                      try {
+                        await db.ft_messages.update(m.id, { status: 'read' });
+                      } catch (e) {}
+                    });
                   }}
                   style={{
                     padding: '0.75rem 0.85rem', borderRadius: '14px', marginBottom: '0.4rem',
