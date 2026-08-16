@@ -207,6 +207,63 @@ function isEventPassed(startStr, endStr) {
   }
 }
 
+/**
+ * Determine session day status:
+ * - 'passed': Session date and time has already ended.
+ * - 'today': Today is the calendar day of the workshop (or active session window).
+ * - 'future': Workshop is on a future date (has not reached the day of the workshop yet).
+ */
+function getSessionDayStatus(startStr, endStr) {
+  if (!startStr) return 'today';
+  try {
+    let sStr = String(startStr).trim();
+    if (!sStr.includes('T') && !sStr.includes(':') && /^\d{4}-\d{2}-\d{2}$/.test(sStr)) {
+      sStr = `${sStr}T00:00:00`;
+    }
+    const startDate = new Date(sStr.replace(' ', 'T'));
+    if (isNaN(startDate.getTime())) return 'today';
+
+    const now = new Date();
+
+    // Check if session has fully ended
+    let eStr = endStr || startStr;
+    let endStrClean = String(eStr).trim();
+    if (!endStrClean.includes('T') && !endStrClean.includes(':') && /^\d{4}-\d{2}-\d{2}$/.test(endStrClean)) {
+      endStrClean = `${endStrClean}T23:59:59`;
+    }
+    const endDate = new Date(endStrClean.replace(' ', 'T'));
+    if (!isNaN(endDate.getTime()) && now > endDate) {
+      return 'passed';
+    }
+
+    // Check if today matches the start date's local calendar day
+    const isSameDay = (
+      now.getFullYear() === startDate.getFullYear() &&
+      now.getMonth() === startDate.getMonth() &&
+      now.getDate() === startDate.getDate()
+    );
+
+    if (isSameDay) {
+      return 'today';
+    }
+
+    // Check if now is before the workshop day (midnight of that day)
+    const workshopMidnight = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0);
+    if (now < workshopMidnight) {
+      return 'future';
+    }
+
+    // If now is after start day but before end date (e.g. multi-day workshop)
+    if (!isNaN(endDate.getTime()) && now <= endDate) {
+      return 'today';
+    }
+
+    return 'today';
+  } catch {
+    return 'today';
+  }
+}
+
 // Stage Submissions Definitions per Track matching official Roadmap
 const TRACK_STAGE_SUBMISSIONS = {
   pop_science: [
@@ -426,7 +483,10 @@ export default function FTModulesPage() {
       const rawTarget = ws.targetTrack || ws.trackKey || 'both';
       if (doesItemMatchTrack(rawTarget, normTrack)) {
         const fileUrl = ws.fileUrl || ws.presentationLink || '';
-        const isPassed = isEventPassed(ws.startDate, ws.endDate);
+        const dayStatus = getSessionDayStatus(ws.startDate, ws.endDate);
+        const isPassed = dayStatus === 'passed';
+        const isFuture = dayStatus === 'future';
+        const isToday = dayStatus === 'today';
         const normTarget = normalizeTrackKey(rawTarget);
 
         // Find track-specific assignment in ft_module_items
@@ -460,6 +520,9 @@ export default function FTModulesPage() {
           startDate: ws.startDate || '',
           endDate: ws.endDate || '',
           isPassed,
+          isFuture,
+          isToday,
+          dayStatus,
           description: ws.description || ''
         });
       }
@@ -1782,30 +1845,63 @@ export default function FTModulesPage() {
                               {/* Right Action Controls for Workshop */}
                               <div className="lms-item-actions-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
                                 {/* Join Live Session Button */}
-                                {item.meetingLink && !isPassed && (
-                                  <a
-                                    href={item.meetingLink}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    style={{
-                                      background: theme.buttonBg, color: '#ffffff', padding: '0.5rem 0.9rem', borderRadius: '10px',
-                                      fontSize: '0.82rem', fontWeight: 900, textDecoration: 'none',
-                                      display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                                      boxShadow: `0 3px 10px ${theme.buttonShadow}`
-                                    }}
-                                  >
-                                    Join Live Session <ExternalLink size={14} />
-                                  </a>
-                                )}
-
-                                {item.meetingLink && isPassed && (
-                                  <span style={{
-                                    fontSize: '0.76rem', color: '#94a3b8', background: '#f1f5f9',
-                                    border: '1px solid #e2e8f0', padding: '0.35rem 0.65rem', borderRadius: '8px',
-                                    fontWeight: 700
-                                  }}>
-                                    Live Session Ended
-                                  </span>
+                                {item.meetingLink && (
+                                  <>
+                                    {isPassed ? (
+                                      <span style={{
+                                        fontSize: '0.76rem', color: '#94a3b8', background: '#f1f5f9',
+                                        border: '1px solid #e2e8f0', padding: '0.45rem 0.75rem', borderRadius: '8px',
+                                        fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem'
+                                      }}>
+                                        Live Session Ended
+                                      </span>
+                                    ) : item.isFuture ? (
+                                      <button
+                                        type="button"
+                                        disabled
+                                        title={`Join button will become active on the day of the workshop (${formattedTime || 'Upcoming'})`}
+                                        style={{
+                                          background: '#f1f5f9',
+                                          color: '#94a3b8',
+                                          border: '1.5px solid #e2e8f0',
+                                          padding: '0.5rem 0.9rem',
+                                          borderRadius: '10px',
+                                          fontSize: '0.82rem',
+                                          fontWeight: 800,
+                                          cursor: 'not-allowed',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '0.4rem',
+                                          opacity: 0.65,
+                                          boxShadow: 'none',
+                                          userSelect: 'none'
+                                        }}
+                                      >
+                                        <Clock size={13} style={{ color: '#94a3b8' }} /> Join Live Session <ExternalLink size={13} style={{ opacity: 0.4 }} />
+                                      </button>
+                                    ) : (
+                                      <a
+                                        href={item.meetingLink}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        style={{
+                                          background: theme.buttonBg,
+                                          color: '#ffffff',
+                                          padding: '0.5rem 0.95rem',
+                                          borderRadius: '10px',
+                                          fontSize: '0.82rem',
+                                          fontWeight: 900,
+                                          textDecoration: 'none',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '0.4rem',
+                                          boxShadow: `0 3px 12px ${theme.buttonShadow}`
+                                        }}
+                                      >
+                                        <Video size={14} /> Join Live Session <ExternalLink size={14} />
+                                      </a>
+                                    )}
+                                  </>
                                 )}
 
                                 <CheckCircle2 size={18} style={{ color: isPassed ? '#94a3b8' : theme.accentColor }} />
