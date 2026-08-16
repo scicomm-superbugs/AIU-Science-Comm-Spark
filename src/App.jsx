@@ -17,6 +17,7 @@ import FTTimelineManagement from './FTTimelineManagement';
 import FTEvaluationManagement from './FTEvaluationManagement';
 import FTTestSection from './FTTestSection';
 import FTChatPage from './FTChatPage';
+import FTModulesPage from './FTModulesPage';
 import FTNotificationsPage from './FTNotificationsPage';
 import Login from './Login';
 import Register from './Register';
@@ -91,6 +92,7 @@ function App() {
               <Route path="my-competition" element={<FTMyCompetition />} />
               <Route path="our-team" element={<FTOurTeam />} />
               <Route path="schedule" element={<FTSchedulePage />} />
+              <Route path="modules" element={<FTModulesPage />} />
               <Route path="chat" element={<FTChatPage />} />
               <Route path="notifications" element={<FTNotificationsPage />} />
 
@@ -132,6 +134,7 @@ function App() {
           <Route path="/admin/submission-assignments" element={<Navigate to="/dashboard/admin/submission-assignments" replace />} />
           <Route path="/judge" element={<Navigate to="/dashboard/judge" replace />} />
           <Route path="/chat" element={<Navigate to="/dashboard/chat" replace />} />
+          <Route path="/modules" element={<Navigate to="/dashboard/modules" replace />} />
           <Route path="/manage-places" element={<Navigate to="/dashboard/manage-places" replace />} />
 
           {/* Route fallback */}
