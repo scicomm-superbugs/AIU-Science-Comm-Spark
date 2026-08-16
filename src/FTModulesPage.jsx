@@ -438,6 +438,13 @@ export default function FTModulesPage() {
       });
     });
 
+    // Sort all available items strictly by date and time in chronological order
+    items.sort((a, b) => {
+      const timeA = a.startDate ? new Date(a.startDate).getTime() : (a.openDate ? new Date(a.openDate).getTime() : 0);
+      const timeB = b.startDate ? new Date(b.startDate).getTime() : (b.openDate ? new Date(b.openDate).getTime() : 0);
+      return timeA - timeB;
+    });
+
     return items;
   }, [dynamicWorkshops, timelineConfig, moduleItemAssignments, selectedTrack]);
 
@@ -747,10 +754,10 @@ export default function FTModulesPage() {
     }
   };
 
-  // Filter items in the "+ Add Content to Module" Picker Modal
+  // Filter and sort items chronologically in the "+ Add Content to Module" Picker Modal
   const pickerFilteredItems = useMemo(() => {
     if (!pickerModalWeek) return [];
-    return allTrackAvailableItems.filter(item => {
+    const list = allTrackAvailableItems.filter(item => {
       // Type filter
       if (pickerFilterType === 'workshop' && item.isSubmission) return false;
       if (pickerFilterType === 'submission' && !item.isSubmission) return false;
@@ -768,6 +775,13 @@ export default function FTModulesPage() {
       }
 
       return true;
+    });
+
+    // Chronological order: earliest date & time first
+    return list.sort((a, b) => {
+      const timeA = a.startDate ? new Date(a.startDate).getTime() : (a.openDate ? new Date(a.openDate).getTime() : 0);
+      const timeB = b.startDate ? new Date(b.startDate).getTime() : (b.openDate ? new Date(b.openDate).getTime() : 0);
+      return timeA - timeB;
     });
   }, [allTrackAvailableItems, pickerModalWeek, pickerFilterType, pickerSearchQuery]);
 
