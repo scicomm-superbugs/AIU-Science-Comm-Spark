@@ -430,29 +430,44 @@ export default function FTDashboard() {
   };
 
   const getExactItemSchedule = (item) => {
+    const formatTimeAr = (d) => {
+      if (!d || isNaN(d.getTime())) return '';
+      const hours = d.getHours();
+      const minutes = d.getMinutes();
+      const period = hours >= 12 ? 'مساءً' : 'صباحاً';
+      const h12 = hours % 12 || 12;
+      const mStr = String(minutes).padStart(2, '0');
+      return `${h12}:${mStr} ${period}`;
+    };
+
     // 1. If workshop with startDate
     if (item.startDate) {
       const d = new Date(item.startDate);
       if (!isNaN(d.getTime())) {
         const dateEn = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-        const dateAr = d.toLocaleDateString('ar-EG', { weekday: 'short', month: 'short', day: 'numeric' });
+        const dateAr = d.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' });
         const hasTime = String(item.startDate).includes('T') || String(item.startDate).includes(':');
         let timeEn = '';
+        let timeAr = '';
         if (hasTime) {
           const startT = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+          const startTAr = formatTimeAr(d);
           if (item.endDate) {
             const endD = new Date(item.endDate);
             if (!isNaN(endD.getTime())) {
               const endT = endD.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
               timeEn = `${startT} – ${endT}`;
+              timeAr = `${startTAr} – ${formatTimeAr(endD)}`;
             } else {
               timeEn = startT;
+              timeAr = startTAr;
             }
           } else {
             timeEn = startT;
+            timeAr = startTAr;
           }
         }
-        return { dateEn, dateAr, timeEn };
+        return { dateEn, dateAr, timeEn, timeAr };
       }
     }
 
@@ -463,22 +478,23 @@ export default function FTDashboard() {
         ? openD.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
         : item.openDate;
       const dateAr = !isNaN(openD.getTime())
-        ? openD.toLocaleDateString('ar-EG', { weekday: 'short', month: 'short', day: 'numeric' })
+        ? openD.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })
         : item.openDate;
       
       const timeEn = item.closeDeadline ? `Deadline: ${item.closeDeadline}` : '';
-      return { dateEn, dateAr, timeEn };
+      const timeAr = item.closeDeadline ? `الموعد النهائي: ${formatUnifiedDate(item.closeDeadline)}` : '';
+      return { dateEn, dateAr, timeEn, timeAr };
     }
 
     // 3. Stage milestone with deadline
     if (item._rawDate && !isNaN(item._rawDate.getTime())) {
       const d = item._rawDate;
       const dateEn = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-      const dateAr = d.toLocaleDateString('ar-EG', { weekday: 'short', month: 'short', day: 'numeric' });
-      return { dateEn, dateAr, timeEn: 'Milestone Review' };
+      const dateAr = d.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' });
+      return { dateEn, dateAr, timeEn: 'Milestone Review', timeAr: 'تقييم المرحلة' };
     }
 
-    return { dateEn: item.deadline || 'Date TBA', dateAr: item.deadline || 'الموعد يحدد لاحقاً', timeEn: '' };
+    return { dateEn: item.deadline || 'Date TBA', dateAr: item.deadline || 'الموعد يحدد لاحقاً', timeEn: '', timeAr: '' };
   };
 
   const handleAgendaItemClick = (item) => {
@@ -760,9 +776,10 @@ export default function FTDashboard() {
           </div>
         </div>
 
-        {/* ── REDESIGNED AGENDA WIDGET: ما يحدث الآن والفعاليات القادمة ── */}
+        {/* ── REDESIGNED AGENDA WIDGET: ما يحدث الآن والفعاليات القادمة (RTL) ── */}
         <div 
           className="ft-agenda-widget"
+          dir="rtl"
           style={{
             marginTop: '1.25rem',
             padding: '1.15rem 1.25rem',
@@ -770,7 +787,8 @@ export default function FTDashboard() {
             border: '1px solid #e2e8f0',
             borderRadius: '18px',
             boxShadow: '0 4px 20px rgba(15, 23, 42, 0.04)',
-            textAlign: 'left'
+            direction: 'rtl',
+            textAlign: 'right'
           }}
         >
           {/* Header */}
@@ -787,17 +805,19 @@ export default function FTDashboard() {
             </div>
           </div>
 
-          {/* 2-Column Grid (desktop) / Vertical Stack with separators (mobile) */}
+          {/* 2-Column Grid (desktop: Right = Required, Left = Optional) / Vertical Stack (mobile) */}
           <div className="ft-agenda-grid-container">
             
-            {/* ── SECTION 1: 📌 مهام أساسية (Required) ── */}
+            {/* ── SECTION 1 (RIGHT IN RTL): 📌 مهام أساسية (Required) ── */}
             <div className="ft-agenda-section-group">
-              <div className="ft-agenda-section-label required-label">
-                <span>📌</span>
-                <span>مهام أساسية</span>
-              </div>
-              <div className={`ft-agenda-track-badge track-primary`}>
-                {primaryTrackKey === 'pop_science' ? '🎥 المسار الأول — الفيديوهات العلمية' : '📰 المسار الثاني — الصحافة العلمية'}
+              <div className="ft-agenda-section-header-row">
+                <div className="ft-agenda-section-label required-label">
+                  <span>📌</span>
+                  <span>مهام أساسية</span>
+                </div>
+                <div className="ft-agenda-track-badge track-primary">
+                  {primaryTrackKey === 'pop_science' ? '🎥 المسار الأول — الفيديوهات العلمية' : '📰 المسار الثاني — الصحافة العلمية'}
+                </div>
               </div>
 
               {primaryUpcoming.length === 0 ? (
@@ -832,8 +852,7 @@ export default function FTDashboard() {
 
                   // Arabic time formatting
                   const getArabicTimeDisplay = (sched) => {
-                    if (!sched.timeEn) return '';
-                    return sched.timeEn;
+                    return sched.timeAr || sched.timeEn || '';
                   };
 
                   return (
@@ -866,15 +885,15 @@ export default function FTDashboard() {
 
                       {/* Row 3: Date & Time */}
                       <div className={`ft-agenda-datetime${status.isLive ? ' is-live' : ''}`}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <Calendar size={12} style={{ color: status.isLive ? '#dc2626' : '#2563eb', flexShrink: 0 }} />
-                          <span>📅 {getArabicDateDisplay(sched, status)}</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <Calendar size={13} style={{ color: status.isLive ? '#dc2626' : '#2563eb', flexShrink: 0 }} />
+                          <span>{getArabicDateDisplay(sched, status)}</span>
                         </span>
                         {getArabicTimeDisplay(sched) && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                            <span>·</span>
-                            <Clock size={12} style={{ color: '#059669', flexShrink: 0 }} />
-                            <span>🕘 {getArabicTimeDisplay(sched)}</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <span style={{ opacity: 0.4 }}>•</span>
+                            <Clock size={13} style={{ color: '#059669', flexShrink: 0 }} />
+                            <span>{getArabicTimeDisplay(sched)}</span>
                           </span>
                         )}
                       </div>
@@ -914,7 +933,7 @@ export default function FTDashboard() {
                           onClick={() => handleAgendaItemClick(item)}
                           className="ft-agenda-btn-details"
                         >
-                          التفاصيل →
+                          التفاصيل ←
                         </button>
                       </div>
                     </div>
@@ -926,14 +945,16 @@ export default function FTDashboard() {
             {/* ── Mobile separator ── */}
             <div className="ft-agenda-mobile-separator" />
 
-            {/* ── SECTION 2: ✨ أنشطة إضافية (Optional) ── */}
+            {/* ── SECTION 2 (LEFT IN RTL): ✨ أنشطة إضافية (Optional) ── */}
             <div className="ft-agenda-section-group">
-              <div className="ft-agenda-section-label optional-label">
-                <span>✨</span>
-                <span>أنشطة إضافية</span>
-              </div>
-              <div className={`ft-agenda-track-badge track-secondary`}>
-                {secondaryTrackKey === 'pop_science' ? '🎥 المسار الأول — الفيديوهات العلمية' : '📰 المسار الثاني — الصحافة العلمية'}
+              <div className="ft-agenda-section-header-row">
+                <div className="ft-agenda-section-label optional-label">
+                  <span>✨</span>
+                  <span>أنشطة إضافية</span>
+                </div>
+                <div className="ft-agenda-track-badge track-secondary">
+                  {secondaryTrackKey === 'pop_science' ? '🎥 المسار الأول — الفيديوهات العلمية' : '📰 المسار الثاني — الصحافة العلمية'}
+                </div>
               </div>
 
               {optionalUpcoming.length === 0 ? (
@@ -965,8 +986,7 @@ export default function FTDashboard() {
                   };
 
                   const getArabicTimeDisplay = (sched) => {
-                    if (!sched.timeEn) return '';
-                    return sched.timeEn;
+                    return sched.timeAr || sched.timeEn || '';
                   };
 
                   return (
@@ -999,15 +1019,15 @@ export default function FTDashboard() {
 
                       {/* Row 3: Date & Time */}
                       <div className={`ft-agenda-datetime${status.isLive ? ' is-live' : ''}`}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <Calendar size={12} style={{ color: status.isLive ? '#dc2626' : '#2563eb', flexShrink: 0 }} />
-                          <span>📅 {getArabicDateDisplay(sched, status)}</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <Calendar size={13} style={{ color: status.isLive ? '#dc2626' : '#2563eb', flexShrink: 0 }} />
+                          <span>{getArabicDateDisplay(sched, status)}</span>
                         </span>
                         {getArabicTimeDisplay(sched) && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                            <span>·</span>
-                            <Clock size={12} style={{ color: '#059669', flexShrink: 0 }} />
-                            <span>🕘 {getArabicTimeDisplay(sched)}</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <span style={{ opacity: 0.4 }}>•</span>
+                            <Clock size={13} style={{ color: '#059669', flexShrink: 0 }} />
+                            <span>{getArabicTimeDisplay(sched)}</span>
                           </span>
                         )}
                       </div>
@@ -1039,7 +1059,7 @@ export default function FTDashboard() {
                           onClick={() => handleAgendaItemClick(item)}
                           className="ft-agenda-btn-details"
                         >
-                          التفاصيل →
+                          التفاصيل ←
                         </button>
                       </div>
                     </div>
