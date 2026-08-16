@@ -52,6 +52,7 @@ const CATEGORY_THEMES = {
 export default function FTActivityLogsPage() {
   const { user } = useAuth();
   const rawLogs = useLiveCollection('ft_activity_logs') || [];
+  const rawScientists = useLiveCollection('scientists') || [];
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -63,16 +64,68 @@ export default function FTActivityLogsPage() {
   const [inspectModalLog, setInspectModalLog] = useState(null);
   const [isPruning, setIsPruning] = useState(false);
 
-  // Parse and sort all logs chronologically (newest first)
+  // Dynamic user resolver: Resolves anonymous/generic log user identities to real scientist accounts
+  const resolveLogUser = (log) => {
+    const u = log.user || {};
+    const isAnonymous = !u.name || u.name === 'Anonymous User' || u.username === 'anonymous' || !u.id || u.id === 'guest';
+
+    if (!isAnonymous && u.name && u.name !== 'Anonymous User') {
+      return u;
+    }
+
+    if (rawScientists && rawScientists.length > 0) {
+      const matched = rawScientists.find(s => 
+        (u.id && (s.id === u.id || s.username === u.id)) ||
+        (u.username && u.username !== 'anonymous' && (s.username === u.username || s.id === u.username)) ||
+        (u.email && (s.email === u.email || s.googleEmail === u.email)) ||
+        (log.metadata?.userId && (s.id === log.metadata.userId || s.username === log.metadata.userId)) ||
+        (log.metadata?.username && (s.username === log.metadata.username || s.id === log.metadata.username))
+      );
+
+      if (matched) {
+        return {
+          id: matched.id,
+          username: matched.username,
+          name: matched.name || matched.username,
+          role: matched.role || u.role || 'competitor',
+          track: matched.registeredTrack || u.track || 'unassigned',
+          avatar: matched.avatarUrl || matched.avatar
+        };
+      }
+    }
+
+    // If current logged-in user is available in this active session
+    if (user && (user.name || user.username)) {
+      return {
+        id: user.id,
+        username: user.username,
+        name: user.name || user.username,
+        role: user.role || u.role || 'user',
+        track: user.registeredTrack || u.track || 'unassigned',
+        avatar: user.avatar
+      };
+    }
+
+    return u;
+  };
+
+  // Parse and sort all logs chronologically (newest first) with resolved user names
   const allLogs = useMemo(() => {
-    const list = [...rawLogs];
+    const list = rawLogs.map(log => {
+      const resolvedUser = resolveLogUser(log);
+      return {
+        ...log,
+        user: resolvedUser
+      };
+    });
+
     list.sort((a, b) => {
       const timeA = a.epochMs || (a.timestamp ? new Date(a.timestamp).getTime() : 0);
       const timeB = b.epochMs || (b.timestamp ? new Date(b.timestamp).getTime() : 0);
       return timeB - timeA;
     });
     return list;
-  }, [rawLogs]);
+  }, [rawLogs, rawScientists, user]);
 
   // Apply filters
   const filteredLogs = useMemo(() => {

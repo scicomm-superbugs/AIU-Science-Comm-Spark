@@ -428,7 +428,12 @@ export const AuthProvider = ({ children }) => {
     setViewAsMode(null);
     localStorage.removeItem('ft_userId');
     sessionStorage.removeItem('ft_userId');
+    localStorage.removeItem('ft_user');
+    sessionStorage.removeItem('ft_user');
     sessionStorage.removeItem('ft_viewAsMode');
+    if (typeof window !== 'undefined') {
+      window.__CURRENT_FT_USER__ = null;
+    }
   };
 
   const effectiveUser = (function() {
@@ -482,11 +487,11 @@ export const AuthProvider = ({ children }) => {
         modeTrack = 'science_journalism';
         modePart = 'individual';
         impCode = 'C-802';
-      } else if (viewAsMode === 'judge_scicomm') {
-        impId = 'test_judge_trainer';
-        impName = 'test-judge-trainer';
-        impUsername = 'test_judge_trainer';
-        impEmail = 'test-judge-trainer@aiu.edu.eg';
+      } else if (viewAsMode === 'judge_trainer' || viewAsMode === 'judge_scicomm') {
+        impId = 'test_judge_scicomm';
+        impName = 'test-trainer-judge';
+        impUsername = 'test_judge_scicomm';
+        impEmail = 'test-trainer-judge@aiu.edu.eg';
         modeRole = 'trainer_judge';
         modeTrack = '';
         impCode = 'J-301';
@@ -524,6 +529,27 @@ export const AuthProvider = ({ children }) => {
       viewAsMode: null
     };
   })();
+
+  // Keep localStorage, sessionStorage, and window user identity in sync in real-time
+  useEffect(() => {
+    if (effectiveUser && (effectiveUser.name || effectiveUser.username)) {
+      try {
+        localStorage.setItem('ft_user', JSON.stringify(effectiveUser));
+        sessionStorage.setItem('ft_user', JSON.stringify(effectiveUser));
+        if (typeof window !== 'undefined') {
+          window.__CURRENT_FT_USER__ = effectiveUser;
+        }
+      } catch {}
+    } else if (!effectiveUser && !loading) {
+      try {
+        localStorage.removeItem('ft_user');
+        sessionStorage.removeItem('ft_user');
+        if (typeof window !== 'undefined') {
+          window.__CURRENT_FT_USER__ = null;
+        }
+      } catch {}
+    }
+  }, [effectiveUser, loading]);
 
   const isRealAdmin = Boolean(effectiveUser && (effectiveUser.realRole === 'master' || effectiveUser.realRole === 'admin' || Boolean(effectiveUser.isMasterAdmin) || isAdminEmail(effectiveUser.email) || isAdminEmail(effectiveUser.googleEmail)));
 

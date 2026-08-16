@@ -60,6 +60,90 @@ export function getDeviceMetadata() {
  * @param {Object} [options.user] - Override user identity object
  * @param {string} [options.level] - 'info' | 'success' | 'warning' | 'error'
  */
+/**
+ * Helper to resolve active user identity with multiple fallbacks
+ */
+export function getActiveUserIdentity(providedUser = null) {
+  if (providedUser && providedUser.username && providedUser.username !== 'anonymous' && providedUser.name && providedUser.name !== 'Anonymous User') {
+    return {
+      id: String(providedUser.id || providedUser.userId || 'guest'),
+      username: String(providedUser.username),
+      name: String(providedUser.name || providedUser.username),
+      email: String(providedUser.email || providedUser.googleEmail || ''),
+      role: String(providedUser.role || providedUser.realRole || 'guest'),
+      track: String(providedUser.registeredTrack || providedUser.track || 'unassigned')
+    };
+  }
+
+  if (typeof window !== 'undefined') {
+    // 1. Check window.__CURRENT_FT_USER__
+    if (window.__CURRENT_FT_USER__ && (window.__CURRENT_FT_USER__.name || window.__CURRENT_FT_USER__.username)) {
+      const u = window.__CURRENT_FT_USER__;
+      return {
+        id: String(u.id || u.userId || 'guest'),
+        username: String(u.username || 'user'),
+        name: String(u.name || u.username || 'User'),
+        email: String(u.email || u.googleEmail || ''),
+        role: String(u.role || u.realRole || 'guest'),
+        track: String(u.registeredTrack || u.track || 'unassigned')
+      };
+    }
+
+    // 2. Check localStorage / sessionStorage ft_user
+    try {
+      const stored = localStorage.getItem('ft_user') || sessionStorage.getItem('ft_user') || localStorage.getItem('user') || sessionStorage.getItem('user');
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u && (u.name || u.username)) {
+          return {
+            id: String(u.id || u.userId || 'guest'),
+            username: String(u.username || 'user'),
+            name: String(u.name || u.username || 'User'),
+            email: String(u.email || u.googleEmail || ''),
+            role: String(u.role || u.realRole || 'guest'),
+            track: String(u.registeredTrack || u.track || 'unassigned')
+          };
+        }
+      }
+    } catch {}
+
+    // 3. Check ft_userId in localStorage / sessionStorage
+    try {
+      const storedId = localStorage.getItem('ft_userId') || sessionStorage.getItem('ft_userId');
+      if (storedId) {
+        return {
+          id: String(storedId),
+          username: String(storedId),
+          name: String(storedId),
+          email: '',
+          role: 'user',
+          track: 'unassigned'
+        };
+      }
+    } catch {}
+  }
+
+  return {
+    id: providedUser?.id || providedUser?.userId || 'guest',
+    username: providedUser?.username || 'anonymous',
+    name: providedUser?.name || providedUser?.username || 'Anonymous User',
+    email: providedUser?.email || providedUser?.googleEmail || '',
+    role: providedUser?.role || 'guest',
+    track: providedUser?.registeredTrack || providedUser?.track || 'unassigned'
+  };
+}
+
+/**
+ * Log an activity to Firestore collection `scicommspark_ft_activity_logs`
+ * @param {Object} options
+ * @param {string} options.category - 'AUTH' | 'CLICKS' | 'SUBMISSIONS' | 'TEAMS' | 'MESSAGES' | 'LMS' | 'JUDGING' | 'ADMIN' | 'ERRORS'
+ * @param {string} options.action - Short title of action (e.g., 'User Logged In', 'Button Clicked', 'Team Created')
+ * @param {string} [options.details] - Human-readable explanation
+ * @param {string} [options.target] - Target item ID, name, or URL
+ * @param {Object} [options.metadata] - Arbitrary JSON payload
+ * @param {Object} [options.user] - Override user identity object
+ * @param {string} [options.level] - 'info' | 'success' | 'warning' | 'error'
+ */
 export async function logActivity({
   category = 'GENERAL',
   action = 'User Action',
@@ -70,17 +154,7 @@ export async function logActivity({
   level = 'info'
 }) {
   try {
-    // Determine active user identity from param or localStorage/sessionStorage
-    let activeUser = user;
-    if (!activeUser && typeof window !== 'undefined') {
-      try {
-        const storedUser = localStorage.getItem('ft_user') || sessionStorage.getItem('ft_user');
-        if (storedUser) {
-          activeUser = JSON.parse(storedUser);
-        }
-      } catch {}
-    }
-
+    const activeUser = getActiveUserIdentity(user);
     const device = getDeviceMetadata();
     const sessionId = getSessionId();
     const now = new Date();
@@ -101,14 +175,7 @@ export async function logActivity({
         screen: device.screen,
         language: device.language
       },
-      user: {
-        id: activeUser?.id || activeUser?.userId || 'guest',
-        username: activeUser?.username || 'anonymous',
-        name: activeUser?.name || activeUser?.username || 'Anonymous User',
-        email: activeUser?.email || activeUser?.googleEmail || '',
-        role: activeUser?.role || 'guest',
-        track: activeUser?.registeredTrack || activeUser?.track || 'unassigned'
-      },
+      user: activeUser,
       metadata: metadata || {}
     };
 
