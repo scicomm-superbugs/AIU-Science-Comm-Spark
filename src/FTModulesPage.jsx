@@ -150,6 +150,32 @@ function formatShortDate(dateStr) {
 }
 
 /**
+ * Sort items chronologically:
+ * - Different dates: earliest date first.
+ * - Same calendar date: Workshops/Lectures/Office Hours come FIRST, Submissions/Milestones come AFTER.
+ */
+function compareModuleItems(a, b) {
+  const rawDateA = String(a.startDate || a.openDate || '');
+  const rawDateB = String(b.startDate || b.openDate || '');
+
+  const dayA = rawDateA ? rawDateA.slice(0, 10) : '';
+  const dayB = rawDateB ? rawDateB.slice(0, 10) : '';
+
+  if (dayA && dayB && dayA === dayB) {
+    // Same calendar day: workshop/lecture (priority 1) comes before submission/milestone (priority 2)
+    const priorityA = a.isSubmission ? 2 : 1;
+    const priorityB = b.isSubmission ? 2 : 1;
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
+  }
+
+  const timeA = rawDateA ? new Date(rawDateA).getTime() : 0;
+  const timeB = rawDateB ? new Date(rawDateB).getTime() : 0;
+  return timeA - timeB;
+}
+
+/**
  * Check if the workshop / session date and time has passed
  */
 function isEventPassed(startStr, endStr) {
@@ -438,12 +464,8 @@ export default function FTModulesPage() {
       });
     });
 
-    // Sort all available items strictly by date and time in chronological order
-    items.sort((a, b) => {
-      const timeA = a.startDate ? new Date(a.startDate).getTime() : (a.openDate ? new Date(a.openDate).getTime() : 0);
-      const timeB = b.startDate ? new Date(b.startDate).getTime() : (b.openDate ? new Date(b.openDate).getTime() : 0);
-      return timeA - timeB;
-    });
+    // Sort all available items strictly by date with workshops before submissions on same date
+    items.sort(compareModuleItems);
 
     return items;
   }, [dynamicWorkshops, timelineConfig, moduleItemAssignments, selectedTrack]);
@@ -493,9 +515,9 @@ export default function FTModulesPage() {
     // Convert map to sorted array
     const result = Array.from(weekMapByNum.values()).sort((a, b) => a.weekNumber - b.weekNumber);
 
-    // Sort items chronologically inside each module
+    // Sort items chronologically inside each module (workshops before submissions on same date)
     result.forEach(w => {
-      w.items.sort((a, b) => new Date(a.startDate || 0) - new Date(b.startDate || 0));
+      w.items.sort(compareModuleItems);
     });
 
     return result;
@@ -777,12 +799,8 @@ export default function FTModulesPage() {
       return true;
     });
 
-    // Chronological order: earliest date & time first
-    return list.sort((a, b) => {
-      const timeA = a.startDate ? new Date(a.startDate).getTime() : (a.openDate ? new Date(a.openDate).getTime() : 0);
-      const timeB = b.startDate ? new Date(b.startDate).getTime() : (b.openDate ? new Date(b.openDate).getTime() : 0);
-      return timeA - timeB;
-    });
+    // Chronological order: earliest date first, workshops before submissions on same date
+    return list.sort(compareModuleItems);
   }, [allTrackAvailableItems, pickerModalWeek, pickerFilterType, pickerSearchQuery]);
 
   return (
