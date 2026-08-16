@@ -4,7 +4,8 @@ import {
   BookOpen, FileText, ChevronDown, ChevronRight, ExternalLink, Plus, 
   Calendar, Clock, User, CheckCircle2, Search, Layers, GripVertical, 
   Video, Pencil, Trash2, X, Sparkles, Paperclip, Check, AlertCircle, 
-  Download, ArrowRightLeft, MoveRight, Award, Send, CheckCircle, Flame
+  Download, ArrowRightLeft, MoveRight, Award, Send, CheckCircle, Flame,
+  FolderPlus, Filter, RotateCcw
 } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { db, useLiveCollection } from './db';
@@ -13,7 +14,7 @@ import './scicommspark.css';
 
 /**
  * Format exact date and time cleanly without duplicated start/end times
- * e.g. "Thu, Aug 6, 2026 • 5:00 PM" OR "Fri, Aug 21, 2026 • 10:00 PM - 11:00 PM"
+ * e.g. "Thu, Aug 6, 2026 • 5:00 PM"
  */
 function formatExactDateTime(startStr, endStr) {
   if (!startStr) return null;
@@ -42,7 +43,6 @@ function formatExactDateTime(startStr, endStr) {
         minute: '2-digit',
         hour12: true
       });
-      // ONLY show end time if it is genuinely different from start time and >= 1 minute apart
       if (endTime && endTime !== timeFormatted && Math.abs(endD.getTime() - d.getTime()) >= 60000) {
         return `${dateFormatted} • ${timeFormatted} - ${endTime}`;
       }
@@ -84,7 +84,6 @@ function isEventPassed(startStr, endStr) {
   try {
     const targetDate = endStr ? new Date(endStr) : new Date(startStr);
     if (isNaN(targetDate.getTime())) return false;
-    // If only date (no time specified), consider it passed after 23:59:59 of that day
     if (!String(startStr).includes('T') && !String(startStr).includes(':')) {
       targetDate.setHours(23, 59, 59, 999);
     }
@@ -94,94 +93,76 @@ function isEventPassed(startStr, endStr) {
   }
 }
 
-// Default Track-Specific Weeks
-const DEFAULT_WEEKS_BY_TRACK = {
-  pop_science: [
-    { weekNumber: 1, weekKey: 'pop_science_week_1', defaultTitle: 'Week 1: Pop Science Foundations & Competition Orientation' },
-    { weekNumber: 2, weekKey: 'pop_science_week_2', defaultTitle: 'Week 2: Short Video Scriptwriting & Scientific Storytelling' },
-    { weekNumber: 3, weekKey: 'pop_science_week_3', defaultTitle: 'Week 3: On-Camera Delivery, Voice Acting & Mobile Editing' },
-    { weekNumber: 4, weekKey: 'pop_science_week_4', defaultTitle: 'Week 4: Long-Form Video Production & Animation Basics' },
-    { weekNumber: 5, weekKey: 'pop_science_week_5', defaultTitle: 'Week 5: Grand Finale Stage Performance & Showmanship' }
-  ],
-  science_journalism: [
-    { weekNumber: 1, weekKey: 'science_journalism_week_1', defaultTitle: 'Week 1: Science Journalism Orientation & Topic Scouting' },
-    { weekNumber: 2, weekKey: 'science_journalism_week_2', defaultTitle: 'Week 2: Field Research, Expert Interviews & Scientific Storytelling' },
-    { weekNumber: 3, weekKey: 'science_journalism_week_3', defaultTitle: 'Week 3: Science Feature Writing & Editorial Ethics' },
-    { weekNumber: 4, weekKey: 'science_journalism_week_4', defaultTitle: 'Week 4: Fact-Checking, Digital Publishing & Headline Crafting' },
-    { weekNumber: 5, weekKey: 'science_journalism_week_5', defaultTitle: 'Week 5: Live Stage Talk Show & Grand Finale Showcase' }
-  ]
-};
-
-// Default Official Stage Submissions per Track
-const DEFAULT_STAGE_SUBMISSIONS = {
+// Stage Submissions Definitions per Track
+const TRACK_STAGE_SUBMISSIONS = {
   pop_science: [
     {
-      id: 'pop_stage_1',
+      id: 'stage_pop_1',
       stageId: 1,
       isSubmission: true,
       title: 'Stage 1 Official Submission: Short Pop Video',
       sub: 'Reels / TikTok SciComm Video (max 90 seconds)',
       defaultOpenDate: '2026-08-15T00:00',
       defaultDeadline: '2026-09-01T23:59',
-      defaultWeek: 2,
+      targetTrack: 'pop_science',
       description: 'Produce a punchy, highly engaging 90-second short video introducing a core scientific concept for social media.'
     },
     {
-      id: 'pop_stage_2',
+      id: 'stage_pop_2',
       stageId: 2,
       isSubmission: true,
       title: 'Stage 2 Official Submission: Long Pop Video',
       sub: 'YouTube SciComm Video (up to 3 minutes)',
       defaultOpenDate: '2026-09-02T00:00',
       defaultDeadline: '2026-09-20T23:59',
-      defaultWeek: 4,
+      targetTrack: 'pop_science',
       description: 'Deep scientific storytelling featuring comprehensive explanation, visual graphics, and clear narration.'
     },
     {
-      id: 'pop_stage_3',
+      id: 'stage_pop_3',
       stageId: 3,
       isSubmission: true,
       title: 'Stage 3 (Finals): Grand Finale Live Stage Show',
       sub: 'Interactive Live Presentation (5 mins on stage)',
       defaultOpenDate: '2026-09-21T00:00',
       defaultDeadline: '2026-10-10T23:59',
-      defaultWeek: 5,
+      targetTrack: 'pop_science',
       description: 'Deliver an interactive live science presentation on stage before expert judges, audience, and broadcast.'
     }
   ],
   science_journalism: [
     {
-      id: 'jour_stage_1',
+      id: 'stage_jour_1',
       stageId: 1,
       isSubmission: true,
       title: 'Stage 1 Official Submission: Pre-Interview Preparation',
       sub: 'Topic Research, Profile & Field Interview Prep',
       defaultOpenDate: '2026-08-15T00:00',
       defaultDeadline: '2026-09-01T23:59',
-      defaultWeek: 2,
+      targetTrack: 'science_journalism',
       googleFormUrl: 'https://forms.gle/tzgEf9QxBj3nG43S9',
       description: 'Submit your Pre-Interview Preparation document via Google Form demonstrating thorough literature review and interview planning.'
     },
     {
-      id: 'jour_stage_2',
+      id: 'stage_jour_2',
       stageId: 2,
       isSubmission: true,
       title: 'Stage 2 Official Submission: Article Publication PDF',
       sub: 'Simplified Science Article Publication',
       defaultOpenDate: '2026-09-02T00:00',
       defaultDeadline: '2026-09-20T23:59',
-      defaultWeek: 4,
+      targetTrack: 'science_journalism',
       description: 'Write and upload a formatted science article PDF document ready for digital publishing and magazine editorial review.'
     },
     {
-      id: 'jour_stage_3',
+      id: 'stage_jour_3',
       stageId: 3,
       isSubmission: true,
       title: 'Stage 3 (Finals): Live Talk Show Showcase',
       sub: 'Live Science Talk Show Interview on Stage',
       defaultOpenDate: '2026-09-21T00:00',
       defaultDeadline: '2026-10-10T23:59',
-      defaultWeek: 5,
+      targetTrack: 'science_journalism',
       description: 'Host a simulated live science talk show interview on stage in front of expert judges and public audience.'
     }
   ]
@@ -190,7 +171,6 @@ const DEFAULT_STAGE_SUBMISSIONS = {
 export default function FTModulesPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const outletContext = useOutletContext();
   
   const scientists = useLiveCollection('scientists') || [];
   const dynamicWorkshops = useLiveCollection('workshops') || [];
@@ -225,11 +205,17 @@ export default function FTModulesPage() {
   const [editingWeekTitleText, setEditingWeekTitleText] = useState('');
   const [isSavingWeekTitle, setIsSavingWeekTitle] = useState(false);
 
-  // Add New Week Modal State
+  // Add New Module/Week Modal State
   const [showAddWeekModal, setShowAddWeekModal] = useState(false);
   const [newWeekNumber, setNewWeekNumber] = useState(1);
   const [newWeekTitle, setNewWeekTitle] = useState('');
   const [isSavingNewWeek, setIsSavingNewWeek] = useState(false);
+
+  // Add Content / Workshop / File / Submission Picker Modal State
+  const [pickerModalWeek, setPickerModalWeek] = useState(null);
+  const [pickerSearchQuery, setPickerSearchQuery] = useState('');
+  const [pickerFilterType, setPickerFilterType] = useState('all'); // 'all' | 'workshop' | 'submission' | 'file'
+  const [isAssigningItem, setIsAssigningItem] = useState(false);
 
   const toggleWeek = (weekKey) => {
     setCollapsedWeeks(prev => ({
@@ -248,33 +234,33 @@ export default function FTModulesPage() {
     setCollapsedWeeks({});
   };
 
-  // Build track-specific grouped weeks with automatic workshop mapping, stage submissions, and chronological sorting
-  const groupedWeeks = useMemo(() => {
+  // Check if a workshop or item matches the selected track tab
+  const doesItemMatchTrack = (itemTrack, normTrack) => {
+    if (!itemTrack) return true;
+    const raw = String(itemTrack).toLowerCase().trim();
+    if (raw === 'both' || raw === 'all' || raw === 'both_tracks' || raw === 'all_tracks' || raw.includes('both') || raw.includes('all') || raw === 'common') {
+      return true; // Common to both tracks! (e.g. Orientation Lecture)
+    }
+    if (raw.includes('journal') || raw.includes('article') || raw.includes('news')) {
+      return normTrack === 'science_journalism';
+    }
+    return normTrack === 'pop_science';
+  };
+
+  // ── 1. POOL OF ALL AVAILABLE ITEMS FOR CURRENT TRACK ────────────────
+  const allTrackAvailableItems = useMemo(() => {
     const normTrack = selectedTrack === 'science_journalism' ? 'science_journalism' : 'pop_science';
-    const allItems = [];
+    const items = [];
 
-    // Check if a workshop matches the currently selected track tab
-    const doesWorkshopMatchTrack = (wsTrack) => {
-      if (!wsTrack) return true;
-      const raw = String(wsTrack).toLowerCase().trim();
-      if (raw === 'both' || raw === 'all' || raw === 'both_tracks' || raw === 'all_tracks' || raw.includes('both') || raw.includes('all') || raw === 'common') {
-        return true; // Common to both tracks! (e.g. Orientation Lecture)
-      }
-      if (raw.includes('journal') || raw.includes('article') || raw.includes('news')) {
-        return normTrack === 'science_journalism';
-      }
-      return normTrack === 'pop_science';
-    };
-
-    // 1. Map Workshops automatically filtered by this specific track
+    // A. Workshops & Lectures
     (dynamicWorkshops || []).forEach(ws => {
       const rawTarget = ws.targetTrack || ws.trackKey || 'both';
-      if (doesWorkshopMatchTrack(rawTarget)) {
+      if (doesItemMatchTrack(rawTarget, normTrack)) {
         const fileUrl = ws.fileUrl || ws.presentationLink || '';
         const isPassed = isEventPassed(ws.startDate, ws.endDate);
         const normTarget = normalizeTrackKey(rawTarget);
 
-        allItems.push({
+        items.push({
           id: ws.id,
           source: 'workshop',
           isSubmission: false,
@@ -295,10 +281,9 @@ export default function FTModulesPage() {
       }
     });
 
-    // 2. Map Stage Submissions for this track with open and closing dates
-    const trackSubmissions = DEFAULT_STAGE_SUBMISSIONS[normTrack] || DEFAULT_STAGE_SUBMISSIONS.pop_science;
+    // B. Stage Submissions
+    const trackSubmissions = TRACK_STAGE_SUBMISSIONS[normTrack] || TRACK_STAGE_SUBMISSIONS.pop_science;
     trackSubmissions.forEach(defStage => {
-      // Find override in timeline_config
       const custom = timelineConfig.find(c => 
         c.id === defStage.id || 
         (Number(c.stageId) === Number(defStage.stageId) && normalizeTrackKey(c.trackId || c.targetTrack) === normTrack)
@@ -314,21 +299,21 @@ export default function FTModulesPage() {
       const openD = openDate ? new Date(openDate) : null;
       const deadD = deadline ? new Date(deadline) : null;
 
-      let windowStatus = 'active'; // 'upcoming' | 'active' | 'closed'
+      let windowStatus = 'active';
       if (openD && !isNaN(openD.getTime()) && now < openD) {
         windowStatus = 'upcoming';
       } else if (deadD && !isNaN(deadD.getTime()) && now > deadD) {
         windowStatus = 'closed';
       }
 
-      allItems.push({
+      items.push({
         id: defStage.id,
         source: 'stage_submission',
         isSubmission: true,
         stageId: defStage.stageId,
         title: custom?.title || defStage.title,
         sub: defStage.sub,
-        weekNumber: Number(custom?.weekNumber) || defStage.defaultWeek || defStage.stageId * 2,
+        weekNumber: Number(custom?.weekNumber) || 0,
         openDate: openDate || '',
         deadline: deadline || '',
         startDate: openDate || '',
@@ -342,128 +327,61 @@ export default function FTModulesPage() {
       });
     });
 
-    // 3. Search query filter
-    const searchFiltered = allItems.filter(item => {
-      if (!searchQuery) return true;
-      const q = searchQuery.toLowerCase();
-      return (
-        item.title.toLowerCase().includes(q) ||
-        (item.fileName && item.fileName.toLowerCase().includes(q)) ||
-        (item.speakerName && item.speakerName.toLowerCase().includes(q)) ||
-        (item.description && item.description.toLowerCase().includes(q))
-      );
-    });
+    return items;
+  }, [dynamicWorkshops, timelineConfig, selectedTrack]);
 
-    // 4. Track-Specific Weeks strictly keyed by weekNumber (1, 2, 3, ...)
-    const trackDefaultWeeks = DEFAULT_WEEKS_BY_TRACK[normTrack] || DEFAULT_WEEKS_BY_TRACK.pop_science;
+  // ── 2. GROUPED MODULES FOR DISPLAY ──────────────────────────────────
+  const groupedWeeks = useMemo(() => {
+    const normTrack = selectedTrack === 'science_journalism' ? 'science_journalism' : 'pop_science';
     const weekMapByNum = new Map();
 
-    // Helper to find custom doc for weekNumber
-    const findCustomDocForWeek = (wNum) => {
-      return customWeekTitles.find(c => 
-        (Number(c.weekNumber) === Number(wNum) && (normalizeTrackKey(c.track || normTrack) === normTrack || !c.track)) ||
-        c.id === `${normTrack}_week_${wNum}` ||
-        c.id === `week_${wNum}` ||
-        c.weekKey === `${normTrack}_week_${wNum}` ||
-        c.weekKey === `week_${wNum}`
-      );
-    };
-
-    // 4a. Initialize default weeks
-    trackDefaultWeeks.forEach(w => {
-      const wNum = Number(w.weekNumber);
-      const customDoc = findCustomDocForWeek(wNum);
-      if (customDoc?.deleted) return; // Explicitly deleted by admin
-
-      weekMapByNum.set(wNum, {
-        weekNumber: wNum,
-        weekKey: `${normTrack}_week_${wNum}`,
-        weekTitle: customDoc?.title || w.defaultTitle,
-        items: []
-      });
-    });
-
-    // 4b. Add any custom added weeks from Firestore for this track
+    // Only load modules that are explicitly saved and created in Firestore ft_week_titles for this track
     customWeekTitles.forEach(c => {
       if (c.deleted) return;
       const cTrack = normalizeTrackKey(c.track || normTrack);
-      if (cTrack !== normTrack && c.track) return; // Skip weeks of the other track
+      if (cTrack !== normTrack && c.track) return;
 
       const wNum = Number(c.weekNumber);
       if (!wNum || isNaN(wNum)) return;
 
-      if (!weekMapByNum.has(wNum)) {
-        weekMapByNum.set(wNum, {
-          weekNumber: wNum,
-          weekKey: `${normTrack}_week_${wNum}`,
-          weekTitle: c.title || `Week ${wNum}: Learning Modules`,
-          items: []
-        });
-      } else if (c.title) {
-        // If custom doc has a title, update the title on the week
-        weekMapByNum.get(wNum).weekTitle = c.title;
+      weekMapByNum.set(wNum, {
+        weekNumber: wNum,
+        weekKey: `${normTrack}_week_${wNum}`,
+        weekTitle: c.title || `Module ${wNum}`,
+        items: []
+      });
+    });
+
+    // Distribute items that are explicitly assigned to a module
+    allTrackAvailableItems.forEach(item => {
+      const wNum = Number(item.weekNumber);
+      if (wNum > 0 && weekMapByNum.has(wNum)) {
+        // Apply search query filter if typed
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          const matches = (
+            item.title.toLowerCase().includes(q) ||
+            (item.fileName && item.fileName.toLowerCase().includes(q)) ||
+            (item.speakerName && item.speakerName.toLowerCase().includes(q)) ||
+            (item.description && item.description.toLowerCase().includes(q))
+          );
+          if (!matches) return;
+        }
+
+        weekMapByNum.get(wNum).items.push(item);
       }
     });
 
-    // 4c. Distribute workshops & submissions strictly into deduplicated week numbers
-    searchFiltered.forEach(item => {
-      let weekNum = Number(item.weekNumber);
-
-      // Auto-calculate week from date if none
-      if (!weekNum && item.startDate) {
-        try {
-          const itemDate = new Date(item.startDate);
-          const compStart = new Date('2026-08-01');
-          const diffDays = Math.floor((itemDate - compStart) / (1000 * 60 * 60 * 24));
-          if (diffDays >= 0) {
-            weekNum = Math.min(6, Math.floor(diffDays / 7) + 1);
-          } else {
-            weekNum = 1;
-          }
-        } catch {
-          weekNum = 1;
-        }
-      }
-
-      if (!weekNum || isNaN(weekNum)) weekNum = 1;
-
-      // If the target week was explicitly deleted, fallback to the nearest available active week
-      if (!weekMapByNum.has(weekNum)) {
-        const customDoc = findCustomDocForWeek(weekNum);
-        if (customDoc?.deleted) {
-          const firstAvail = Array.from(weekMapByNum.keys())[0] || 1;
-          weekNum = firstAvail;
-        }
-      }
-
-      // If still not in weekMapByNum (and not deleted), initialize it
-      if (!weekMapByNum.has(weekNum)) {
-        const customDoc = findCustomDocForWeek(weekNum);
-        if (!customDoc?.deleted) {
-          weekMapByNum.set(weekNum, {
-            weekNumber: weekNum,
-            weekKey: `${normTrack}_week_${weekNum}`,
-            weekTitle: customDoc?.title || `Week ${weekNum}: Learning Modules`,
-            items: []
-          });
-        }
-      }
-
-      if (weekMapByNum.has(weekNum)) {
-        weekMapByNum.get(weekNum).items.push(item);
-      }
-    });
-
-    // Convert map to array and sort by weekNumber (Strict 1-to-1 mapping, no duplicate week numbers!)
+    // Convert map to sorted array
     const result = Array.from(weekMapByNum.values()).sort((a, b) => a.weekNumber - b.weekNumber);
 
-    // Sort items within each week chronologically by date and time
+    // Sort items chronologically inside each module
     result.forEach(w => {
       w.items.sort((a, b) => new Date(a.startDate || 0) - new Date(b.startDate || 0));
     });
 
     return result;
-  }, [dynamicWorkshops, customWeekTitles, timelineConfig, selectedTrack, searchQuery]);
+  }, [customWeekTitles, allTrackAvailableItems, selectedTrack, searchQuery]);
 
   // ── DRAG AND DROP HANDLERS ACROSS WEEKS ──────────────────────────────
   const handleDragStart = (e, item) => {
@@ -535,6 +453,31 @@ export default function FTModulesPage() {
     }
   };
 
+  // Assign or Remove Item from a Module
+  const handleToggleItemAssignment = async (item, targetWeekNum) => {
+    if (!canManage) return;
+    setIsAssigningItem(true);
+    try {
+      const isAlreadyInThisWeek = Number(item.weekNumber) === Number(targetWeekNum);
+      const newWeekNum = isAlreadyInThisWeek ? 0 : Number(targetWeekNum);
+
+      const updatePayload = {
+        weekNumber: newWeekNum,
+        updatedAt: new Date().toISOString()
+      };
+
+      if (item.isSubmission) {
+        await db.timeline_config.set(item.id, updatePayload);
+      } else {
+        await db.workshops.update(item.id, updatePayload);
+      }
+    } catch (err) {
+      alert('Failed to update item assignment: ' + err.message);
+    } finally {
+      setIsAssigningItem(false);
+    }
+  };
+
   // Handle Saving Custom Week Title for Selected Track
   const handleSaveWeekTitle = async (weekKey, weekNumber) => {
     if (!editingWeekTitleText.trim()) return;
@@ -553,7 +496,7 @@ export default function FTModulesPage() {
         updatedBy: user?.username || user?.email || 'admin'
       });
 
-      // Also delete any legacy un-prefixed key
+      // Clean legacy un-prefixed key
       try {
         await db.ft_week_titles.delete(`week_${wNum}`);
       } catch {}
@@ -571,8 +514,7 @@ export default function FTModulesPage() {
     const maxWeek = groupedWeeks.reduce((max, w) => Math.max(max, w.weekNumber), 0);
     const nextNum = maxWeek + 1;
     setNewWeekNumber(nextNum);
-    const trackLabel = selectedTrack === 'pop_science' ? 'Pop Science' : 'Science Journalism';
-    setNewWeekTitle(`Week ${nextNum}: ${trackLabel} Modules`);
+    setNewWeekTitle(`Module ${nextNum}`);
     setShowAddWeekModal(true);
   };
 
@@ -597,7 +539,7 @@ export default function FTModulesPage() {
       setShowAddWeekModal(false);
       setNewWeekTitle('');
     } catch (err) {
-      alert('Failed to create week: ' + err.message);
+      alert('Failed to create module: ' + err.message);
     } finally {
       setIsSavingNewWeek(false);
     }
@@ -606,22 +548,24 @@ export default function FTModulesPage() {
   // Handle Deleting a Week from Selected Track cleanly
   const handleDeleteWeek = async (weekGroup) => {
     const trackName = selectedTrack === 'pop_science' ? 'Track 1 (Pop Science)' : 'Track 2 (Science Journalism)';
-    if (!window.confirm(`Are you sure you want to delete "${weekGroup.weekTitle}" from ${trackName}?`)) return;
+    if (!window.confirm(`Are you sure you want to delete "${weekGroup.weekTitle}" from ${trackName}? All assigned items will be unassigned.`)) return;
 
     try {
       const wNum = Number(weekGroup.weekNumber);
 
-      // 1. Find all remaining active weeks
-      const remainingWeeks = groupedWeeks.filter(w => w.weekNumber !== wNum);
-      const targetFallbackWeek = remainingWeeks.length > 0 ? remainingWeeks[0].weekNumber : 1;
-
-      // 2. Reassign any workshops in this week to a remaining active week
-      const workshopsInThisWeek = dynamicWorkshops.filter(ws => (Number(ws.weekNumber) || 1) === wNum);
+      // 1. Unassign all workshops in this week
+      const workshopsInThisWeek = dynamicWorkshops.filter(ws => (Number(ws.weekNumber) || 0) === wNum);
       for (const ws of workshopsInThisWeek) {
-        await db.workshops.update(ws.id, { weekNumber: targetFallbackWeek, updatedAt: new Date().toISOString() });
+        await db.workshops.update(ws.id, { weekNumber: 0, updatedAt: new Date().toISOString() });
       }
 
-      // 3. Mark week as deleted in Firestore for this track
+      // 2. Unassign all submissions in this week
+      const submissionsInThisWeek = timelineConfig.filter(c => (Number(c.weekNumber) || 0) === wNum);
+      for (const s of submissionsInThisWeek) {
+        await db.timeline_config.set(s.id, { weekNumber: 0, updatedAt: new Date().toISOString() });
+      }
+
+      // 3. Mark module as deleted in Firestore for this track
       const docId = `${selectedTrack}_week_${wNum}`;
       await db.ft_week_titles.set(docId, {
         id: docId,
@@ -633,14 +577,68 @@ export default function FTModulesPage() {
         updatedAt: new Date().toISOString()
       });
 
-      // 4. Also delete any legacy un-prefixed key from Firestore
+      // 4. Also delete any legacy un-prefixed key
       try {
         await db.ft_week_titles.delete(`week_${wNum}`);
       } catch {}
     } catch (err) {
-      alert('Failed to delete week: ' + err.message);
+      alert('Failed to delete module: ' + err.message);
     }
   };
+
+  // Reset / Clear All Modules in Both Tracks
+  const handleClearAllModules = async () => {
+    if (!window.confirm('⚠️ Are you sure you want to delete and reset all modules across both tracks? All workshops and submissions will be safely preserved and unassigned so you can build clean modules manually.')) return;
+
+    try {
+      // 1. Unassign all workshops
+      for (const ws of dynamicWorkshops) {
+        if (ws.weekNumber) {
+          await db.workshops.update(ws.id, { weekNumber: 0, updatedAt: new Date().toISOString() });
+        }
+      }
+
+      // 2. Unassign all submissions
+      for (const s of timelineConfig) {
+        if (s.weekNumber) {
+          await db.timeline_config.set(s.id, { weekNumber: 0, updatedAt: new Date().toISOString() });
+        }
+      }
+
+      // 3. Mark all custom week titles deleted
+      for (const c of customWeekTitles) {
+        await db.ft_week_titles.set(c.id, { ...c, deleted: true, updatedAt: new Date().toISOString() });
+      }
+
+      alert('🎉 All modules cleared! You can now create clean custom modules and add lectures, workshops, files, and submissions manually.');
+    } catch (err) {
+      alert('Failed to clear modules: ' + err.message);
+    }
+  };
+
+  // Filter items in the "+ Add Content to Module" Picker Modal
+  const pickerFilteredItems = useMemo(() => {
+    if (!pickerModalWeek) return [];
+    return allTrackAvailableItems.filter(item => {
+      // Type filter
+      if (pickerFilterType === 'workshop' && item.isSubmission) return false;
+      if (pickerFilterType === 'submission' && !item.isSubmission) return false;
+      if (pickerFilterType === 'file' && !item.hasFile) return false;
+
+      // Search query filter
+      if (pickerSearchQuery) {
+        const q = pickerSearchQuery.toLowerCase();
+        return (
+          item.title.toLowerCase().includes(q) ||
+          (item.fileName && item.fileName.toLowerCase().includes(q)) ||
+          (item.speakerName && item.speakerName.toLowerCase().includes(q)) ||
+          (item.description && item.description.toLowerCase().includes(q))
+        );
+      }
+
+      return true;
+    });
+  }, [allTrackAvailableItems, pickerModalWeek, pickerFilterType, pickerSearchQuery]);
 
   return (
     <div className="lms-modules-container">
@@ -652,42 +650,61 @@ export default function FTModulesPage() {
               <Sparkles size={15} /> AIU SciComm Spark LMS
             </div>
             <h1 style={{ fontSize: '1.85rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <BookOpen size={28} style={{ color: '#be123c' }} /> Course Modules & Submissions
+              <BookOpen size={28} style={{ color: '#be123c' }} /> Course Modules & Curriculum
             </h1>
             <p style={{ fontSize: '0.9rem', color: '#64748b', margin: '0.35rem 0 0 0', fontWeight: 600 }}>
-              Track-specific learning modules, live workshops, and official stage submission windows.
+              Track-specific learning modules, live workshops, presentation files, and official stage submissions.
             </p>
           </div>
 
-          {/* Action Buttons & Controls: Add Week & Collapse */}
+          {/* Action Buttons & Controls: Add Module, Collapse, Reset */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={() => Object.keys(collapsedWeeks).length > 0 ? expandAll() : collapseAll(groupedWeeks)}
-              style={{
-                padding: '0.6rem 1.1rem', borderRadius: '12px', background: '#f8fafc',
-                border: '1.5px solid #cbd5e1', color: '#334155', fontWeight: 800, fontSize: '0.85rem',
-                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <Layers size={16} /> {Object.keys(collapsedWeeks).length > 0 ? 'Expand All Weeks' : 'Collapse All'}
-            </button>
-
-            {canManage && (
+            {groupedWeeks.length > 0 && (
               <button
                 type="button"
-                onClick={handleOpenAddWeekModal}
+                onClick={() => Object.keys(collapsedWeeks).length > 0 ? expandAll() : collapseAll(groupedWeeks)}
                 style={{
-                  padding: '0.65rem 1.25rem', borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
-                  color: '#ffffff', fontWeight: 900, fontSize: '0.88rem', border: 'none',
-                  cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
-                  boxShadow: '0 4px 16px rgba(190, 18, 60, 0.35)'
+                  padding: '0.6rem 1.1rem', borderRadius: '12px', background: '#f8fafc',
+                  border: '1.5px solid #cbd5e1', color: '#334155', fontWeight: 800, fontSize: '0.85rem',
+                  cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                  transition: 'all 0.2s ease'
                 }}
               >
-                <Plus size={18} /> + Add Week to {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}
+                <Layers size={16} /> {Object.keys(collapsedWeeks).length > 0 ? 'Expand All' : 'Collapse All'}
               </button>
+            )}
+
+            {canManage && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleOpenAddWeekModal}
+                  style={{
+                    padding: '0.65rem 1.25rem', borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
+                    color: '#ffffff', fontWeight: 900, fontSize: '0.88rem', border: 'none',
+                    cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
+                    boxShadow: '0 4px 16px rgba(190, 18, 60, 0.35)'
+                  }}
+                >
+                  <Plus size={18} /> + Add Module to {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}
+                </button>
+
+                {groupedWeeks.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearAllModules}
+                    title="Clear and reset all modules across tracks"
+                    style={{
+                      padding: '0.6rem 0.9rem', borderRadius: '12px', background: '#fff1f2',
+                      border: '1.5px solid #fecdd3', color: '#dc2626', fontWeight: 800, fontSize: '0.82rem',
+                      cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem'
+                    }}
+                  >
+                    <RotateCcw size={15} /> Clear All Modules
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -766,13 +783,40 @@ export default function FTModulesPage() {
             />
           </div>
         </div>
-
-        {canManage && (
-          <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: '#64748b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-            <span>💡 <strong>Track-Isolated View:</strong> {selectedTrack === 'pop_science' ? 'Track 1 (Pop Science Videos)' : 'Track 2 (Science Journalism)'} displays its matching workshops and official stage submission deadlines.</span>
-          </div>
-        )}
       </div>
+
+      {/* ── EMPTY STATE WHEN NO MODULES EXIST ────────────────────────── */}
+      {groupedWeeks.length === 0 && (
+        <div style={{
+          background: '#ffffff', borderRadius: '20px', padding: '3.5rem 2rem', textAlign: 'center',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.04)', border: '1px dashed #cbd5e1', margin: '1rem 0'
+        }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto' }}>
+            <BookOpen size={32} />
+          </div>
+          <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.5rem 0' }}>
+            No Modules Created Yet in {selectedTrack === 'pop_science' ? 'Track 1 (Pop Science)' : 'Track 2 (Science Journalism)'}
+          </h2>
+          <p style={{ fontSize: '0.9rem', color: '#64748b', maxWidth: '520px', margin: '0 auto 1.5rem auto', fontWeight: 600 }}>
+            Click the button below to add your first module. Then manually pick and assign lectures, workshops, resource files, and stage submissions!
+          </p>
+          {canManage && (
+            <button
+              type="button"
+              onClick={handleOpenAddWeekModal}
+              style={{
+                padding: '0.75rem 1.5rem', borderRadius: '14px',
+                background: 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
+                color: '#ffffff', fontWeight: 900, fontSize: '0.92rem', border: 'none',
+                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                boxShadow: '0 4px 20px rgba(190, 18, 60, 0.35)'
+              }}
+            >
+              <Plus size={20} /> + Create First Module for {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ── CANVAS LMS STYLE ACCORDION MODULE GROUPS ──────────────────────── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -872,7 +916,7 @@ export default function FTModulesPage() {
                             setEditingWeekKey(weekGroup.weekKey);
                             setEditingWeekTitleText(weekGroup.weekTitle);
                           }}
-                          title={`Edit Week Title for ${selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}`}
+                          title={`Edit Title for ${selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}`}
                           style={{
                             background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px',
                             color: '#be123c', padding: '0.2rem 0.45rem', fontSize: '0.72rem', fontWeight: 800,
@@ -887,8 +931,31 @@ export default function FTModulesPage() {
                   )}
                 </div>
 
-                {/* Right Badges, Item Count & Delete Week Control */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                {/* Right Controls: + Add Item Button, Item Count & Delete Week Control */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                  
+                  {/* + ADD CONTENT / WORKSHOP / SUBMISSION BUTTON */}
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPickerModalWeek(weekGroup);
+                        setPickerSearchQuery('');
+                        setPickerFilterType('all');
+                      }}
+                      style={{
+                        padding: '0.45rem 0.85rem', borderRadius: '10px',
+                        background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                        color: '#ffffff', border: 'none', fontWeight: 900, fontSize: '0.8rem',
+                        cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                        boxShadow: '0 2px 10px rgba(37, 99, 235, 0.25)'
+                      }}
+                    >
+                      <Plus size={15} /> + Add Item
+                    </button>
+                  )}
+
                   <span style={{
                     fontSize: '0.78rem', fontWeight: 800, padding: '0.22rem 0.65rem', borderRadius: '8px',
                     background: itemCount > 0 ? '#eff6ff' : '#f1f5f9', color: itemCount > 0 ? '#2563eb' : '#64748b',
@@ -901,7 +968,7 @@ export default function FTModulesPage() {
                     <button
                       type="button"
                       onClick={() => handleDeleteWeek(weekGroup)}
-                      title={`Delete this week from ${selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}`}
+                      title={`Delete this module from ${selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}`}
                       style={{
                         background: '#fef2f2', border: '1px solid #fecdd3', color: '#dc2626',
                         width: '32px', height: '32px', borderRadius: '8px',
@@ -920,8 +987,27 @@ export default function FTModulesPage() {
               {!isCollapsed && (
                 <div>
                   {itemCount === 0 ? (
-                    <div style={{ padding: '2.5rem 1.5rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem', fontStyle: 'italic', fontWeight: 600 }}>
-                      No workshops or submissions scheduled for this week in {selectedTrack === 'pop_science' ? 'Track 1 (Pop Science)' : 'Track 2 (Science Journalism)'} yet.
+                    <div style={{ padding: '2.5rem 1.5rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem', fontWeight: 600 }}>
+                      <p style={{ margin: '0 0 0.75rem 0', fontStyle: 'italic' }}>
+                        No items added to this module yet.
+                      </p>
+                      {canManage && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPickerModalWeek(weekGroup);
+                            setPickerSearchQuery('');
+                            setPickerFilterType('all');
+                          }}
+                          style={{
+                            background: '#eff6ff', color: '#2563eb', border: '1.5px dashed #93c5fd',
+                            padding: '0.5rem 1rem', borderRadius: '10px', fontWeight: 800, fontSize: '0.82rem',
+                            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem'
+                          }}
+                        >
+                          <Plus size={16} /> Add Lectures, Workshops, Files or Submissions
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -962,7 +1048,7 @@ export default function FTModulesPage() {
                                   {canManage && (
                                     <div
                                       className="lms-drag-grip"
-                                      title="Click & Drag submission milestone across weeks"
+                                      title="Click & Drag submission milestone across modules"
                                       style={{ marginTop: '0.2rem', flexShrink: 0 }}
                                     >
                                       <GripVertical size={18} />
@@ -1100,22 +1186,19 @@ export default function FTModulesPage() {
                                     </button>
                                   )}
 
-                                  {/* Admin Move to Week */}
+                                  {/* Admin Remove from Module */}
                                   {canManage && (
                                     <button
                                       type="button"
-                                      onClick={() => {
-                                        setMoveModalItem(item);
-                                        setTargetMoveWeek(item.weekNumber || 1);
-                                      }}
-                                      title="Move submission milestone to another week"
+                                      onClick={() => handleToggleItemAssignment(item, weekGroup.weekNumber)}
+                                      title="Remove from this module"
                                       style={{
-                                        background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155',
+                                        background: '#fff1f2', border: '1px solid #fecdd3', color: '#dc2626',
                                         height: '34px', padding: '0 0.55rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800,
                                         display: 'inline-flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer'
                                       }}
                                     >
-                                      <ArrowRightLeft size={13} /> Move
+                                      <Trash2 size={13} /> Remove
                                     </button>
                                   )}
                                 </div>
@@ -1155,7 +1238,7 @@ export default function FTModulesPage() {
                                 {canManage && (
                                   <div
                                     className="lms-drag-grip"
-                                    title="Click & Drag to move workshop across weeks"
+                                    title="Click & Drag to move workshop across modules"
                                     style={{ marginTop: '0.2rem', flexShrink: 0 }}
                                   >
                                     <GripVertical size={18} />
@@ -1200,7 +1283,7 @@ export default function FTModulesPage() {
                                     )}
                                   </div>
 
-                                  {/* Exact Date & Time, Speaker Subtitle (No Duplicate Time!) */}
+                                  {/* Exact Date & Time, Speaker Subtitle */}
                                   <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
                                     {item.speakerName && (
                                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -1261,31 +1344,25 @@ export default function FTModulesPage() {
 
                                 <CheckCircle2 size={18} style={{ color: isPassed ? '#94a3b8' : '#059669' }} />
 
-                                {/* Admin Quick Reassignment */}
+                                {/* Admin Remove from Module */}
                                 {canManage && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginLeft: '0.3rem', borderLeft: '1px solid #e2e8f0', paddingLeft: '0.4rem' }}>
-                                    {/* Quick Move to Week Button */}
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setMoveModalItem(item);
-                                        setTargetMoveWeek(item.weekNumber || 1);
-                                      }}
-                                      title="Move workshop to another week"
-                                      style={{
-                                        background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155',
-                                        height: '32px', padding: '0 0.55rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800,
-                                        display: 'inline-flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer'
-                                      }}
-                                    >
-                                      <ArrowRightLeft size={13} /> Move
-                                    </button>
-                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleItemAssignment(item, weekGroup.weekNumber)}
+                                    title="Remove workshop from this module"
+                                    style={{
+                                      background: '#fff1f2', border: '1px solid #fecdd3', color: '#dc2626',
+                                      height: '32px', padding: '0 0.55rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800,
+                                      display: 'inline-flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer'
+                                    }}
+                                  >
+                                    <Trash2 size={13} /> Remove
+                                  </button>
                                 )}
                               </div>
                             </div>
 
-                            {/* ── DEDICATED ATTACHED RESOURCE FILE CARD (ALWAYS ACCESSIBLE & NOT DIMMED!) ── */}
+                            {/* ── DEDICATED ATTACHED RESOURCE FILE CARD ── */}
                             {item.hasFile && (
                               <div className="lms-attached-file-card">
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '220px' }}>
@@ -1347,7 +1424,223 @@ export default function FTModulesPage() {
         })}
       </div>
 
-      {/* ── ADD NEW WEEK MODAL (TRACK-SPECIFIC) ────────────────────── */}
+      {/* ── "+ ADD CONTENT TO MODULE" PICKER MODAL ─────────────────── */}
+      {pickerModalWeek && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 99999, padding: '0.75rem'
+        }}>
+          <div style={{
+            background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '720px',
+            maxHeight: '90vh', display: 'flex', flexDirection: 'column',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.3)', position: 'relative'
+          }}>
+            {/* Modal Header */}
+            <div style={{ padding: '1.5rem 1.75rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <FolderPlus size={22} style={{ color: '#2563eb' }} /> Add Content to {pickerModalWeek.weekTitle}
+                </h2>
+                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0.25rem 0 0 0', fontWeight: 600 }}>
+                  Select from all available workshops, lecture materials, and submissions for {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}.
+                </p>
+              </div>
+              <button
+                onClick={() => setPickerModalWeek(null)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Filter Bar */}
+            <div style={{ padding: '1rem 1.75rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+              {/* Type Tabs */}
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setPickerFilterType('all')}
+                  style={{
+                    padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 800,
+                    border: '1px solid #cbd5e1', cursor: 'pointer',
+                    background: pickerFilterType === 'all' ? '#0f172a' : '#ffffff',
+                    color: pickerFilterType === 'all' ? '#ffffff' : '#334155'
+                  }}
+                >
+                  All Items ({allTrackAvailableItems.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPickerFilterType('workshop')}
+                  style={{
+                    padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 800,
+                    border: '1px solid #cbd5e1', cursor: 'pointer',
+                    background: pickerFilterType === 'workshop' ? '#0f172a' : '#ffffff',
+                    color: pickerFilterType === 'workshop' ? '#ffffff' : '#334155'
+                  }}
+                >
+                  🎥 Workshops & Lectures
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPickerFilterType('submission')}
+                  style={{
+                    padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 800,
+                    border: '1px solid #cbd5e1', cursor: 'pointer',
+                    background: pickerFilterType === 'submission' ? '#0f172a' : '#ffffff',
+                    color: pickerFilterType === 'submission' ? '#ffffff' : '#334155'
+                  }}
+                >
+                  🎯 Stage Submissions
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPickerFilterType('file')}
+                  style={{
+                    padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 800,
+                    border: '1px solid #cbd5e1', cursor: 'pointer',
+                    background: pickerFilterType === 'file' ? '#0f172a' : '#ffffff',
+                    color: pickerFilterType === 'file' ? '#ffffff' : '#334155'
+                  }}
+                >
+                  📄 Attached Files
+                </button>
+              </div>
+
+              {/* Search inside picker */}
+              <div style={{ position: 'relative', width: '220px' }}>
+                <Search size={14} style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                <input
+                  type="text"
+                  placeholder="Filter available list..."
+                  value={pickerSearchQuery}
+                  onChange={e => setPickerSearchQuery(e.target.value)}
+                  style={{
+                    width: '100%', padding: '0.35rem 0.65rem 0.35rem 2rem', borderRadius: '8px',
+                    border: '1.5px solid #cbd5e1', fontSize: '0.8rem', fontWeight: 600,
+                    outline: 'none', background: '#ffffff', color: '#0f172a', boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Modal Body: Available List */}
+            <div style={{ padding: '1rem 1.75rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {pickerFilteredItems.length === 0 ? (
+                <div style={{ padding: '3rem 1rem', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: '0.9rem' }}>
+                  No matching items found in the {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'} pool.
+                </div>
+              ) : (
+                pickerFilteredItems.map(item => {
+                  const isInThisWeek = Number(item.weekNumber) === Number(pickerModalWeek.weekNumber);
+                  const isInOtherWeek = item.weekNumber > 0 && !isInThisWeek;
+                  const formattedTime = formatExactDateTime(item.startDate, item.endDate);
+
+                  return (
+                    <div
+                      key={item.id}
+                      style={{
+                        padding: '0.9rem 1.1rem', borderRadius: '14px',
+                        border: `1.5px solid ${isInThisWeek ? '#a7f3d0' : '#e2e8f0'}`,
+                        background: isInThisWeek ? '#f0fdf4' : '#ffffff',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        flexWrap: 'wrap', gap: '0.75rem', transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '240px' }}>
+                        <div style={{
+                          width: '36px', height: '36px', borderRadius: '10px',
+                          background: item.isSubmission ? '#f5f3ff' : '#eff6ff',
+                          color: item.isSubmission ? '#7c3aed' : '#2563eb',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                        }}>
+                          {item.isSubmission ? <Award size={18} /> : item.meetingLink ? <Video size={18} /> : <BookOpen size={18} />}
+                        </div>
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a' }}>
+                              {item.title}
+                            </span>
+                            {item.isSubmission && (
+                              <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '0.1rem 0.45rem', borderRadius: '6px', background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe' }}>
+                                Stage Submission
+                              </span>
+                            )}
+                            {item.hasFile && (
+                              <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '0.1rem 0.45rem', borderRadius: '6px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }}>
+                                Has File 📄
+                              </span>
+                            )}
+                          </div>
+
+                          <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '0.2rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            {item.speakerName && <span>Speaker: <strong>{item.speakerName}</strong></span>}
+                            {formattedTime && <span>Date: <strong>{formattedTime}</strong></span>}
+                            {isInOtherWeek && (
+                              <span style={{ color: '#d97706', fontWeight: 700 }}>
+                                Currently in Module {item.weekNumber}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Add/Remove Action Button */}
+                      <div>
+                        {isInThisWeek ? (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleItemAssignment(item, pickerModalWeek.weekNumber)}
+                            disabled={isAssigningItem}
+                            style={{
+                              background: '#ecfdf5', color: '#059669', border: '1.5px solid #a7f3d0',
+                              padding: '0.4rem 0.85rem', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 900,
+                              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem'
+                            }}
+                          >
+                            <Check size={14} /> In This Module (Click to Remove)
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleItemAssignment(item, pickerModalWeek.weekNumber)}
+                            disabled={isAssigningItem}
+                            style={{
+                              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                              color: '#ffffff', border: 'none',
+                              padding: '0.45rem 0.95rem', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 900,
+                              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                              boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)'
+                            }}
+                          >
+                            <Plus size={14} /> {isInOtherWeek ? 'Move to This Module' : '+ Add to Module'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ padding: '1rem 1.75rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="ft-btn ft-btn-primary"
+                onClick={() => setPickerModalWeek(null)}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ADD NEW MODULE MODAL (TRACK-SPECIFIC) ──────────────────── */}
       {showAddWeekModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -1362,10 +1655,10 @@ export default function FTModulesPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <div>
                 <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Plus size={22} style={{ color: '#be123c' }} /> Add Week to {selectedTrack === 'pop_science' ? 'Track 1 (Pop Science)' : 'Track 2 (Science Journalism)'}
+                  <Plus size={22} style={{ color: '#be123c' }} /> Add Module to {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}
                 </h2>
                 <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0.25rem 0 0 0', fontWeight: 600 }}>
-                  This week will be created exclusively for {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}.
+                  Create an empty module and then manually pick content to add.
                 </p>
               </div>
               <button
@@ -1378,7 +1671,7 @@ export default function FTModulesPage() {
 
             <form onSubmit={handleCreateNewWeek} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
               <div>
-                <label className="ft-label">Week Number *</label>
+                <label className="ft-label">Module Number *</label>
                 <input
                   type="number"
                   min={1}
@@ -1391,11 +1684,11 @@ export default function FTModulesPage() {
               </div>
 
               <div>
-                <label className="ft-label">Week Title / Description *</label>
+                <label className="ft-label">Module Title *</label>
                 <input
                   type="text"
                   className="ft-input"
-                  placeholder={selectedTrack === 'pop_science' ? 'e.g. Week 6: Advanced Editing & Visual Effects' : 'e.g. Week 6: Investigative Journalism & Long-Form Articles'}
+                  placeholder={selectedTrack === 'pop_science' ? 'e.g. Module 1: Pop Science Foundations' : 'e.g. Module 1: Science Journalism Orientation'}
                   value={newWeekTitle}
                   onChange={e => setNewWeekTitle(e.target.value)}
                   required
@@ -1403,13 +1696,13 @@ export default function FTModulesPage() {
               </div>
 
               <div style={{ background: '#eff6ff', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #bfdbfe', fontSize: '0.8rem', color: '#1e40af', fontWeight: 600 }}>
-                💡 Workshops and submissions tagged for {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'} will automatically flow into this week.
+                💡 After creating this module, click "+ Add Item" to choose from all matching lectures, workshops, files, and submissions.
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
                 <button type="button" className="ft-btn ft-btn-outline" onClick={() => setShowAddWeekModal(false)}>Cancel</button>
                 <button type="submit" className="ft-btn ft-btn-primary" disabled={isSavingNewWeek}>
-                  {isSavingNewWeek ? 'Creating...' : `+ Create Week for ${selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}`}
+                  {isSavingNewWeek ? 'Creating...' : `+ Create Module`}
                 </button>
               </div>
             </form>
@@ -1432,7 +1725,7 @@ export default function FTModulesPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <div>
                 <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <ArrowRightLeft size={20} style={{ color: '#be123c' }} /> Move Item to Week
+                  <ArrowRightLeft size={20} style={{ color: '#be123c' }} /> Move Item to Module
                 </h2>
                 <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0.25rem 0 0 0', fontWeight: 600 }}>
                   Item: <strong>{moveModalItem.title}</strong>
@@ -1448,7 +1741,7 @@ export default function FTModulesPage() {
 
             <form onSubmit={handleConfirmQuickMove} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
               <div>
-                <label className="ft-label">Select Destination Week ({selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}) *</label>
+                <label className="ft-label">Select Destination Module ({selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}) *</label>
                 <select
                   className="ft-select"
                   value={targetMoveWeek}
