@@ -1365,7 +1365,7 @@ export default function FTModulesPage() {
                                   ) : (
                                     <button
                                       type="button"
-                                      onClick={() => navigate('/app/my-competition')}
+                                      onClick={() => navigate('/dashboard/my-competition')}
                                       style={{
                                         background: isClosed ? '#94a3b8' : theme.buttonBg,
                                         color: '#ffffff', padding: '0.55rem 1rem', borderRadius: '10px',
