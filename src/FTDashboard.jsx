@@ -890,11 +890,11 @@ export default function FTDashboard() {
                         )}
 
                         <span style={{
-                          fontSize: '0.7rem', fontWeight: 800, color: item.color || '#475569',
-                          background: item.bgColor || '#f1f5f9', padding: '0.15rem 0.55rem', borderRadius: '6px',
+                          fontSize: '0.72rem', fontWeight: 800, color: item.color || '#475569',
+                          background: item.bgColor || '#f1f5f9', padding: '0.15rem 0.6rem', borderRadius: '6px',
                           border: `1px solid ${item.bgColor ? '#cbd5e1' : '#e2e8f0'}`
                         }}>
-                          {item.badge || (isSubmission ? 'Submission' : 'Workshop')}
+                          {isSubmission ? 'تسليم مرحلي' : (item.badge === 'Workshop' || !item.badge ? 'محاضرة تدريبية' : item.badge)}
                         </span>
                       </div>
 
@@ -1060,11 +1060,11 @@ export default function FTDashboard() {
                         )}
 
                         <span style={{
-                          fontSize: '0.7rem', fontWeight: 800, color: '#475569',
-                          background: '#f1f5f9', padding: '0.15rem 0.55rem', borderRadius: '6px',
+                          fontSize: '0.72rem', fontWeight: 800, color: '#475569',
+                          background: '#f1f5f9', padding: '0.15rem 0.6rem', borderRadius: '6px',
                           border: '1px solid #e2e8f0'
                         }}>
-                          {item.badge || 'Workshop'}
+                          {item.badge === 'Workshop' || !item.badge ? 'محاضرة تدريبية' : item.badge}
                         </span>
                       </div>
 
