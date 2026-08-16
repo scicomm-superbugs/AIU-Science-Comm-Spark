@@ -1139,7 +1139,7 @@ export default function FTModulesPage() {
                                 </div>
 
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                  {/* Title & Track Badge & Passed Badge */}
+                                  {/* Title & Passed Badge */}
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
                                     <span style={{
                                       fontSize: '1.02rem', fontWeight: 900,
@@ -1148,15 +1148,6 @@ export default function FTModulesPage() {
                                       lineHeight: 1.35, wordBreak: 'break-word'
                                     }}>
                                       {item.title}
-                                    </span>
-
-                                    <span style={{
-                                      fontSize: '0.68rem', fontWeight: 900, padding: '0.15rem 0.55rem', borderRadius: '6px',
-                                      background: item.targetTrack === 'both' ? '#f1f5f9' : '#fef2f2',
-                                      color: item.targetTrack === 'both' ? '#475569' : '#be123c',
-                                      border: `1px solid ${item.targetTrack === 'both' ? '#cbd5e1' : '#fecdd3'}`
-                                    }}>
-                                      {item.targetTrack === 'both' ? 'Both Tracks' : item.targetTrack === 'pop_science' ? 'Track 1' : 'Track 2'}
                                     </span>
 
                                     {/* Passed / Past Session Status Badge */}
