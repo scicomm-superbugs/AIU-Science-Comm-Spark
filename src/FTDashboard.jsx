@@ -26,6 +26,7 @@ export default function FTDashboard() {
 
   const isAdmin = ['admin', 'master'].includes(user?.role);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [modalStep, setModalStep] = useState(null);
   const modalTimerRef = useRef(null);
 
   // Helper to handle step clicks: animate laser line first, then pop up modal window
@@ -36,6 +37,8 @@ export default function FTDashboard() {
 
     // 1. Move laser line immediately towards clicked step
     setSelectedStepId(stepId);
+    const targetStep = steps.find(s => String(s.id).toLowerCase().trim() === String(stepId).toLowerCase().trim());
+    setModalStep(targetStep || null);
 
     // 2. Clear any pending modal open timers
     if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
@@ -380,17 +383,27 @@ export default function FTDashboard() {
       return stepDay.getTime() >= todayZero.getTime();
     };
 
-    const sortByDate = (a, b) => (a._rawDate?.getTime() || 0) - (b._rawDate?.getTime() || 0);
+    const sortByDateAndPriority = (a, b) => {
+      const getDayKey = (d) => {
+        if (!d || isNaN(d.getTime())) return 9999999999999;
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0).getTime();
+      };
+      const dayA = getDayKey(a._rawDate);
+      const dayB = getDayKey(b._rawDate);
+      if (dayA !== dayB) return dayA - dayB;
+      // On the same calendar day, workshops (priority 1) MUST ALWAYS come BEFORE submissions (priority 2)
+      return (a._sortPriority || 1) - (b._sortPriority || 1);
+    };
 
-    const futurePrimary = (primarySteps || []).filter(isFutureOrToday).sort(sortByDate);
-    const futureSecondary = (secondarySteps || []).filter(isFutureOrToday).sort(sortByDate);
+    const futurePrimary = (primarySteps || []).filter(isFutureOrToday).sort(sortByDateAndPriority);
+    const futureSecondary = (secondarySteps || []).filter(isFutureOrToday).sort(sortByDateAndPriority);
 
     const primaryTitles = new Set(futurePrimary.map(p => (p.title || '').toLowerCase().trim()));
     const uniqueSecondary = futureSecondary.filter(s => !primaryTitles.has((s.title || '').toLowerCase().trim()));
 
     return {
-      primaryUpcoming: futurePrimary.slice(0, 2),
-      optionalUpcoming: uniqueSecondary.slice(0, 2),
+      primaryUpcoming: futurePrimary.slice(0, 1), // Only 1 focused event
+      optionalUpcoming: uniqueSecondary.slice(0, 1), // Only 1 focused event
       currentDayFormatted: now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
     };
   }, [primarySteps, secondarySteps]);
@@ -468,12 +481,9 @@ export default function FTDashboard() {
     return { dateEn: item.deadline || 'Date TBA', dateAr: item.deadline || 'الموعد يحدد لاحقاً', timeEn: '' };
   };
 
-  const handleAgendaItemClick = (item, trackKey) => {
-    if (selectedTrack !== trackKey) {
-      setSelectedTrack(trackKey);
-    }
-    setSelectedStepId(item.id);
-    setDetailStep(item);
+  const handleAgendaItemClick = (item) => {
+    // Open modal directly with item details without changing active track tab
+    setModalStep(item);
     setIsDetailModalOpen(true);
   };
 
@@ -609,7 +619,7 @@ export default function FTDashboard() {
     return idx;
   }, [steps]);
 
-  const activeStep = steps.find(s => s.id === selectedStepId) || steps[0];
+  const activeStep = modalStep || steps.find(s => s.id === selectedStepId) || steps[0];
   const trackThemeColor = selectedTrack === 'pop_science' ? '#be123c' : '#2563eb';
 
   return (
@@ -806,43 +816,41 @@ export default function FTDashboard() {
             
             {/* 1. PRIMARY TO-DO (REQUIRED IN YOUR REGISTERED TRACK) */}
             <div style={{
-              background: '#ffffff', borderRadius: '14px', padding: '0.95rem 1.1rem',
+              background: '#ffffff', borderRadius: '16px', padding: '1rem 1.15rem',
               border: '1.5px solid #cbd5e1', boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
               display: 'flex', flexDirection: 'column', gap: '0.65rem'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.15rem' }}>
-                <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <div style={{ fontWeight: 800, fontSize: '0.84rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <span>📌 Primary To-Do</span>
                   <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>•</span>
-                  <span style={{ fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.82rem', fontWeight: 800 }}>مهام أساسية مطلوبة</span>
+                  <span style={{ fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.84rem', fontWeight: 800 }}>مهام أساسية مطلوبة</span>
                 </div>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b', background: '#f8fafc', padding: '0.12rem 0.45rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#be123c', background: '#fff1f2', padding: '0.15rem 0.55rem', borderRadius: '6px', border: '1px solid #fecdd3' }}>
                   {primaryTrackKey === 'pop_science' ? 'Track 1 (Videos)' : 'Track 2 (Journalism)'}
                 </span>
               </div>
 
               {primaryUpcoming.length === 0 ? (
-                <div style={{ padding: '0.75rem', textAlign: 'center', background: '#f8fafc', borderRadius: '10px', color: '#16a34a', fontSize: '0.8rem', fontWeight: 700 }}>
+                <div style={{ padding: '1rem', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', color: '#16a34a', fontSize: '0.85rem', fontWeight: 700 }}>
                   🎉 All current track deliverables & workshops completed!
                 </div>
               ) : (
                 primaryUpcoming.map((item, idx) => {
                   const status = getTimeStatus(item);
                   const sched = getExactItemSchedule(item);
+                  const isSubmission = item.type === 'submission_open' || item.badge === 'Submission';
 
                   return (
                     <div
                       key={item.id || idx}
-                      onClick={() => handleAgendaItemClick(item, primaryTrackKey)}
                       style={{
-                        padding: '0.75rem 0.85rem', borderRadius: '12px',
+                        padding: '0.85rem 1rem', borderRadius: '14px',
                         background: status.isLive ? '#fff1f2' : '#f8fafc',
                         border: status.isLive ? '1.5px solid #f87171' : '1px solid #e2e8f0',
-                        cursor: 'pointer', transition: 'all 0.15s ease',
-                        display: 'flex', flexDirection: 'column', gap: '0.45rem',
+                        display: 'flex', flexDirection: 'column', gap: '0.6rem',
                         boxShadow: status.isLive ? '0 4px 14px rgba(220, 38, 38, 0.08)' : 'none'
                       }}
-                      className="ft-agenda-item-hover"
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                         {status.isLive ? (
@@ -852,9 +860,9 @@ export default function FTDashboard() {
                             gap: '0.45rem',
                             background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
                             color: '#ffffff',
-                            fontSize: '0.72rem',
+                            fontSize: '0.74rem',
                             fontWeight: 900,
-                            padding: '0.22rem 0.7rem',
+                            padding: '0.24rem 0.75rem',
                             borderRadius: '9999px',
                             boxShadow: '0 0 12px rgba(220, 38, 38, 0.45)',
                             border: '1.5px solid #f87171'
@@ -889,15 +897,15 @@ export default function FTDashboard() {
                         )}
 
                         <span style={{
-                          fontSize: '0.68rem', fontWeight: 700, color: item.color || '#475569',
-                          background: item.bgColor || '#f1f5f9', padding: '0.12rem 0.5rem', borderRadius: '6px',
+                          fontSize: '0.7rem', fontWeight: 800, color: item.color || '#475569',
+                          background: item.bgColor || '#f1f5f9', padding: '0.15rem 0.55rem', borderRadius: '6px',
                           border: `1px solid ${item.bgColor ? '#cbd5e1' : '#e2e8f0'}`
                         }}>
-                          {item.badge || (item.type === 'submission_open' ? 'Submission' : 'Workshop')}
+                          {item.badge || (isSubmission ? 'Submission' : 'Workshop')}
                         </span>
                       </div>
 
-                      <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a', lineHeight: 1.35 }}>
+                      <div style={{ fontWeight: 900, fontSize: '0.94rem', color: '#0f172a', lineHeight: 1.35 }}>
                         {item.title}
                       </div>
 
@@ -905,8 +913,8 @@ export default function FTDashboard() {
                       <div style={{
                         display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap',
                         background: status.isLive ? '#fee2e2' : '#ffffff',
-                        padding: '0.35rem 0.65rem', borderRadius: '8px',
-                        fontSize: '0.74rem', fontWeight: 700,
+                        padding: '0.4rem 0.7rem', borderRadius: '8px',
+                        fontSize: '0.75rem', fontWeight: 700,
                         border: `1px solid ${status.isLive ? '#fca5a5' : '#e2e8f0'}`
                       }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#0f172a' }}>
@@ -921,11 +929,54 @@ export default function FTDashboard() {
                         )}
                       </div>
 
-                      <div style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>{item.sub || (item.trainerName ? `Trainer: ${item.trainerName}` : '')}</span>
-                        <span style={{ color: '#2563eb', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.15rem' }}>
-                          View ➔
-                        </span>
+                      {/* Action Buttons Row */}
+                      <div style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
+                        {item.meetingLink ? (
+                          <a
+                            href={item.meetingLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="ft-btn"
+                            style={{
+                              background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+                              color: '#ffffff', fontWeight: 900, fontSize: '0.78rem',
+                              padding: '0.45rem 0.85rem', borderRadius: '10px', textDecoration: 'none',
+                              display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
+                            }}
+                          >
+                            <Mic size={14} /> Join Live Session • انضم للجلسة
+                          </a>
+                        ) : isSubmission ? (
+                          <button
+                            type="button"
+                            onClick={() => navigate('/my-competition')}
+                            className="ft-btn"
+                            style={{
+                              background: 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)',
+                              color: '#ffffff', fontWeight: 900, fontSize: '0.78rem',
+                              padding: '0.45rem 0.85rem', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                              display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                              boxShadow: '0 2px 8px rgba(225, 29, 72, 0.3)'
+                            }}
+                          >
+                            <Upload size={14} /> Submit Deliverables • تسليم العمل
+                          </button>
+                        ) : null}
+
+                        <button
+                          type="button"
+                          onClick={() => handleAgendaItemClick(item)}
+                          className="ft-btn"
+                          style={{
+                            background: '#ffffff', border: '1.5px solid #cbd5e1',
+                            color: '#334155', fontWeight: 800, fontSize: '0.78rem',
+                            padding: '0.45rem 0.75rem', borderRadius: '10px', cursor: 'pointer',
+                            display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
+                          }}
+                        >
+                          View Details • التفاصيل ➔
+                        </button>
                       </div>
                     </div>
                   );
@@ -935,43 +986,41 @@ export default function FTDashboard() {
 
             {/* 2. OPTIONAL TO-DO (CROSS-TRACK WORKSHOPS & OPEN SESSIONS) */}
             <div style={{
-              background: '#ffffff', borderRadius: '14px', padding: '0.95rem 1.1rem',
+              background: '#ffffff', borderRadius: '16px', padding: '1rem 1.15rem',
               border: '1.5px solid #cbd5e1', boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
               display: 'flex', flexDirection: 'column', gap: '0.65rem'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.15rem' }}>
-                <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#2563eb', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <div style={{ fontWeight: 800, fontSize: '0.84rem', color: '#2563eb', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <span>✨ Optional To-Do</span>
                   <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>•</span>
-                  <span style={{ fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.82rem', fontWeight: 800 }}>أنشطة اختيارية ومسارات أخرى</span>
+                  <span style={{ fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.84rem', fontWeight: 800 }}>أنشطة اختيارية ومسارات أخرى</span>
                 </div>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b', background: '#f8fafc', padding: '0.12rem 0.45rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#2563eb', background: '#eff6ff', padding: '0.15rem 0.55rem', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
                   {secondaryTrackKey === 'pop_science' ? 'Track 1 (Videos)' : 'Track 2 (Journalism)'}
                 </span>
               </div>
 
               {optionalUpcoming.length === 0 ? (
-                <div style={{ padding: '0.75rem', textAlign: 'center', background: '#f8fafc', borderRadius: '10px', color: '#64748b', fontSize: '0.8rem', fontWeight: 600 }}>
+                <div style={{ padding: '1rem', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', color: '#64748b', fontSize: '0.85rem', fontWeight: 600 }}>
                   No optional cross-track events currently scheduled.
                 </div>
               ) : (
                 optionalUpcoming.map((item, idx) => {
                   const status = getTimeStatus(item);
                   const sched = getExactItemSchedule(item);
+                  const isSubmission = item.type === 'submission_open' || item.badge === 'Submission';
 
                   return (
                     <div
                       key={item.id || idx}
-                      onClick={() => handleAgendaItemClick(item, secondaryTrackKey)}
                       style={{
-                        padding: '0.75rem 0.85rem', borderRadius: '12px',
+                        padding: '0.85rem 1rem', borderRadius: '14px',
                         background: status.isLive ? '#fff1f2' : '#f8fafc',
                         border: status.isLive ? '1.5px solid #f87171' : '1px solid #e2e8f0',
-                        cursor: 'pointer', transition: 'all 0.15s ease',
-                        display: 'flex', flexDirection: 'column', gap: '0.45rem',
+                        display: 'flex', flexDirection: 'column', gap: '0.6rem',
                         boxShadow: status.isLive ? '0 4px 14px rgba(220, 38, 38, 0.08)' : 'none'
                       }}
-                      className="ft-agenda-item-hover"
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                         {status.isLive ? (
@@ -981,7 +1030,7 @@ export default function FTDashboard() {
                             gap: '0.45rem',
                             background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
                             color: '#ffffff',
-                            fontSize: '0.72rem',
+                            fontSize: '0.74rem',
                             fontWeight: 900,
                             padding: '0.22rem 0.7rem',
                             borderRadius: '9999px',
@@ -1018,15 +1067,15 @@ export default function FTDashboard() {
                         )}
 
                         <span style={{
-                          fontSize: '0.68rem', fontWeight: 700, color: '#475569',
-                          background: '#f1f5f9', padding: '0.12rem 0.5rem', borderRadius: '6px',
+                          fontSize: '0.7rem', fontWeight: 800, color: '#475569',
+                          background: '#f1f5f9', padding: '0.15rem 0.55rem', borderRadius: '6px',
                           border: '1px solid #e2e8f0'
                         }}>
                           {item.badge || 'Workshop'}
                         </span>
                       </div>
 
-                      <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a', lineHeight: 1.35 }}>
+                      <div style={{ fontWeight: 900, fontSize: '0.94rem', color: '#0f172a', lineHeight: 1.35 }}>
                         {item.title}
                       </div>
 
@@ -1034,8 +1083,8 @@ export default function FTDashboard() {
                       <div style={{
                         display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap',
                         background: status.isLive ? '#fee2e2' : '#ffffff',
-                        padding: '0.35rem 0.65rem', borderRadius: '8px',
-                        fontSize: '0.74rem', fontWeight: 700,
+                        padding: '0.4rem 0.7rem', borderRadius: '8px',
+                        fontSize: '0.75rem', fontWeight: 700,
                         border: `1px solid ${status.isLive ? '#fca5a5' : '#e2e8f0'}`
                       }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#0f172a' }}>
@@ -1050,11 +1099,39 @@ export default function FTDashboard() {
                         )}
                       </div>
 
-                      <div style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>{item.sub || (item.trainerName ? `Trainer: ${item.trainerName}` : '')}</span>
-                        <span style={{ color: '#2563eb', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.15rem' }}>
-                          Optional ➔
-                        </span>
+                      {/* Action Buttons Row */}
+                      <div style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
+                        {item.meetingLink ? (
+                          <a
+                            href={item.meetingLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="ft-btn"
+                            style={{
+                              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                              color: '#ffffff', fontWeight: 900, fontSize: '0.78rem',
+                              padding: '0.45rem 0.85rem', borderRadius: '10px', textDecoration: 'none',
+                              display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                              boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)'
+                            }}
+                          >
+                            <Mic size={14} /> Join Session • انضم للجلسة
+                          </a>
+                        ) : null}
+
+                        <button
+                          type="button"
+                          onClick={() => handleAgendaItemClick(item)}
+                          className="ft-btn"
+                          style={{
+                            background: '#ffffff', border: '1.5px solid #cbd5e1',
+                            color: '#334155', fontWeight: 800, fontSize: '0.78rem',
+                            padding: '0.45rem 0.75rem', borderRadius: '10px', cursor: 'pointer',
+                            display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
+                          }}
+                        >
+                          View Details • التفاصيل ➔
+                        </button>
                       </div>
                     </div>
                   );
@@ -1579,7 +1656,7 @@ export default function FTDashboard() {
         {isDetailModalOpen && activeStep && createPortal(
           <div
             className="ft-timeline-modal-container"
-            onClick={() => setIsDetailModalOpen(false)}
+            onClick={() => { setIsDetailModalOpen(false); setModalStep(null); }}
             style={{
               position: 'fixed',
               top: 0, left: 0, right: 0, bottom: 0,
@@ -1609,7 +1686,7 @@ export default function FTDashboard() {
             >
               {/* Floating Close Button (X) */}
               <button
-                onClick={() => setIsDetailModalOpen(false)}
+                onClick={() => { setIsDetailModalOpen(false); setModalStep(null); }}
                 style={{
                   position: 'absolute', top: '1.25rem', right: '1.25rem', zIndex: 20,
                   background: '#f1f5f9', border: '1px solid #cbd5e1',
@@ -1653,7 +1730,7 @@ export default function FTDashboard() {
                         {activeStep.badge}
                       </span>
                       <span style={{ fontSize: '0.78rem', background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '0.25rem 0.7rem', borderRadius: '8px', color: '#334155', fontWeight: 700 }}>
-                        {selectedTrack === 'pop_science' ? 'Pop Science Track' : 'Journalism Track'}
+                        {activeStep.targetTrack === 'pop_science' ? 'Pop Science Track' : activeStep.targetTrack === 'science_journalism' ? 'Journalism Track' : selectedTrack === 'pop_science' ? 'Pop Science Track' : 'Journalism Track'}
                       </span>
                     </div>
                     <h3 style={{ fontSize: '1.6rem', fontWeight: 900, margin: 0, color: '#0f172a', fontFamily: "'Outfit', sans-serif", lineHeight: 1.25 }}>
