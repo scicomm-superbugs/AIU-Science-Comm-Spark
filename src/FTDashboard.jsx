@@ -794,13 +794,6 @@ export default function FTDashboard() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <span style={{
-                background: '#f1f5f9', color: '#475569', fontSize: '0.72rem', fontWeight: 700,
-                padding: '0.2rem 0.6rem', borderRadius: '8px', border: '1px solid #e2e8f0',
-                display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
-              }}>
-                <Calendar size={12} /> {currentDayFormatted} • يتحدث يومياً 🔄
-              </span>
-              <span style={{
                 background: primaryTrackKey === 'pop_science' ? '#fff1f2' : '#eff6ff',
                 color: primaryTrackKey === 'pop_science' ? '#be123c' : '#2563eb',
                 fontSize: '0.72rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '8px',
