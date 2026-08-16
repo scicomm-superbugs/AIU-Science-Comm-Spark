@@ -218,9 +218,9 @@ export default function FTDashboard() {
     return isNaN(d.getTime()) ? new Date(2099, 11, 31, 23, 59, 59 + fallbackIdx) : d;
   };
 
-  const steps = useMemo(() => {
+  const buildTrackTimelineSteps = (trackKey) => {
     // 1. Get merged stages for this track from defaultStages and Firestore timeline_config
-    const rawStages = (defaultStages[selectedTrack] || defaultStages.pop_science).map((st) => getMergedStage(st, selectedTrack));
+    const rawStages = (defaultStages[trackKey] || defaultStages.pop_science).map((st) => getMergedStage(st, trackKey));
 
     const stageMilestoneEvents = [];
     const rawSubmissionItems = [];
@@ -315,7 +315,7 @@ export default function FTDashboard() {
 
     // 2. Map dynamic workshops for this track
     const trackWorkshops = dynamicWorkshops
-      .filter(ws => ws.targetTrack === 'both' || ws.targetTrack === selectedTrack)
+      .filter(ws => ws.targetTrack === 'both' || ws.targetTrack === trackKey)
       .map((ws, idx) => ({
         id: ws.id,
         type: 'workshop',
@@ -360,7 +360,70 @@ export default function FTDashboard() {
       ...item,
       stepNumber: String(idx + 1).padStart(2, '0')
     }));
-  }, [selectedTrack, customConfig, dynamicWorkshops]);
+  };
+
+  const steps = useMemo(() => buildTrackTimelineSteps(selectedTrack), [selectedTrack, customConfig, dynamicWorkshops]);
+
+  const primaryTrackKey = isCompetitorUser ? userTrack : selectedTrack;
+  const secondaryTrackKey = primaryTrackKey === 'pop_science' ? 'science_journalism' : 'pop_science';
+
+  const primarySteps = useMemo(() => buildTrackTimelineSteps(primaryTrackKey), [primaryTrackKey, customConfig, dynamicWorkshops]);
+  const secondarySteps = useMemo(() => buildTrackTimelineSteps(secondaryTrackKey), [secondaryTrackKey, customConfig, dynamicWorkshops]);
+
+  const { primaryUpcoming, optionalUpcoming, currentDayFormatted } = useMemo(() => {
+    const now = new Date();
+    const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+
+    const isFutureOrToday = (step) => {
+      if (!step._rawDate || isNaN(step._rawDate.getTime())) return false;
+      const stepDay = new Date(step._rawDate.getFullYear(), step._rawDate.getMonth(), step._rawDate.getDate(), 0, 0, 0, 0);
+      return stepDay.getTime() >= todayZero.getTime();
+    };
+
+    const sortByDate = (a, b) => (a._rawDate?.getTime() || 0) - (b._rawDate?.getTime() || 0);
+
+    const futurePrimary = (primarySteps || []).filter(isFutureOrToday).sort(sortByDate);
+    const futureSecondary = (secondarySteps || []).filter(isFutureOrToday).sort(sortByDate);
+
+    const primaryTitles = new Set(futurePrimary.map(p => (p.title || '').toLowerCase().trim()));
+    const uniqueSecondary = futureSecondary.filter(s => !primaryTitles.has((s.title || '').toLowerCase().trim()));
+
+    return {
+      primaryUpcoming: futurePrimary.slice(0, 2),
+      optionalUpcoming: uniqueSecondary.slice(0, 2),
+      currentDayFormatted: now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    };
+  }, [primarySteps, secondarySteps]);
+
+  const getTimeStatus = (item) => {
+    if (!item._rawDate || isNaN(item._rawDate.getTime())) {
+      return { en: 'Scheduled', ar: 'مجدول', isLive: false, isTomorrow: false };
+    }
+    const now = new Date();
+    const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const itemZero = new Date(item._rawDate.getFullYear(), item._rawDate.getMonth(), item._rawDate.getDate(), 0, 0, 0, 0);
+    const diffDays = Math.round((itemZero.getTime() - todayZero.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return { en: '🔴 Live Today', ar: 'جاري اليوم', isLive: true, isTomorrow: false };
+    }
+    if (diffDays === 1) {
+      return { en: '⚡ Tomorrow', ar: 'غداً', isLive: false, isTomorrow: true };
+    }
+    if (diffDays > 1 && diffDays <= 7) {
+      return { en: `📅 In ${diffDays} days`, ar: `خلال ${diffDays} أيام`, isLive: false, isTomorrow: false };
+    }
+    return { en: item.deadline || 'Upcoming', ar: item.deadline || 'قادم', isLive: false, isTomorrow: false };
+  };
+
+  const handleAgendaItemClick = (item, trackKey) => {
+    if (selectedTrack !== trackKey) {
+      setSelectedTrack(trackKey);
+    }
+    setSelectedStepId(item.id);
+    setDetailStep(item);
+    setIsDetailModalOpen(true);
+  };
 
   // Automatically select the first step in chronological order whose date has not passed yet
   useEffect(() => {
@@ -632,6 +695,203 @@ export default function FTDashboard() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>
             <Mail size={16} style={{ color: '#059669', flexShrink: 0 }} /> scmnexus@aiu.edu.eg
+          </div>
+        </div>
+
+        {/* ── BILINGUAL COMPACT WIDGET: WHAT'S NEXT & RUNNING NOW ── */}
+        <div 
+          className="ft-agenda-widget"
+          style={{
+            marginTop: '1.25rem',
+            padding: '1.25rem 1.4rem',
+            background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
+            border: '1.5px solid #e2e8f0',
+            borderRadius: '20px',
+            boxShadow: '0 4px 20px rgba(15, 23, 42, 0.04)',
+            textAlign: 'left'
+          }}
+        >
+          {/* Header Bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.6rem', marginBottom: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: '28px', height: '28px', borderRadius: '50%',
+                background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe'
+              }}>
+                <Zap size={15} style={{ color: '#2563eb' }} />
+              </span>
+              <div>
+                <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                  <span>⚡ What's Next & Running Now</span>
+                  <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.82rem' }}>|</span>
+                  <span style={{ color: '#334155', fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.88rem' }}>ما التالي وجاري الآن</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span style={{
+                background: '#f1f5f9', color: '#475569', fontSize: '0.72rem', fontWeight: 700,
+                padding: '0.2rem 0.6rem', borderRadius: '8px', border: '1px solid #e2e8f0',
+                display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
+              }}>
+                <Calendar size={12} /> {currentDayFormatted} • يتحدث يومياً 🔄
+              </span>
+              <span style={{
+                background: primaryTrackKey === 'pop_science' ? '#fff1f2' : '#eff6ff',
+                color: primaryTrackKey === 'pop_science' ? '#be123c' : '#2563eb',
+                fontSize: '0.72rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '8px',
+                border: `1px solid ${primaryTrackKey === 'pop_science' ? '#fecdd3' : '#bfdbfe'}`
+              }}>
+                {primaryTrackKey === 'pop_science' ? '🎥 Pop Science Videos' : '📰 Science Journalism'}
+              </span>
+            </div>
+          </div>
+
+          {/* 2-Column Grid: Primary (Your Track) vs Optional (Other Tracks) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: '1rem' }}>
+            
+            {/* 1. PRIMARY TO-DO (REQUIRED IN YOUR REGISTERED TRACK) */}
+            <div style={{
+              background: '#ffffff', borderRadius: '14px', padding: '0.95rem 1.1rem',
+              border: '1.5px solid #cbd5e1', boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+              display: 'flex', flexDirection: 'column', gap: '0.65rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.15rem' }}>
+                <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <span>📌 Primary To-Do</span>
+                  <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>•</span>
+                  <span style={{ fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.8rem' }}>مهام أساسية مطلوبة</span>
+                </div>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b', background: '#f8fafc', padding: '0.12rem 0.45rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  {primaryTrackKey === 'pop_science' ? 'Track 1 (Videos)' : 'Track 2 (Journalism)'}
+                </span>
+              </div>
+
+              {primaryUpcoming.length === 0 ? (
+                <div style={{ padding: '0.75rem', textAlign: 'center', background: '#f8fafc', borderRadius: '10px', color: '#16a34a', fontSize: '0.8rem', fontWeight: 700 }}>
+                  🎉 All current track deliverables & workshops completed!
+                </div>
+              ) : (
+                primaryUpcoming.map((item, idx) => {
+                  const status = getTimeStatus(item);
+                  return (
+                    <div
+                      key={item.id || idx}
+                      onClick={() => handleAgendaItemClick(item, primaryTrackKey)}
+                      style={{
+                        padding: '0.65rem 0.8rem', borderRadius: '12px',
+                        background: status.isLive ? '#fff1f2' : '#f8fafc',
+                        border: status.isLive ? '1.5px solid #fecdd3' : '1px solid #e2e8f0',
+                        cursor: 'pointer', transition: 'all 0.15s ease',
+                        display: 'flex', flexDirection: 'column', gap: '0.35rem'
+                      }}
+                      className="ft-agenda-item-hover"
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{
+                          fontSize: '0.68rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '9999px',
+                          background: status.isLive ? '#dc2626' : (status.isTomorrow ? '#ea580c' : '#eff6ff'),
+                          color: status.isLive || status.isTomorrow ? '#ffffff' : '#2563eb',
+                          display: 'inline-flex', alignItems: 'center', gap: '0.25rem'
+                        }}>
+                          {status.en} • {status.ar}
+                        </span>
+                        <span style={{
+                          fontSize: '0.68rem', fontWeight: 700, color: item.color || '#475569',
+                          background: item.bgColor || '#f1f5f9', padding: '0.1rem 0.45rem', borderRadius: '6px'
+                        }}>
+                          {item.badge || (item.type === 'submission_open' ? 'Submission' : 'Workshop')}
+                        </span>
+                      </div>
+
+                      <div style={{ fontWeight: 800, fontSize: '0.86rem', color: '#0f172a', lineHeight: 1.3 }}>
+                        {item.title}
+                      </div>
+
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>{item.sub || (item.deadline ? `Date: ${item.deadline}` : '')}</span>
+                        <span style={{ color: '#2563eb', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.15rem' }}>
+                          View ➔
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* 2. OPTIONAL TO-DO (CROSS-TRACK WORKSHOPS & OPEN SESSIONS) */}
+            <div style={{
+              background: '#ffffff', borderRadius: '14px', padding: '0.95rem 1.1rem',
+              border: '1.5px solid #cbd5e1', boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+              display: 'flex', flexDirection: 'column', gap: '0.65rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.15rem' }}>
+                <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#2563eb', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <span>✨ Optional To-Do</span>
+                  <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>•</span>
+                  <span style={{ fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.8rem' }}>أنشطة اختيارية ومسارات أخرى</span>
+                </div>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b', background: '#f8fafc', padding: '0.12rem 0.45rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  {secondaryTrackKey === 'pop_science' ? 'Track 1 (Videos)' : 'Track 2 (Journalism)'}
+                </span>
+              </div>
+
+              {optionalUpcoming.length === 0 ? (
+                <div style={{ padding: '0.75rem', textAlign: 'center', background: '#f8fafc', borderRadius: '10px', color: '#64748b', fontSize: '0.8rem', fontWeight: 600 }}>
+                  No optional cross-track events currently scheduled.
+                </div>
+              ) : (
+                optionalUpcoming.map((item, idx) => {
+                  const status = getTimeStatus(item);
+                  return (
+                    <div
+                      key={item.id || idx}
+                      onClick={() => handleAgendaItemClick(item, secondaryTrackKey)}
+                      style={{
+                        padding: '0.65rem 0.8rem', borderRadius: '12px',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        cursor: 'pointer', transition: 'all 0.15s ease',
+                        display: 'flex', flexDirection: 'column', gap: '0.35rem'
+                      }}
+                      className="ft-agenda-item-hover"
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{
+                          fontSize: '0.68rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '9999px',
+                          background: status.isLive ? '#dc2626' : (status.isTomorrow ? '#ea580c' : '#eff6ff'),
+                          color: status.isLive || status.isTomorrow ? '#ffffff' : '#2563eb',
+                          display: 'inline-flex', alignItems: 'center', gap: '0.25rem'
+                        }}>
+                          {status.en} • {status.ar}
+                        </span>
+                        <span style={{
+                          fontSize: '0.68rem', fontWeight: 700, color: '#475569',
+                          background: '#f1f5f9', padding: '0.1rem 0.45rem', borderRadius: '6px'
+                        }}>
+                          {item.badge || 'Workshop'}
+                        </span>
+                      </div>
+
+                      <div style={{ fontWeight: 800, fontSize: '0.86rem', color: '#0f172a', lineHeight: 1.3 }}>
+                        {item.title}
+                      </div>
+
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>{item.sub || (item.deadline ? `Date: ${item.deadline}` : '')}</span>
+                        <span style={{ color: '#2563eb', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.15rem' }}>
+                          Optional ➔
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
           </div>
         </div>
       </div>
