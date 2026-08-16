@@ -785,9 +785,9 @@ export default function FTDashboard() {
               </span>
               <div>
                 <div style={{ fontWeight: 900, fontSize: '0.98rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <span>⚡ Happening Now & Upcoming Agenda</span>
+                  <span>⚡ Happening Now & Upcoming Events</span>
                   <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.85rem' }}>|</span>
-                  <span style={{ color: '#be123c', fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.95rem', fontWeight: 900 }}>يحدث الآن والمهام القادمة</span>
+                  <span style={{ color: '#be123c', fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.95rem', fontWeight: 900 }}>ما يحدث الآن والفعاليات القادمة</span>
                 </div>
               </div>
             </div>
