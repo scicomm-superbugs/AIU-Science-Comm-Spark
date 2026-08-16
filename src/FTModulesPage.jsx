@@ -1,10 +1,69 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { BookOpen, FileText, ChevronDown, ChevronRight, ExternalLink, Plus, Calendar, Clock, User, Download, CheckCircle2, Search, Layers, GripVertical, Video, Pencil, Trash2, X, Sparkles } from 'lucide-react';
+import { 
+  BookOpen, FileText, ChevronDown, ChevronRight, ExternalLink, Plus, 
+  Calendar, Clock, User, CheckCircle2, Search, Layers, GripVertical, 
+  Video, Pencil, Trash2, X, Sparkles, Paperclip, Check, AlertCircle, Download
+} from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { db, useLiveCollection } from './db';
 import { normalizeTrackKey, renderFormattedDescription } from './ftConstants';
 import './scicommspark.css';
+
+/**
+ * Format exact date and time (e.g. "Thu, Aug 6, 2026 • 7:00 PM - 8:30 PM")
+ */
+function formatExactDateTime(startStr, endStr) {
+  if (!startStr) return null;
+  const d = new Date(startStr);
+  if (isNaN(d.getTime())) return startStr;
+
+  const dateFormatted = d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+
+  const hasTime = String(startStr).includes('T') || String(startStr).includes(':');
+  const timeFormatted = hasTime ? d.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  }) : '';
+
+  if (endStr && hasTime) {
+    const endD = new Date(endStr);
+    if (!isNaN(endD.getTime())) {
+      const endTime = endD.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      return `${dateFormatted} • ${timeFormatted} - ${endTime}`;
+    }
+  }
+
+  return timeFormatted ? `${dateFormatted} • ${timeFormatted}` : dateFormatted;
+}
+
+/**
+ * Check if the workshop / session date and time has passed
+ */
+function isEventPassed(startStr, endStr) {
+  if (!startStr) return false;
+  try {
+    const targetDate = endStr ? new Date(endStr) : new Date(startStr);
+    if (isNaN(targetDate.getTime())) return false;
+    // If only date (no time specified), consider it passed after 23:59:59 of that day
+    if (!String(startStr).includes('T') && !String(startStr).includes(':')) {
+      targetDate.setHours(23, 59, 59, 999);
+    }
+    return new Date() > targetDate;
+  } catch {
+    return false;
+  }
+}
 
 export default function FTModulesPage() {
   const { user } = useAuth();
@@ -14,6 +73,7 @@ export default function FTModulesPage() {
   const scientists = useLiveCollection('scientists') || [];
   const dynamicWorkshops = useLiveCollection('workshops') || [];
   const customModules = useLiveCollection('ft_modules') || [];
+  const customWeekTitles = useLiveCollection('ft_week_titles') || [];
 
   const isAdmin = ['admin', 'master'].includes(user?.role);
   const isTrainer = ['trainer', 'trainer_judge'].includes(user?.role);
@@ -27,8 +87,13 @@ export default function FTModulesPage() {
   const [selectedTrack, setSelectedTrack] = useState(userTrack === 'science_journalism' ? 'science_journalism' : 'pop_science');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Accordion Expand/Collapse state: Map of weekId -> boolean
+  // Accordion Expand/Collapse state: Map of weekKey -> boolean
   const [collapsedWeeks, setCollapsedWeeks] = useState({});
+
+  // Editing Week Title state
+  const [editingWeekKey, setEditingWeekKey] = useState(null);
+  const [editingWeekTitleText, setEditingWeekTitleText] = useState('');
+  const [isSavingWeekTitle, setIsSavingWeekTitle] = useState(false);
 
   // Admin Add/Edit Material Modal State
   const [showModal, setShowModal] = useState(false);
@@ -36,15 +101,24 @@ export default function FTModulesPage() {
   const [form, setForm] = useState({
     title: '',
     weekNumber: 1,
-    weekTitle: 'Week 1: Foundations & Orientation',
+    weekTitle: '',
+    itemKind: 'workshop', // 'workshop' | 'resource_file'
     fileName: '',
     fileUrl: '',
     meetingLink: '',
-    type: 'pdf', // pdf, video, doc, session
+    startDate: '',
+    endDate: '',
+    type: 'pdf',
     targetTrack: 'both',
     speakerName: '',
     description: ''
   });
+
+  // Quick Attach File Modal State (for workshops that don't have files yet)
+  const [attachModalItem, setAttachModalItem] = useState(null);
+  const [attachFileName, setAttachFileName] = useState('');
+  const [attachFileUrl, setAttachFileUrl] = useState('');
+  const [isSavingAttachment, setIsSavingAttachment] = useState(false);
 
   const toggleWeek = (weekKey) => {
     setCollapsedWeeks(prev => ({
@@ -53,9 +127,9 @@ export default function FTModulesPage() {
     }));
   };
 
-  const collapseAll = () => {
+  const collapseAll = (weeks) => {
     const collapsedMap = {};
-    groupedWeeks.forEach(g => { collapsedMap[g.weekKey] = true; });
+    weeks.forEach(g => { collapsedMap[g.weekKey] = true; });
     setCollapsedWeeks(collapsedMap);
   };
 
@@ -63,52 +137,62 @@ export default function FTModulesPage() {
     setCollapsedWeeks({});
   };
 
-  // Combine workshops from Firestore & custom uploaded modules into Canvas/Coursera Weekly Groups
+  // Build grouped weeks
   const groupedWeeks = useMemo(() => {
     const normTrack = normalizeTrackKey(selectedTrack);
-
-    // 1. All available items (workshops + custom modules)
     const allItems = [];
 
-    // Map workshops
+    // Map Workshops
     (dynamicWorkshops || []).forEach(ws => {
       const target = normalizeTrackKey(ws.targetTrack || ws.trackKey || 'both');
       if (target === 'both' || target === 'all' || target === normTrack || !ws.targetTrack) {
+        const fileUrl = ws.fileUrl || ws.presentationLink || '';
+        const isPassed = isEventPassed(ws.startDate, ws.endDate);
+
         allItems.push({
           id: ws.id,
           source: 'workshop',
           title: ws.title,
-          weekNumber: ws.weekNumber || 1,
-          weekTitle: ws.weekTitle || `Week ${ws.weekNumber || 1}: Course & Practical Workshops`,
-          fileName: ws.fileName || (ws.fileUrl ? 'Workshop_Materials_Presentation.pdf' : ''),
-          fileUrl: ws.fileUrl || ws.presentationLink || '',
+          weekNumber: Number(ws.weekNumber) || 1,
+          weekTitle: ws.weekTitle || '',
+          fileName: ws.fileName || (fileUrl ? 'Workshop_Materials_Presentation.pdf' : ''),
+          fileUrl: fileUrl,
+          hasFile: Boolean(fileUrl),
           meetingLink: ws.meetingLink || '',
           type: ws.type || 'Workshop',
           targetTrack: target,
           speakerName: ws.trainerName || ws.speakerName || '',
           startDate: ws.startDate || '',
+          endDate: ws.endDate || '',
+          isPassed,
           description: ws.description || ''
         });
       }
     });
 
-    // Map custom modules
+    // Map Custom Modules / Files
     (customModules || []).forEach(mod => {
       const target = normalizeTrackKey(mod.targetTrack || 'both');
       if (target === 'both' || target === 'all' || target === normTrack || !mod.targetTrack) {
+        const fileUrl = mod.fileUrl || '';
+        const isPassed = isEventPassed(mod.startDate, mod.endDate);
+
         allItems.push({
           id: mod.id,
           source: 'custom_module',
           title: mod.title,
-          weekNumber: mod.weekNumber || 1,
-          weekTitle: mod.weekTitle || `Week ${mod.weekNumber || 1}: Course Modules`,
-          fileName: mod.fileName || 'Course_Handout.pdf',
-          fileUrl: mod.fileUrl || '',
+          weekNumber: Number(mod.weekNumber) || 1,
+          weekTitle: mod.weekTitle || '',
+          fileName: mod.fileName || (fileUrl ? 'Course_Handout.pdf' : ''),
+          fileUrl: fileUrl,
+          hasFile: Boolean(fileUrl),
           meetingLink: mod.meetingLink || '',
           type: mod.type || 'pdf',
           targetTrack: target,
           speakerName: mod.speakerName || '',
-          startDate: mod.createdAt || '',
+          startDate: mod.startDate || mod.createdAt || '',
+          endDate: mod.endDate || '',
+          isPassed,
           description: mod.description || ''
         });
       }
@@ -126,35 +210,36 @@ export default function FTModulesPage() {
       );
     });
 
-    // Default structure if empty or for organize by week
+    // Default base week structure
     const defaultWeeks = [
-      { weekNumber: 1, weekKey: 'week-1', weekTitle: 'Week 1: Foundations & Competition Orientation' },
-      { weekNumber: 2, weekKey: 'week-2', weekTitle: 'Week 2: Scriptwriting & Scientific Storytelling' },
-      { weekNumber: 3, weekKey: 'week-3', weekTitle: 'Week 3: On-Camera Delivery, Voice Acting & Mobile Editing' },
-      { weekNumber: 4, weekKey: 'week-4', weekTitle: 'Week 4: Science Journalism Writing & Editorial Ethics' },
-      { weekNumber: 5, weekKey: 'week-5', weekTitle: 'Week 5: Live Stage Performance & Showmanship' }
+      { weekNumber: 1, weekKey: 'week-1', defaultTitle: 'Week 1: Foundations & Competition Orientation' },
+      { weekNumber: 2, weekKey: 'week-2', defaultTitle: 'Week 2: Scriptwriting & Scientific Storytelling' },
+      { weekNumber: 3, weekKey: 'week-3', defaultTitle: 'Week 3: On-Camera Delivery, Voice Acting & Mobile Editing' },
+      { weekNumber: 4, weekKey: 'week-4', defaultTitle: 'Week 4: Science Journalism Writing & Editorial Ethics' },
+      { weekNumber: 5, weekKey: 'week-5', defaultTitle: 'Week 5: Live Stage Performance & Showmanship' }
     ];
 
-    // Group items into weeks
     const weekMap = {};
 
-    // Initialize default weeks
+    // Initialize with custom titles from Firestore or defaults
     defaultWeeks.forEach(w => {
+      const customTitleDoc = customWeekTitles.find(c => c.id === w.weekKey || c.weekKey === w.weekKey);
+      const title = customTitleDoc?.title || w.defaultTitle;
+
       weekMap[w.weekKey] = {
         weekNumber: w.weekNumber,
         weekKey: w.weekKey,
-        weekTitle: w.weekTitle,
+        weekTitle: title,
         items: []
       };
     });
 
-    // Distribute items into weeks
+    // Distribute items into week groups
     searchFiltered.forEach(item => {
-      // Determine week key
       let weekNum = item.weekNumber || 1;
 
-      // If item has a startDate, calculate week relative to competition start date (Aug 1)
-      if (item.startDate) {
+      // If item has a startDate, calculate week relative to competition start date (Aug 1) if not explicitly set
+      if (!item.weekNumber && item.startDate) {
         try {
           const itemDate = new Date(item.startDate);
           const compStart = new Date('2026-08-01');
@@ -167,10 +252,11 @@ export default function FTModulesPage() {
 
       const weekKey = `week-${weekNum}`;
       if (!weekMap[weekKey]) {
+        const customTitleDoc = customWeekTitles.find(c => c.id === weekKey || c.weekKey === weekKey);
         weekMap[weekKey] = {
           weekNumber: weekNum,
           weekKey,
-          weekTitle: item.weekTitle || `Week ${weekNum}: Training & Learning Modules`,
+          weekTitle: customTitleDoc?.title || item.weekTitle || `Week ${weekNum}: Training & Learning Modules`,
           items: []
         };
       }
@@ -181,51 +267,164 @@ export default function FTModulesPage() {
     // Sort weeks by weekNumber
     const result = Object.values(weekMap).sort((a, b) => a.weekNumber - b.weekNumber);
 
-    // Sort items within each week chronologically or by ID
+    // Sort items within each week chronologically
     result.forEach(w => {
       w.items.sort((a, b) => new Date(a.startDate || 0) - new Date(b.startDate || 0));
     });
 
     return result;
-  }, [dynamicWorkshops, customModules, selectedTrack, searchQuery]);
+  }, [dynamicWorkshops, customModules, customWeekTitles, selectedTrack, searchQuery]);
 
-  // Admin Save Custom Module Item
+  // Handle Saving Custom Week Title
+  const handleSaveWeekTitle = async (weekKey, weekNumber) => {
+    if (!editingWeekTitleText.trim()) return;
+    setIsSavingWeekTitle(true);
+    try {
+      await db.ft_week_titles.set(weekKey, {
+        id: weekKey,
+        weekKey,
+        weekNumber,
+        title: editingWeekTitleText.trim(),
+        updatedAt: new Date().toISOString(),
+        updatedBy: user?.username || user?.email || 'admin'
+      });
+      setEditingWeekKey(null);
+    } catch (err) {
+      alert('Failed to update week title: ' + err.message);
+    } finally {
+      setIsSavingWeekTitle(false);
+    }
+  };
+
+  // Open Edit Modal for a Workshop or Custom Module
+  const handleOpenEditModal = (item) => {
+    setEditingItem(item);
+    
+    // Format datetime-local strings
+    const formatForInput = (dStr) => {
+      if (!dStr) return '';
+      try {
+        const d = new Date(dStr);
+        if (isNaN(d.getTime())) return '';
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      } catch {
+        return '';
+      }
+    };
+
+    setForm({
+      title: item.title || '',
+      weekNumber: item.weekNumber || 1,
+      weekTitle: item.weekTitle || '',
+      itemKind: item.source === 'workshop' ? 'workshop' : 'resource_file',
+      fileName: item.fileName || '',
+      fileUrl: item.fileUrl || '',
+      meetingLink: item.meetingLink || '',
+      startDate: formatForInput(item.startDate),
+      endDate: formatForInput(item.endDate),
+      type: item.type || 'pdf',
+      targetTrack: item.targetTrack || 'both',
+      speakerName: item.speakerName || '',
+      description: item.description || ''
+    });
+    setShowModal(true);
+  };
+
+  // Open Add New Modal
+  const handleOpenAddModal = (defaultWeekNum = 1) => {
+    setEditingItem(null);
+    setForm({
+      title: '',
+      weekNumber: defaultWeekNum,
+      weekTitle: '',
+      itemKind: 'workshop',
+      fileName: '',
+      fileUrl: '',
+      meetingLink: '',
+      startDate: '',
+      endDate: '',
+      type: 'pdf',
+      targetTrack: 'both',
+      speakerName: '',
+      description: ''
+    });
+    setShowModal(true);
+  };
+
+  // Handle Save Module / Workshop Item
   const handleSaveModule = async (e) => {
     e.preventDefault();
     try {
       const payload = {
-        title: form.title,
+        title: form.title.trim(),
         weekNumber: Number(form.weekNumber) || 1,
-        weekTitle: `Week ${form.weekNumber || 1}: ${form.weekTitle || 'Course Modules'}`,
-        fileName: form.fileName || 'Module_Material.pdf',
-        fileUrl: form.fileUrl || '',
-        meetingLink: form.meetingLink || '',
+        fileName: form.fileName ? form.fileName.trim() : '',
+        fileUrl: form.fileUrl ? form.fileUrl.trim() : '',
+        meetingLink: form.meetingLink ? form.meetingLink.trim() : '',
         type: form.type || 'pdf',
         targetTrack: form.targetTrack || 'both',
-        speakerName: form.speakerName || '',
-        description: form.description || '',
+        trainerName: form.speakerName ? form.speakerName.trim() : '',
+        speakerName: form.speakerName ? form.speakerName.trim() : '',
+        startDate: form.startDate || '',
+        endDate: form.endDate || '',
+        description: form.description ? form.description.trim() : '',
         updatedAt: new Date().toISOString()
       };
 
-      if (editingItem && editingItem.source === 'custom_module') {
-        await db.ft_modules.update(editingItem.id, payload);
+      if (editingItem) {
+        if (editingItem.source === 'workshop') {
+          await db.workshops.update(editingItem.id, payload);
+        } else {
+          await db.ft_modules.update(editingItem.id, payload);
+        }
       } else {
-        await db.ft_modules.add({ ...payload, createdAt: new Date().toISOString() });
+        // Create new item
+        if (form.itemKind === 'workshop') {
+          await db.workshops.add({ ...payload, createdAt: new Date().toISOString() });
+        } else {
+          await db.ft_modules.add({ ...payload, createdAt: new Date().toISOString() });
+        }
       }
 
       setShowModal(false);
       setEditingItem(null);
-      setForm({
-        title: '', weekNumber: 1, weekTitle: 'Week 1: Foundations & Orientation',
-        fileName: '', fileUrl: '', meetingLink: '', type: 'pdf', targetTrack: 'both', speakerName: '', description: ''
-      });
     } catch (err) {
-      alert('Failed to save module: ' + err.message);
+      alert('Failed to save: ' + err.message);
     }
   };
 
-  const handleDeleteModule = async (item) => {
-    if (!window.confirm(`Delete module item "${item.title}"?`)) return;
+  // Handle Quick File Attachment to an existing workshop
+  const handleSaveQuickAttachment = async (e) => {
+    e.preventDefault();
+    if (!attachModalItem) return;
+    setIsSavingAttachment(true);
+    try {
+      const updateData = {
+        fileName: attachFileName.trim() || 'Workshop_Materials_Presentation.pdf',
+        fileUrl: attachFileUrl.trim(),
+        updatedAt: new Date().toISOString()
+      };
+
+      if (attachModalItem.source === 'workshop') {
+        await db.workshops.update(attachModalItem.id, updateData);
+      } else {
+        await db.ft_modules.update(attachModalItem.id, updateData);
+      }
+
+      setAttachModalItem(null);
+      setAttachFileName('');
+      setAttachFileUrl('');
+    } catch (err) {
+      alert('Failed to attach file: ' + err.message);
+    } finally {
+      setIsSavingAttachment(false);
+    }
+  };
+
+  // Handle Delete Item
+  const handleDeleteItem = async (item) => {
+    if (!window.confirm(`Are you sure you want to delete "${item.title}"?`)) return;
     try {
       if (item.source === 'custom_module') {
         await db.ft_modules.delete(item.id);
@@ -233,7 +432,22 @@ export default function FTModulesPage() {
         await db.workshops.delete(item.id);
       }
     } catch (err) {
-      alert('Failed to delete item: ' + err.message);
+      alert('Failed to delete: ' + err.message);
+    }
+  };
+
+  // Remove Attached File from a workshop
+  const handleDetachFile = async (item) => {
+    if (!window.confirm(`Remove attached file from "${item.title}"?`)) return;
+    try {
+      const updateData = { fileName: '', fileUrl: '', presentationLink: '', updatedAt: new Date().toISOString() };
+      if (item.source === 'workshop') {
+        await db.workshops.update(item.id, updateData);
+      } else {
+        await db.ft_modules.update(item.id, updateData);
+      }
+    } catch (err) {
+      alert('Failed to remove file: ' + err.message);
     }
   };
 
@@ -254,7 +468,7 @@ export default function FTModulesPage() {
               <BookOpen size={30} style={{ color: '#be123c' }} /> Course & Training Modules
             </h1>
             <p style={{ fontSize: '0.9rem', color: '#64748b', margin: '0.35rem 0 0 0', fontWeight: 600 }}>
-              Structured weekly learning modules, lecture PDFs, scripting guides, and workshop resources.
+              Structured weekly learning modules, workshop schedules, and permanently accessible lecture resources.
             </p>
           </div>
 
@@ -262,7 +476,7 @@ export default function FTModulesPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button
               type="button"
-              onClick={Object.keys(collapsedWeeks).length > 0 ? expandAll : collapseAll}
+              onClick={() => Object.keys(collapsedWeeks).length > 0 ? expandAll() : collapseAll(groupedWeeks)}
               style={{
                 padding: '0.6rem 1.1rem', borderRadius: '12px', background: '#f8fafc',
                 border: '1.5px solid #cbd5e1', color: '#334155', fontWeight: 800, fontSize: '0.85rem',
@@ -276,11 +490,7 @@ export default function FTModulesPage() {
             {canManage && (
               <button
                 type="button"
-                onClick={() => {
-                  setEditingItem(null);
-                  setForm({ title: '', weekNumber: 1, weekTitle: 'Foundations & Orientation', fileName: '', fileUrl: '', meetingLink: '', type: 'pdf', targetTrack: 'both', speakerName: '', description: '' });
-                  setShowModal(true);
-                }}
+                onClick={() => handleOpenAddModal(1)}
                 style={{
                   padding: '0.65rem 1.25rem', borderRadius: '12px',
                   background: 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
@@ -289,7 +499,7 @@ export default function FTModulesPage() {
                   boxShadow: '0 4px 16px rgba(190, 18, 60, 0.35)'
                 }}
               >
-                <Plus size={18} /> + Add Module Material
+                <Plus size={18} /> + Add Module / Workshop
               </button>
             )}
           </div>
@@ -358,7 +568,7 @@ export default function FTModulesPage() {
             <Search size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
             <input
               type="text"
-              placeholder="Search module materials..."
+              placeholder="Search modules & materials..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               style={{
@@ -372,194 +582,443 @@ export default function FTModulesPage() {
       </div>
 
       {/* ── CANVAS LMS STYLE ACCORDION MODULE GROUPS ──────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
         {groupedWeeks.map((weekGroup) => {
           const isCollapsed = Boolean(collapsedWeeks[weekGroup.weekKey]);
           const itemCount = weekGroup.items.length;
+          const isEditingThisTitle = editingWeekKey === weekGroup.weekKey;
 
           return (
             <div
               key={weekGroup.weekKey}
               style={{
-                background: '#ffffff', borderRadius: '18px', border: '1.5px solid #e2e8f0',
-                boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)', overflow: 'hidden',
+                background: '#ffffff', borderRadius: '20px', border: '1.5px solid #e2e8f0',
+                boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)', overflow: 'hidden',
                 transition: 'all 0.2s ease'
               }}
             >
-              {/* Accordion Week Header (Canvas LMS Style Light Header Bar) */}
+              {/* Accordion Week Header */}
               <div
-                onClick={() => toggleWeek(weekGroup.weekKey)}
                 style={{
                   padding: '1.1rem 1.5rem', background: '#f8fafc', borderBottom: isCollapsed ? 'none' : '1px solid #e2e8f0',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem',
                   userSelect: 'none'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <GripVertical size={18} style={{ color: '#94a3b8' }} />
-                  <div style={{
-                    width: '24px', height: '24px', borderRadius: '50%', background: isCollapsed ? '#cbd5e1' : '#be123c',
-                    color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'transform 0.2s ease', flexShrink: 0
-                  }}>
+                {/* Left Week Title & Controls */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '280px' }}>
+                  <GripVertical size={18} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                  
+                  <div
+                    onClick={() => toggleWeek(weekGroup.weekKey)}
+                    style={{
+                      width: '24px', height: '24px', borderRadius: '50%', background: isCollapsed ? '#cbd5e1' : '#be123c',
+                      color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', transition: 'transform 0.2s ease', flexShrink: 0
+                    }}
+                  >
                     {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                   </div>
 
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
-                    {weekGroup.weekTitle}
-                  </h3>
+                  {/* Inline Week Title Editing */}
+                  {isEditingThisTitle ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }} onClick={e => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        value={editingWeekTitleText}
+                        onChange={e => setEditingWeekTitleText(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleSaveWeekTitle(weekGroup.weekKey, weekGroup.weekNumber);
+                          if (e.key === 'Escape') setEditingWeekKey(null);
+                        }}
+                        autoFocus
+                        style={{
+                          fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', padding: '0.35rem 0.75rem',
+                          borderRadius: '8px', border: '2px solid #be123c', outline: 'none', background: '#ffffff',
+                          width: '100%', maxWidth: '460px'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveWeekTitle(weekGroup.weekKey, weekGroup.weekNumber)}
+                        disabled={isSavingWeekTitle}
+                        style={{
+                          background: '#059669', color: '#ffffff', border: 'none', borderRadius: '8px',
+                          padding: '0.4rem 0.75rem', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer',
+                          display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
+                        }}
+                      >
+                        <Check size={14} /> Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingWeekKey(null)}
+                        style={{
+                          background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '8px',
+                          padding: '0.4rem 0.65rem', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                      <h3
+                        onClick={() => toggleWeek(weekGroup.weekKey)}
+                        style={{ fontSize: '1.12rem', fontWeight: 900, color: '#0f172a', margin: 0, cursor: 'pointer' }}
+                      >
+                        {weekGroup.weekTitle}
+                      </h3>
+
+                      {canManage && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingWeekKey(weekGroup.weekKey);
+                            setEditingWeekTitleText(weekGroup.weekTitle);
+                          }}
+                          title="Edit Week Title (Admin/Trainer)"
+                          style={{
+                            background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px',
+                            color: '#be123c', padding: '0.2rem 0.45rem', fontSize: '0.72rem', fontWeight: 800,
+                            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                          }}
+                        >
+                          <Pencil size={12} /> Edit Title
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
+                {/* Right Badges & Count */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <span style={{
                     fontSize: '0.78rem', fontWeight: 800, padding: '0.22rem 0.65rem', borderRadius: '8px',
                     background: itemCount > 0 ? '#eff6ff' : '#f1f5f9', color: itemCount > 0 ? '#2563eb' : '#64748b',
                     border: `1px solid ${itemCount > 0 ? '#bfdbfe' : '#cbd5e1'}`
                   }}>
-                    {itemCount} {itemCount === 1 ? 'Material Item' : 'Items'}
+                    {itemCount} {itemCount === 1 ? 'Item' : 'Items'}
                   </span>
+
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModal(weekGroup.weekNumber)}
+                      title="Add item directly to this week"
+                      style={{
+                        background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px',
+                        padding: '0.3rem 0.65rem', fontSize: '0.75rem', fontWeight: 800, color: '#be123c',
+                        cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
+                      }}
+                    >
+                      <Plus size={14} /> Add Item
+                    </button>
+                  )}
 
                   <CheckCircle2 size={18} style={{ color: itemCount > 0 ? '#059669' : '#cbd5e1' }} />
                 </div>
               </div>
 
-              {/* Accordion Week Body (Canvas LMS List Item Rows) */}
+              {/* Accordion Week Body */}
               {!isCollapsed && (
                 <div>
                   {itemCount === 0 ? (
-                    <div style={{ padding: '2rem 1.5rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem', fontStyle: 'italic', fontWeight: 600 }}>
-                      No materials uploaded for this week yet.
+                    <div style={{ padding: '2.5rem 1.5rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem', fontStyle: 'italic', fontWeight: 600 }}>
+                      No modules or workshops scheduled for this week yet.
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       {weekGroup.items.map((item, idx) => {
-                        const fileUrl = item.fileUrl || item.presentationLink;
+                        const formattedTime = formatExactDateTime(item.startDate, item.endDate);
+                        const isPassed = item.isPassed;
 
                         return (
                           <div
                             key={item.id || idx}
                             style={{
-                              padding: '1.1rem 1.5rem',
                               borderBottom: idx === itemCount - 1 ? 'none' : '1px solid #f1f5f9',
-                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                              flexWrap: 'wrap', gap: '1rem', background: '#ffffff',
-                              transition: 'background 0.15s ease'
+                              background: isPassed ? '#fcfcfd' : '#ffffff',
+                              transition: 'all 0.15s ease'
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
                           >
-                            {/* Left Info Column */}
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem', flex: 1, minWidth: '280px' }}>
-                              <GripVertical size={16} style={{ color: '#cbd5e1', marginTop: '0.25rem', flexShrink: 0 }} />
+                            {/* ── WORKSHOP / MODULE MAIN ROW ── */}
+                            <div
+                              style={{
+                                padding: '1.15rem 1.5rem',
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                                flexWrap: 'wrap', gap: '1rem',
+                                opacity: isPassed ? 0.72 : 1
+                              }}
+                            >
+                              {/* Left Info Column */}
+                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem', flex: 1, minWidth: '280px' }}>
+                                <GripVertical size={16} style={{ color: '#cbd5e1', marginTop: '0.25rem', flexShrink: 0 }} />
 
-                              <div style={{
-                                width: '38px', height: '38px', borderRadius: '10px',
-                                background: fileUrl ? '#eff6ff' : item.meetingLink ? '#ecfdf5' : '#f8fafc',
-                                border: `1.5px solid ${fileUrl ? '#bfdbfe' : item.meetingLink ? '#a7f3d0' : '#e2e8f0'}`,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                              }}>
-                                {fileUrl ? (
-                                  <FileText size={18} style={{ color: '#2563eb' }} />
-                                ) : item.meetingLink ? (
-                                  <Video size={18} style={{ color: '#059669' }} />
-                                ) : (
-                                  <BookOpen size={18} style={{ color: '#be123c' }} />
-                                )}
+                                {/* Icon Box */}
+                                <div style={{
+                                  width: '40px', height: '40px', borderRadius: '12px',
+                                  background: isPassed ? '#f1f5f9' : item.meetingLink ? '#ecfdf5' : '#eff6ff',
+                                  border: `1.5px solid ${isPassed ? '#cbd5e1' : item.meetingLink ? '#a7f3d0' : '#bfdbfe'}`,
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                                }}>
+                                  {item.meetingLink ? (
+                                    <Video size={19} style={{ color: isPassed ? '#94a3b8' : '#059669' }} />
+                                  ) : (
+                                    <BookOpen size={19} style={{ color: isPassed ? '#94a3b8' : '#be123c' }} />
+                                  )}
+                                </div>
+
+                                <div>
+                                  {/* Title & Track Badge & Passed Badge */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+                                    <span style={{
+                                      fontSize: '1.02rem', fontWeight: 900,
+                                      color: isPassed ? '#64748b' : '#0f172a',
+                                      textDecoration: isPassed ? 'line-through' : 'none',
+                                      lineHeight: 1.3
+                                    }}>
+                                      {item.title}
+                                    </span>
+
+                                    <span style={{
+                                      fontSize: '0.68rem', fontWeight: 900, padding: '0.15rem 0.55rem', borderRadius: '6px',
+                                      background: item.targetTrack === 'both' ? '#f1f5f9' : '#fef2f2',
+                                      color: item.targetTrack === 'both' ? '#475569' : '#be123c',
+                                      border: `1px solid ${item.targetTrack === 'both' ? '#cbd5e1' : '#fecdd3'}`
+                                    }}>
+                                      {item.targetTrack === 'both' ? 'Both Tracks' : item.targetTrack === 'pop_science' ? 'Track 1' : 'Track 2'}
+                                    </span>
+
+                                    {/* Passed / Past Session Status Badge */}
+                                    {isPassed && (
+                                      <span style={{
+                                        fontSize: '0.68rem', fontWeight: 900, padding: '0.15rem 0.55rem', borderRadius: '6px',
+                                        background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1',
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.25rem'
+                                      }}>
+                                        🏁 Past Session
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Exact Date & Time, Speaker Subtitle */}
+                                  <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+                                    {item.speakerName && (
+                                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                                        <User size={13} style={{ color: '#be123c' }} />
+                                        <span>Speaker: <strong>{item.speakerName}</strong></span>
+                                      </span>
+                                    )}
+
+                                    {formattedTime && (
+                                      <span style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                                        color: isPassed ? '#94a3b8' : '#0284c7', fontWeight: 800,
+                                        textDecoration: isPassed ? 'line-through' : 'none'
+                                      }}>
+                                        <Clock size={13} />
+                                        <span>{formattedTime}</span>
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Formatted Description */}
+                                  {item.description && (
+                                    <div style={{ fontSize: '0.82rem', color: isPassed ? '#94a3b8' : '#475569', marginTop: '0.4rem', lineHeight: 1.45 }} dir="auto">
+                                      {renderFormattedDescription(item.description)}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
 
-                              <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.2rem' }}>
-                                  <span style={{ fontSize: '1rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.3 }}>
-                                    {item.title}
-                                  </span>
+                              {/* Right Action Controls for Workshop */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                                {/* Join Live Session Button (if meetingLink exists and NOT passed) */}
+                                {item.meetingLink && !isPassed && (
+                                  <a
+                                    href={item.meetingLink}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    style={{
+                                      background: '#059669', color: '#ffffff', padding: '0.5rem 1rem', borderRadius: '10px',
+                                      fontSize: '0.82rem', fontWeight: 900, textDecoration: 'none',
+                                      display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                                      boxShadow: '0 3px 10px rgba(5, 150, 105, 0.25)'
+                                    }}
+                                  >
+                                    Join Live Session <ExternalLink size={14} />
+                                  </a>
+                                )}
 
+                                {item.meetingLink && isPassed && (
                                   <span style={{
-                                    fontSize: '0.68rem', fontWeight: 900, padding: '0.15rem 0.55rem', borderRadius: '6px',
-                                    background: item.targetTrack === 'both' ? '#f1f5f9' : '#fef2f2',
-                                    color: item.targetTrack === 'both' ? '#475569' : '#be123c',
-                                    border: `1px solid ${item.targetTrack === 'both' ? '#cbd5e1' : '#fecdd3'}`
+                                    fontSize: '0.78rem', color: '#94a3b8', background: '#f1f5f9',
+                                    border: '1px solid #e2e8f0', padding: '0.35rem 0.75rem', borderRadius: '8px',
+                                    fontWeight: 700
                                   }}>
-                                    {item.targetTrack === 'both' ? 'Both Tracks' : item.targetTrack === 'pop_science' ? 'Track 1' : 'Track 2'}
+                                    Live Session Ended
                                   </span>
-                                </div>
+                                )}
 
-                                {/* Details Subtitle */}
-                                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
-                                  {item.fileName && (
-                                    <span style={{ color: '#2563eb', fontWeight: 800 }}>📎 {item.fileName}</span>
-                                  )}
-                                  {item.speakerName && (
-                                    <span>👤 Speaker: <strong>{item.speakerName}</strong></span>
-                                  )}
-                                  {item.startDate && (
-                                    <span>🕒 {new Date(item.startDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                                  )}
-                                </div>
+                                <CheckCircle2 size={18} style={{ color: isPassed ? '#94a3b8' : '#059669', marginLeft: '0.25rem' }} />
 
-                                {item.description && (
-                                  <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '0.35rem', lineHeight: 1.4 }} dir="auto">
-                                    {renderFormattedDescription(item.description)}
+                                {/* Admin Management Controls */}
+                                {canManage && (
+                                  <div style={{ display: 'flex', gap: '0.35rem', marginLeft: '0.4rem', borderLeft: '1px solid #e2e8f0', paddingLeft: '0.5rem' }}>
+                                    {/* Attach File Button (if no file yet) */}
+                                    {!item.hasFile && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setAttachModalItem(item);
+                                          setAttachFileName('');
+                                          setAttachFileUrl('');
+                                        }}
+                                        title="Attach Lecture PDF / Slides to this workshop"
+                                        style={{
+                                          background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb',
+                                          height: '32px', padding: '0 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800,
+                                          display: 'inline-flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer'
+                                        }}
+                                      >
+                                        <Paperclip size={13} /> + Attach File
+                                      </button>
+                                    )}
+
+                                    {/* Edit Item */}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenEditModal(item)}
+                                      title="Edit Everything (Title, Date, Time, Speaker, Description)"
+                                      style={{
+                                        background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155',
+                                        width: '32px', height: '32px', borderRadius: '8px',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                                      }}
+                                    >
+                                      <Pencil size={14} />
+                                    </button>
+
+                                    {/* Delete Item */}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteItem(item)}
+                                      title="Delete Item"
+                                      style={{
+                                        background: '#fef2f2', border: '1px solid #fecdd3', color: '#dc2626',
+                                        width: '32px', height: '32px', borderRadius: '8px',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                                      }}
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
                                   </div>
                                 )}
                               </div>
                             </div>
 
-                            {/* Right Action Buttons */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
-                              {fileUrl ? (
-                                <a
-                                  href={fileUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  style={{
-                                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                                    color: '#ffffff', padding: '0.5rem 1rem', borderRadius: '10px',
-                                    fontSize: '0.82rem', fontWeight: 900, textDecoration: 'none',
-                                    display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                                    boxShadow: '0 3px 10px rgba(37, 99, 235, 0.25)'
-                                  }}
-                                >
-                                  Open File <ExternalLink size={14} />
-                                </a>
-                              ) : item.meetingLink ? (
-                                <a
-                                  href={item.meetingLink}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  style={{
-                                    background: '#059669', color: '#ffffff', padding: '0.5rem 1rem', borderRadius: '10px',
-                                    fontSize: '0.82rem', fontWeight: 900, textDecoration: 'none',
-                                    display: 'inline-flex', alignItems: 'center', gap: '0.4rem'
-                                  }}
-                                >
-                                  Join Live Session <ExternalLink size={14} />
-                                </a>
-                              ) : (
-                                <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic', fontWeight: 600 }}>
-                                  Pending File Link
-                                </span>
-                              )}
+                            {/* ── DEDICATED ATTACHED RESOURCE FILE CARD (ALWAYS ACCESSIBLE & NOT DIMMED!) ── */}
+                            {item.hasFile && (
+                              <div
+                                style={{
+                                  margin: '0 1.5rem 1.15rem 3.5rem',
+                                  padding: '0.9rem 1.25rem',
+                                  background: '#ffffff',
+                                  borderRadius: '14px',
+                                  border: '1.5px solid #bfdbfe',
+                                  boxShadow: '0 4px 14px rgba(37, 99, 235, 0.06)',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  flexWrap: 'wrap',
+                                  gap: '0.85rem',
+                                  opacity: 1 /* ALWAYS 100% VISIBLE & NOT DIMMED */
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: 1, minWidth: '260px' }}>
+                                  <div style={{
+                                    width: '36px', height: '36px', borderRadius: '10px',
+                                    background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                                    border: '1.5px solid #93c5fd',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                                  }}>
+                                    <FileText size={18} style={{ color: '#2563eb' }} />
+                                  </div>
 
-                              <CheckCircle2 size={18} style={{ color: '#059669', marginLeft: '0.25rem' }} />
+                                  <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                                      <span style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a' }}>
+                                        {item.fileName || 'Lecture_Presentation_Materials.pdf'}
+                                      </span>
+                                      <span style={{
+                                        fontSize: '0.65rem', fontWeight: 900, padding: '0.12rem 0.45rem', borderRadius: '6px',
+                                        background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0'
+                                      }}>
+                                        Available Material 📄
+                                      </span>
+                                    </div>
+                                    <div style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: 700, marginTop: '0.15rem' }}>
+                                      Permanent Lecture Slides & Handout Resources (Always Accessible)
+                                    </div>
+                                  </div>
+                                </div>
 
-                              {/* Admin Management Controls */}
-                              {canManage && (
-                                <div style={{ display: 'flex', gap: '0.35rem', marginLeft: '0.5rem', borderLeft: '1px solid #e2e8f0', paddingLeft: '0.5rem' }}>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteModule(item)}
-                                    title="Delete Material"
+                                {/* Right Download / Open File Button & Admin Controls */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <a
+                                    href={item.fileUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
                                     style={{
-                                      background: '#fef2f2', border: '1px solid #fecdd3', color: '#dc2626',
-                                      width: '32px', height: '32px', borderRadius: '8px',
-                                      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                                      background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                                      color: '#ffffff', padding: '0.48rem 1rem', borderRadius: '10px',
+                                      fontSize: '0.82rem', fontWeight: 900, textDecoration: 'none',
+                                      display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                                      boxShadow: '0 3px 12px rgba(37, 99, 235, 0.28)'
                                     }}
                                   >
-                                    <Trash2 size={14} />
-                                  </button>
+                                    Open File <ExternalLink size={14} />
+                                  </a>
+
+                                  {/* Admin Detach / Edit File option */}
+                                  {canManage && (
+                                    <div style={{ display: 'flex', gap: '0.3rem', marginLeft: '0.35rem', borderLeft: '1px solid #e2e8f0', paddingLeft: '0.4rem' }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setAttachModalItem(item);
+                                          setAttachFileName(item.fileName || '');
+                                          setAttachFileUrl(item.fileUrl || '');
+                                        }}
+                                        title="Change File Link"
+                                        style={{
+                                          background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155',
+                                          width: '30px', height: '30px', borderRadius: '8px',
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                                        }}
+                                      >
+                                        <Pencil size={12} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDetachFile(item)}
+                                        title="Remove File Attachment"
+                                        style={{
+                                          background: '#fef2f2', border: '1px solid #fecdd3', color: '#dc2626',
+                                          width: '30px', height: '30px', borderRadius: '8px',
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                                        }}
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -581,12 +1040,12 @@ export default function FTModulesPage() {
           zIndex: 99999, padding: '1rem'
         }}>
           <div style={{
-            background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '620px',
+            background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto',
             padding: '2rem', boxShadow: '0 25px 60px rgba(0,0,0,0.25)', position: 'relative'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <BookOpen size={22} style={{ color: '#be123c' }} /> Add Course Module Material
+                <BookOpen size={22} style={{ color: '#be123c' }} /> {editingItem ? 'Edit Module / Workshop Details' : 'Add Module / Workshop Material'}
               </h2>
               <button
                 onClick={() => setShowModal(false)}
@@ -596,19 +1055,20 @@ export default function FTModulesPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveModule} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <form onSubmit={handleSaveModule} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
               <div>
-                <label className="ft-label">Material / Lecture Title *</label>
+                <label className="ft-label">Title *</label>
                 <input
                   type="text"
                   className="ft-input"
-                  placeholder="e.g. Lec 1: Introduction to Pop Science Scriptwriting"
+                  placeholder="e.g. Orientation Lecture: Competition Rules & Criteria"
                   value={form.title}
                   onChange={e => setForm({ ...form, title: e.target.value })}
                   required
                 />
               </div>
 
+              {/* Week Assignment & Target Track */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
                   <label className="ft-label">Assign to Week *</label>
@@ -617,11 +1077,12 @@ export default function FTModulesPage() {
                     value={form.weekNumber}
                     onChange={e => setForm({ ...form, weekNumber: Number(e.target.value) })}
                   >
-                    <option value={1}>Week 1: Foundations & Orientation</option>
-                    <option value={2}>Week 2: Scriptwriting & Storytelling</option>
-                    <option value={3}>Week 3: Voice & Video Production</option>
-                    <option value={4}>Week 4: Science Journalism Ethics</option>
-                    <option value={5}>Week 5: Stage Performance & Showmanship</option>
+                    <option value={1}>Week 1</option>
+                    <option value={2}>Week 2</option>
+                    <option value={3}>Week 3</option>
+                    <option value={4}>Week 4</option>
+                    <option value={5}>Week 5</option>
+                    <option value={6}>Week 6</option>
                   </select>
                 </div>
 
@@ -632,27 +1093,43 @@ export default function FTModulesPage() {
                     value={form.targetTrack}
                     onChange={e => setForm({ ...form, targetTrack: e.target.value })}
                   >
-                    <option value="both">Both Tracks (Track 1 & 2)</option>
+                    <option value="both">Both Tracks (Track 1 & Track 2)</option>
                     <option value="pop_science">Track 1: Pop Science Videos</option>
                     <option value="science_journalism">Track 2: Science Journalism</option>
                   </select>
                 </div>
               </div>
 
+              {/* Exact Date & Time */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <label className="ft-label">Resource File Name</label>
+                  <label className="ft-label">Exact Start Date & Time</label>
                   <input
-                    type="text"
+                    type="datetime-local"
                     className="ft-input"
-                    placeholder="e.g. Lec.1_Scripting_Guide.pdf"
-                    value={form.fileName}
-                    onChange={e => setForm({ ...form, fileName: e.target.value })}
+                    value={form.startDate}
+                    onChange={e => setForm({ ...form, startDate: e.target.value })}
                   />
+                  <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '0.2rem' }}>
+                    Auto-scratches & dims if passed.
+                  </span>
                 </div>
 
                 <div>
-                  <label className="ft-label">Speaker / Instructor Name</label>
+                  <label className="ft-label">Exact End Date & Time (Optional)</label>
+                  <input
+                    type="datetime-local"
+                    className="ft-input"
+                    value={form.endDate}
+                    onChange={e => setForm({ ...form, endDate: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Speaker / Trainer & Live Meeting Link */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label className="ft-label">Speaker / Trainer Name</label>
                   <input
                     type="text"
                     className="ft-input"
@@ -661,36 +1138,60 @@ export default function FTModulesPage() {
                     onChange={e => setForm({ ...form, speakerName: e.target.value })}
                   />
                 </div>
+
+                <div>
+                  <label className="ft-label">Live Session Meeting URL (Zoom/Teams)</label>
+                  <input
+                    type="url"
+                    className="ft-input"
+                    placeholder="https://zoom.us/j/..."
+                    value={form.meetingLink}
+                    onChange={e => setForm({ ...form, meetingLink: e.target.value })}
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="ft-label">Resource File URL (Google Drive / PDF Link)</label>
-                <input
-                  type="url"
-                  className="ft-input"
-                  placeholder="https://drive.google.com/... or PDF link"
-                  value={form.fileUrl}
-                  onChange={e => setForm({ ...form, fileUrl: e.target.value })}
-                />
+              {/* Attached Resource File (Separated Section) */}
+              <div style={{
+                background: '#f8fafc', padding: '1rem', borderRadius: '14px', border: '1.5px solid #e2e8f0',
+                display: 'flex', flexDirection: 'column', gap: '0.85rem'
+              }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Paperclip size={16} style={{ color: '#2563eb' }} /> Attached Resource File (Always Available & Not Dimmed)
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                  <div>
+                    <label className="ft-label">File Display Name</label>
+                    <input
+                      type="text"
+                      className="ft-input"
+                      placeholder="e.g. Orientation_Presentation.pdf"
+                      value={form.fileName}
+                      onChange={e => setForm({ ...form, fileName: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="ft-label">File Link / URL (Google Drive / PDF)</label>
+                    <input
+                      type="url"
+                      className="ft-input"
+                      placeholder="https://drive.google.com/... or direct PDF link"
+                      value={form.fileUrl}
+                      onChange={e => setForm({ ...form, fileUrl: e.target.value })}
+                    />
+                  </div>
+                </div>
               </div>
 
+              {/* Description */}
               <div>
-                <label className="ft-label">Live Session Meeting URL (Optional Zoom/Teams)</label>
-                <input
-                  type="url"
-                  className="ft-input"
-                  placeholder="https://zoom.us/j/..."
-                  value={form.meetingLink}
-                  onChange={e => setForm({ ...form, meetingLink: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="ft-label">Module Description / Overview</label>
+                <label className="ft-label">Overview / Description (Arabic & English)</label>
                 <textarea
                   className="ft-textarea"
                   rows={3}
-                  placeholder="Brief description of key learning points and resources..."
+                  placeholder="Key briefing points, topics covered, instructions..."
                   value={form.description}
                   onChange={e => setForm({ ...form, description: e.target.value })}
                 />
@@ -698,7 +1199,76 @@ export default function FTModulesPage() {
 
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
                 <button type="button" className="ft-btn ft-btn-outline" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="ft-btn ft-btn-primary">Save Material</button>
+                <button type="submit" className="ft-btn ft-btn-primary">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── QUICK ATTACH FILE MODAL ──────────────────────────────── */}
+      {attachModalItem && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 99999, padding: '1rem'
+        }}>
+          <div style={{
+            background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '540px',
+            padding: '2rem', boxShadow: '0 25px 60px rgba(0,0,0,0.25)', position: 'relative'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Paperclip size={20} style={{ color: '#2563eb' }} /> Attach Resource File
+                </h2>
+                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0.25rem 0 0 0', fontWeight: 600 }}>
+                  For: <strong>{attachModalItem.title}</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => setAttachModalItem(null)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveQuickAttachment} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label className="ft-label">Resource File Name *</label>
+                <input
+                  type="text"
+                  className="ft-input"
+                  placeholder="e.g. Workshop_Presentation.pdf"
+                  value={attachFileName}
+                  onChange={e => setAttachFileName(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="ft-label">Resource File URL (Google Drive / Direct PDF link) *</label>
+                <input
+                  type="url"
+                  className="ft-input"
+                  placeholder="https://drive.google.com/... or PDF link"
+                  value={attachFileUrl}
+                  onChange={e => setAttachFileUrl(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div style={{ background: '#eff6ff', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #bfdbfe', fontSize: '0.8rem', color: '#1e40af', fontWeight: 600 }}>
+                💡 Attached files remain always accessible and active for competitors even if the live workshop time has passed.
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button type="button" className="ft-btn ft-btn-outline" onClick={() => setAttachModalItem(null)}>Cancel</button>
+                <button type="submit" className="ft-btn ft-btn-primary" disabled={isSavingAttachment}>
+                  {isSavingAttachment ? 'Attaching...' : 'Attach File'}
+                </button>
               </div>
             </form>
           </div>
