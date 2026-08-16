@@ -774,7 +774,7 @@ export default function FTDashboard() {
           }}
         >
           {/* Header Bar */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.6rem', marginBottom: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
+          <div className="ft-agenda-header-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.6rem', marginBottom: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -784,7 +784,7 @@ export default function FTDashboard() {
                 <Zap size={15} style={{ color: '#2563eb' }} />
               </span>
               <div>
-                <div style={{ fontWeight: 900, fontSize: '0.98rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <div className="ft-agenda-title-text" style={{ fontWeight: 900, fontSize: '0.98rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                   <span>⚡ Happening Now & Upcoming Events</span>
                   <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.85rem' }}>|</span>
                   <span style={{ color: '#be123c', fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.95rem', fontWeight: 900 }}>ما يحدث الآن والفعاليات القادمة</span>
@@ -804,15 +804,11 @@ export default function FTDashboard() {
             </div>
           </div>
 
-          {/* 2-Column Grid: Primary (Your Track) vs Optional (Other Tracks) */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: '1rem' }}>
+          {/* 2-Column Desktop Grid / Horizontal Mobile Swipe Banner */}
+          <div className="ft-agenda-grid-container">
             
             {/* 1. PRIMARY TO-DO (REQUIRED IN YOUR REGISTERED TRACK) */}
-            <div style={{
-              background: '#ffffff', borderRadius: '16px', padding: '1rem 1.15rem',
-              border: '1.5px solid #cbd5e1', boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-              display: 'flex', flexDirection: 'column', gap: '0.65rem'
-            }}>
+            <div className="ft-agenda-banner-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.15rem' }}>
                 <div style={{ fontWeight: 800, fontSize: '0.84rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <span>📌 Primary To-Do</span>
@@ -978,11 +974,7 @@ export default function FTDashboard() {
             </div>
 
             {/* 2. OPTIONAL TO-DO (CROSS-TRACK WORKSHOPS & OPEN SESSIONS) */}
-            <div style={{
-              background: '#ffffff', borderRadius: '16px', padding: '1rem 1.15rem',
-              border: '1.5px solid #cbd5e1', boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-              display: 'flex', flexDirection: 'column', gap: '0.65rem'
-            }}>
+            <div className="ft-agenda-banner-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.15rem' }}>
                 <div style={{ fontWeight: 800, fontSize: '0.84rem', color: '#2563eb', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <span>✨ Optional To-Do</span>
@@ -1132,6 +1124,11 @@ export default function FTDashboard() {
               )}
             </div>
 
+          </div>
+
+          {/* Swipe Hint on Mobile */}
+          <div className="ft-agenda-swipe-hint">
+            <span>↔ اسحب أفقياً للمسار الآخر • Swipe for other track</span>
           </div>
         </div>
       </div>

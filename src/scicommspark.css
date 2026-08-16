@@ -2410,9 +2410,87 @@ textarea, input {
   }
 }
 
-/* ── WHAT'S NEXT & RUNNING NOW AGENDA WIDGET ── */
+/* ── WHAT'S NEXT & RUNNING NOW AGENDA BANNER WIDGET ── */
 .ft-agenda-widget {
   transition: all 0.3s ease;
+}
+
+.ft-agenda-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 1rem;
+}
+
+.ft-agenda-banner-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 1rem 1.15rem;
+  border: 1.5px solid #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ft-agenda-swipe-hint {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .ft-agenda-widget {
+    padding: 0.85rem 0.9rem !important;
+    border-radius: 16px !important;
+    margin-top: 0.85rem !important;
+    margin-bottom: 1.25rem !important;
+  }
+
+  .ft-agenda-header-bar {
+    margin-bottom: 0.65rem !important;
+    padding-bottom: 0.55rem !important;
+    gap: 0.4rem !important;
+  }
+
+  .ft-agenda-title-text {
+    font-size: 0.85rem !important;
+  }
+
+  .ft-agenda-grid-container {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 0.75rem !important;
+    padding: 0.15rem 0.25rem 0.45rem 0.25rem !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  .ft-agenda-grid-container::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .ft-agenda-banner-card {
+    flex: 0 0 86% !important;
+    min-width: 86% !important;
+    max-width: 86% !important;
+    scroll-snap-align: center !important;
+    padding: 0.75rem 0.85rem !important;
+    border-radius: 14px !important;
+  }
+
+  .ft-agenda-swipe-hint {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #94a3b8;
+    margin-top: 0.35rem;
+  }
 }
 
 @keyframes pulseLiveBeacon {
