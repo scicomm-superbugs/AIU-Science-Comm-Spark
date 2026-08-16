@@ -938,7 +938,7 @@ export default function FTDashboard() {
                               boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
                             }}
                           >
-                            <Mic size={14} /> Join Live Session • انضم للجلسة
+                            <Mic size={14} /> Join Live Session • دخول للمحاضرة
                           </a>
                         ) : isSubmission ? (
                           <button
@@ -1108,7 +1108,7 @@ export default function FTDashboard() {
                               boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)'
                             }}
                           >
-                            <Mic size={14} /> Join Session • انضم للجلسة
+                            <Mic size={14} /> Join Session • دخول للمحاضرة
                           </a>
                         ) : null}
 
