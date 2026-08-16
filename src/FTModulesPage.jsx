@@ -150,16 +150,29 @@ export default function FTModulesPage() {
 
   // Build track-specific grouped weeks with automatic workshop mapping and chronological sorting
   const groupedWeeks = useMemo(() => {
-    const normTrack = normalizeTrackKey(selectedTrack);
+    const normTrack = selectedTrack === 'science_journalism' ? 'science_journalism' : 'pop_science';
     const allItems = [];
+
+    // Check if a workshop matches the currently selected track tab
+    const doesWorkshopMatchTrack = (wsTrack) => {
+      if (!wsTrack) return true;
+      const raw = String(wsTrack).toLowerCase().trim();
+      if (raw === 'both' || raw === 'all' || raw === 'both_tracks' || raw === 'all_tracks' || raw.includes('both') || raw.includes('all') || raw === 'common') {
+        return true; // Common to both tracks! (e.g. Orientation Lecture)
+      }
+      if (raw.includes('journal') || raw.includes('article') || raw.includes('news')) {
+        return normTrack === 'science_journalism';
+      }
+      return normTrack === 'pop_science';
+    };
 
     // 1. Map Workshops automatically filtered by this specific track
     (dynamicWorkshops || []).forEach(ws => {
-      const target = normalizeTrackKey(ws.targetTrack || ws.trackKey || 'both');
-      // Only include workshops matching this track or common for both tracks
-      if (target === 'both' || target === 'all' || target === normTrack || !ws.targetTrack) {
+      const rawTarget = ws.targetTrack || ws.trackKey || 'both';
+      if (doesWorkshopMatchTrack(rawTarget)) {
         const fileUrl = ws.fileUrl || ws.presentationLink || '';
         const isPassed = isEventPassed(ws.startDate, ws.endDate);
+        const normTarget = normalizeTrackKey(rawTarget);
 
         allItems.push({
           id: ws.id,
@@ -171,7 +184,7 @@ export default function FTModulesPage() {
           hasFile: Boolean(fileUrl),
           meetingLink: ws.meetingLink || '',
           type: ws.type || 'Workshop',
-          targetTrack: target,
+          targetTrack: normTarget,
           speakerName: ws.trainerName || ws.speakerName || '',
           startDate: ws.startDate || '',
           endDate: ws.endDate || '',

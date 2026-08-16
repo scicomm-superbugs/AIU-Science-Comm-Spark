@@ -238,11 +238,14 @@ export const formatSimpleCode = (rawCode, isTeam = false) => {
   return (isTeam ? 'T-' : 'C-') + (100 + hash);
 };
 
-// Normalize raw track key string to standard key ('pop_science' or 'science_journalism')
+// Normalize raw track key string to standard key ('pop_science', 'science_journalism', or 'both')
 export const normalizeTrackKey = (rawTrack) => {
   if (!rawTrack) return 'pop_science';
-  const str = String(rawTrack).toLowerCase();
-  if (str.includes('journal') || str.includes('article') || str.includes('news')) {
+  const str = String(rawTrack).toLowerCase().trim();
+  if (str === 'both' || str === 'all' || str === 'both_tracks' || str === 'all_tracks' || str.includes('both') || str.includes('all') || str === 'common') {
+    return 'both';
+  }
+  if (str.includes('journal') || str.includes('article') || str.includes('news') || str.includes('press')) {
     return 'science_journalism';
   }
   return 'pop_science';
