@@ -70,6 +70,24 @@ function isEventPassed(startStr, endStr) {
   }
 }
 
+// Default Track-Specific Weeks
+const DEFAULT_WEEKS_BY_TRACK = {
+  pop_science: [
+    { weekNumber: 1, weekKey: 'pop_science_week_1', defaultTitle: 'Week 1: Pop Science Foundations & Competition Orientation' },
+    { weekNumber: 2, weekKey: 'pop_science_week_2', defaultTitle: 'Week 2: Short Video Scriptwriting & Scientific Storytelling' },
+    { weekNumber: 3, weekKey: 'pop_science_week_3', defaultTitle: 'Week 3: On-Camera Delivery, Voice Acting & Mobile Editing' },
+    { weekNumber: 4, weekKey: 'pop_science_week_4', defaultTitle: 'Week 4: Long-Form Video Production & Animation Basics' },
+    { weekNumber: 5, weekKey: 'pop_science_week_5', defaultTitle: 'Week 5: Grand Finale Stage Performance & Showmanship' }
+  ],
+  science_journalism: [
+    { weekNumber: 1, weekKey: 'science_journalism_week_1', defaultTitle: 'Week 1: Science Journalism Orientation & Topic Scouting' },
+    { weekNumber: 2, weekKey: 'science_journalism_week_2', defaultTitle: 'Week 2: Field Research, Expert Interviews & Scientific Storytelling' },
+    { weekNumber: 3, weekKey: 'science_journalism_week_3', defaultTitle: 'Week 3: Science Feature Writing & Editorial Ethics' },
+    { weekNumber: 4, weekKey: 'science_journalism_week_4', defaultTitle: 'Week 4: Fact-Checking, Digital Publishing & Headline Crafting' },
+    { weekNumber: 5, weekKey: 'science_journalism_week_5', defaultTitle: 'Week 5: Live Stage Talk Show & Grand Finale Showcase' }
+  ]
+};
+
 export default function FTModulesPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -130,14 +148,15 @@ export default function FTModulesPage() {
     setCollapsedWeeks({});
   };
 
-  // Build grouped weeks with automatic workshop mapping and chronological sorting
+  // Build track-specific grouped weeks with automatic workshop mapping and chronological sorting
   const groupedWeeks = useMemo(() => {
     const normTrack = normalizeTrackKey(selectedTrack);
     const allItems = [];
 
-    // Map Workshops automatically from timeline / workshop settings
+    // 1. Map Workshops automatically filtered by this specific track
     (dynamicWorkshops || []).forEach(ws => {
       const target = normalizeTrackKey(ws.targetTrack || ws.trackKey || 'both');
+      // Only include workshops matching this track or common for both tracks
       if (target === 'both' || target === 'all' || target === normTrack || !ws.targetTrack) {
         const fileUrl = ws.fileUrl || ws.presentationLink || '';
         const isPassed = isEventPassed(ws.startDate, ws.endDate);
@@ -162,7 +181,7 @@ export default function FTModulesPage() {
       }
     });
 
-    // Search query filter
+    // 2. Search query filter
     const searchFiltered = allItems.filter(item => {
       if (!searchQuery) return true;
       const q = searchQuery.toLowerCase();
@@ -174,35 +193,35 @@ export default function FTModulesPage() {
       );
     });
 
-    // Default base week structure
-    const defaultWeeks = [
-      { weekNumber: 1, weekKey: 'week-1', defaultTitle: 'Week 1: Foundations & Competition Orientation' },
-      { weekNumber: 2, weekKey: 'week-2', defaultTitle: 'Week 2: Scriptwriting & Scientific Storytelling' },
-      { weekNumber: 3, weekKey: 'week-3', defaultTitle: 'Week 3: On-Camera Delivery, Voice Acting & Mobile Editing' },
-      { weekNumber: 4, weekKey: 'week-4', defaultTitle: 'Week 4: Science Journalism Writing & Editorial Ethics' },
-      { weekNumber: 5, weekKey: 'week-5', defaultTitle: 'Week 5: Live Stage Performance & Showmanship' }
-    ];
-
+    // 3. Track-Specific Default Weeks
+    const trackDefaultWeeks = DEFAULT_WEEKS_BY_TRACK[normTrack] || DEFAULT_WEEKS_BY_TRACK.pop_science;
     const weekMap = {};
 
-    // Initialize with default weeks unless deleted by admin
-    defaultWeeks.forEach(w => {
-      const customTitleDoc = customWeekTitles.find(c => c.id === w.weekKey || c.weekKey === w.weekKey);
-      if (customTitleDoc?.deleted) return; // Skip deleted weeks
+    // Initialize with default weeks for this track unless marked deleted
+    trackDefaultWeeks.forEach(w => {
+      const customDoc = customWeekTitles.find(c => 
+        (c.track === normTrack && Number(c.weekNumber) === Number(w.weekNumber)) ||
+        c.id === w.weekKey ||
+        c.weekKey === w.weekKey
+      );
 
-      const title = customTitleDoc?.title || w.defaultTitle;
+      if (customDoc?.deleted) return; // Skip deleted week
+
       weekMap[w.weekKey] = {
         weekNumber: w.weekNumber,
         weekKey: w.weekKey,
-        weekTitle: title,
+        weekTitle: customDoc?.title || w.defaultTitle,
         items: []
       };
     });
 
-    // Add any custom added weeks from Firestore
+    // Add any custom added weeks for THIS SPECIFIC TRACK from Firestore
     customWeekTitles.forEach(c => {
       if (c.deleted) return;
-      const weekKey = c.weekKey || c.id || `week-${c.weekNumber}`;
+      const cTrack = normalizeTrackKey(c.track || normTrack);
+      if (cTrack !== normTrack) return; // Only process weeks belonging to this track!
+
+      const weekKey = c.weekKey || c.id || `${normTrack}_week_${c.weekNumber}`;
       if (!weekMap[weekKey]) {
         weekMap[weekKey] = {
           weekNumber: Number(c.weekNumber) || 1,
@@ -215,7 +234,7 @@ export default function FTModulesPage() {
       }
     });
 
-    // Distribute workshops automatically into week groups
+    // 4. Distribute workshops into this track's week groups
     searchFiltered.forEach(item => {
       let weekNum = item.weekNumber;
 
@@ -237,9 +256,13 @@ export default function FTModulesPage() {
 
       if (!weekNum) weekNum = 1;
 
-      const weekKey = `week-${weekNum}`;
+      const weekKey = `${normTrack}_week_${weekNum}`;
       if (!weekMap[weekKey]) {
-        const customTitleDoc = customWeekTitles.find(c => c.id === weekKey || c.weekKey === weekKey);
+        const customTitleDoc = customWeekTitles.find(c => 
+          (c.track === normTrack && Number(c.weekNumber) === Number(weekNum)) ||
+          c.id === weekKey ||
+          c.weekKey === weekKey
+        );
         weekMap[weekKey] = {
           weekNumber: weekNum,
           weekKey,
@@ -251,10 +274,10 @@ export default function FTModulesPage() {
       weekMap[weekKey].items.push(item);
     });
 
-    // Sort weeks by weekNumber
+    // 5. Sort weeks by weekNumber
     const result = Object.values(weekMap).sort((a, b) => a.weekNumber - b.weekNumber);
 
-    // Sort items within each week chronologically by date and time
+    // 6. Sort items within each week chronologically by date and time
     result.forEach(w => {
       w.items.sort((a, b) => new Date(a.startDate || 0) - new Date(b.startDate || 0));
     });
@@ -324,15 +347,17 @@ export default function FTModulesPage() {
     }
   };
 
-  // Handle Saving Custom Week Title
+  // Handle Saving Custom Week Title for Selected Track
   const handleSaveWeekTitle = async (weekKey, weekNumber) => {
     if (!editingWeekTitleText.trim()) return;
     setIsSavingWeekTitle(true);
     try {
-      await db.ft_week_titles.set(weekKey, {
-        id: weekKey,
-        weekKey,
-        weekNumber,
+      const docId = `${selectedTrack}_week_${weekNumber}`;
+      await db.ft_week_titles.set(docId, {
+        id: docId,
+        weekKey: docId,
+        track: selectedTrack,
+        weekNumber: Number(weekNumber),
         title: editingWeekTitleText.trim(),
         deleted: false,
         updatedAt: new Date().toISOString(),
@@ -346,25 +371,27 @@ export default function FTModulesPage() {
     }
   };
 
-  // Open Add New Week Modal
+  // Open Add New Week Modal for Selected Track
   const handleOpenAddWeekModal = () => {
     const maxWeek = groupedWeeks.reduce((max, w) => Math.max(max, w.weekNumber), 0);
     const nextNum = maxWeek + 1;
     setNewWeekNumber(nextNum);
-    setNewWeekTitle(`Week ${nextNum}: New Learning & Workshop Modules`);
+    const trackLabel = selectedTrack === 'pop_science' ? 'Pop Science' : 'Science Journalism';
+    setNewWeekTitle(`Week ${nextNum}: ${trackLabel} Modules`);
     setShowAddWeekModal(true);
   };
 
-  // Handle Creating New Week
+  // Handle Creating New Week for Selected Track
   const handleCreateNewWeek = async (e) => {
     e.preventDefault();
     if (!newWeekTitle.trim()) return;
     setIsSavingNewWeek(true);
     try {
-      const weekKey = `week-${newWeekNumber}`;
-      await db.ft_week_titles.set(weekKey, {
-        id: weekKey,
-        weekKey,
+      const docId = `${selectedTrack}_week_${newWeekNumber}`;
+      await db.ft_week_titles.set(docId, {
+        id: docId,
+        weekKey: docId,
+        track: selectedTrack,
         weekNumber: Number(newWeekNumber),
         title: newWeekTitle.trim(),
         deleted: false,
@@ -380,9 +407,10 @@ export default function FTModulesPage() {
     }
   };
 
-  // Handle Deleting a Week
+  // Handle Deleting a Week from Selected Track
   const handleDeleteWeek = async (weekGroup) => {
-    if (!window.confirm(`Are you sure you want to delete "${weekGroup.weekTitle}"?`)) return;
+    const trackName = selectedTrack === 'pop_science' ? 'Track 1 (Pop Science)' : 'Track 2 (Science Journalism)';
+    if (!window.confirm(`Are you sure you want to delete "${weekGroup.weekTitle}" from ${trackName}?`)) return;
 
     try {
       // Reassign any workshops in this week to week 1 so they are not lost
@@ -391,10 +419,12 @@ export default function FTModulesPage() {
         await db.workshops.update(ws.id, { weekNumber: 1, updatedAt: new Date().toISOString() });
       }
 
-      // Mark week as deleted in Firestore
-      await db.ft_week_titles.set(weekGroup.weekKey, {
-        id: weekGroup.weekKey,
-        weekKey: weekGroup.weekKey,
+      // Mark week as deleted in Firestore for this track
+      const docId = `${selectedTrack}_week_${weekGroup.weekNumber}`;
+      await db.ft_week_titles.set(docId, {
+        id: docId,
+        weekKey: docId,
+        track: selectedTrack,
         weekNumber: weekGroup.weekNumber,
         title: weekGroup.weekTitle,
         deleted: true,
@@ -418,7 +448,7 @@ export default function FTModulesPage() {
               <BookOpen size={28} style={{ color: '#be123c' }} /> Course & Training Modules
             </h1>
             <p style={{ fontSize: '0.9rem', color: '#64748b', margin: '0.35rem 0 0 0', fontWeight: 600 }}>
-              Structured weekly learning modules and workshops automatically populated from timeline settings.
+              Track-specific weekly learning modules, workshops, and downloadable course materials.
             </p>
           </div>
 
@@ -449,7 +479,7 @@ export default function FTModulesPage() {
                   boxShadow: '0 4px 16px rgba(190, 18, 60, 0.35)'
                 }}
               >
-                <Plus size={18} /> + Add New Week
+                <Plus size={18} /> + Add Week to {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}
               </button>
             )}
           </div>
@@ -518,7 +548,7 @@ export default function FTModulesPage() {
             <Search size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
             <input
               type="text"
-              placeholder="Search modules & materials..."
+              placeholder={`Search ${selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'} materials...`}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               style={{
@@ -532,7 +562,7 @@ export default function FTModulesPage() {
 
         {canManage && (
           <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: '#64748b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-            <span>💡 <strong>Note:</strong> Workshops and attached files are automatically populated from Timeline Settings and organized by date/time. You can add or delete weeks here, edit week titles, or drag items between weeks.</span>
+            <span>💡 <strong>Track-Isolated View:</strong> {selectedTrack === 'pop_science' ? 'Track 1 (Pop Science Videos)' : 'Track 2 (Science Journalism)'} has its own independent weeks, module titles, and workshops.</span>
           </div>
         )}
       </div>
@@ -635,7 +665,7 @@ export default function FTModulesPage() {
                             setEditingWeekKey(weekGroup.weekKey);
                             setEditingWeekTitleText(weekGroup.weekTitle);
                           }}
-                          title="Edit Week Title"
+                          title={`Edit Week Title for ${selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}`}
                           style={{
                             background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px',
                             color: '#be123c', padding: '0.2rem 0.45rem', fontSize: '0.72rem', fontWeight: 800,
@@ -664,7 +694,7 @@ export default function FTModulesPage() {
                     <button
                       type="button"
                       onClick={() => handleDeleteWeek(weekGroup)}
-                      title={`Delete ${weekGroup.weekTitle}`}
+                      title={`Delete this week from ${selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}`}
                       style={{
                         background: '#fef2f2', border: '1px solid #fecdd3', color: '#dc2626',
                         width: '32px', height: '32px', borderRadius: '8px',
@@ -684,7 +714,7 @@ export default function FTModulesPage() {
                 <div>
                   {itemCount === 0 ? (
                     <div style={{ padding: '2.5rem 1.5rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem', fontStyle: 'italic', fontWeight: 600 }}>
-                      No workshops scheduled for this week yet. Workshops added in Workshop Timeline Settings will automatically appear here.
+                      No workshops scheduled for this week in {selectedTrack === 'pop_science' ? 'Track 1 (Pop Science)' : 'Track 2 (Science Journalism)'} yet.
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -921,7 +951,7 @@ export default function FTModulesPage() {
         })}
       </div>
 
-      {/* ── ADD NEW WEEK MODAL ────────────────────────────────────── */}
+      {/* ── ADD NEW WEEK MODAL (TRACK-SPECIFIC) ────────────────────── */}
       {showAddWeekModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -934,9 +964,14 @@ export default function FTModulesPage() {
             padding: '1.75rem', boxShadow: '0 25px 60px rgba(0,0,0,0.25)', position: 'relative'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Plus size={22} style={{ color: '#be123c' }} /> Add New Course Week
-              </h2>
+              <div>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Plus size={22} style={{ color: '#be123c' }} /> Add Week to {selectedTrack === 'pop_science' ? 'Track 1 (Pop Science)' : 'Track 2 (Science Journalism)'}
+                </h2>
+                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0.25rem 0 0 0', fontWeight: 600 }}>
+                  This week will be created exclusively for {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}.
+                </p>
+              </div>
               <button
                 onClick={() => setShowAddWeekModal(false)}
                 style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
@@ -964,7 +999,7 @@ export default function FTModulesPage() {
                 <input
                   type="text"
                   className="ft-input"
-                  placeholder="e.g. Week 6: Post-Production, Pitching & Showcase"
+                  placeholder={selectedTrack === 'pop_science' ? 'e.g. Week 6: Advanced Editing & Visual Effects' : 'e.g. Week 6: Investigative Journalism & Long-Form Articles'}
                   value={newWeekTitle}
                   onChange={e => setNewWeekTitle(e.target.value)}
                   required
@@ -972,13 +1007,13 @@ export default function FTModulesPage() {
               </div>
 
               <div style={{ background: '#eff6ff', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #bfdbfe', fontSize: '0.8rem', color: '#1e40af', fontWeight: 600 }}>
-                💡 Workshops and files added in Workshop Timeline Settings will automatically arrange into this week by their dates.
+                💡 Workshops and files tagged for {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'} will automatically flow into this week by their date.
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
                 <button type="button" className="ft-btn ft-btn-outline" onClick={() => setShowAddWeekModal(false)}>Cancel</button>
                 <button type="submit" className="ft-btn ft-btn-primary" disabled={isSavingNewWeek}>
-                  {isSavingNewWeek ? 'Creating...' : '+ Create Week'}
+                  {isSavingNewWeek ? 'Creating...' : `+ Create Week for ${selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}`}
                 </button>
               </div>
             </form>
@@ -1017,7 +1052,7 @@ export default function FTModulesPage() {
 
             <form onSubmit={handleConfirmQuickMove} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
               <div>
-                <label className="ft-label">Select Destination Week *</label>
+                <label className="ft-label">Select Destination Week ({selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}) *</label>
                 <select
                   className="ft-select"
                   value={targetMoveWeek}
