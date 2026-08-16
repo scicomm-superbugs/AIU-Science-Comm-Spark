@@ -139,14 +139,19 @@ function formatShortDate(dateStr) {
     year: 'numeric'
   });
 
-  const hasTime = String(dateStr).includes('T') || String(dateStr).includes(':');
-  const timePart = hasTime ? d.toLocaleTimeString('en-US', {
+  const raw = String(dateStr);
+  const isMidnight = raw.endsWith('00:00') || raw.endsWith('00:00:00') || (!raw.includes('T') && !raw.includes(':'));
+  if (isMidnight) {
+    return datePart;
+  }
+
+  const timePart = d.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true
-  }) : '';
+  });
 
-  return timePart ? `${datePart}, ${timePart}` : datePart;
+  return `${datePart}, ${timePart}`;
 }
 
 /**
@@ -1793,9 +1798,36 @@ export default function FTModulesPage() {
                             )}
                           </div>
 
-                          <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '0.2rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                            {item.speakerName && <span>Speaker: <strong>{item.speakerName}</strong></span>}
-                            {formattedTime && <span>Date: <strong>{formattedTime}</strong></span>}
+                          <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '0.2rem', display: 'flex', gap: '0.85rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            {item.isSubmission ? (
+                              <>
+                                {item.openDate && (
+                                  <span style={{ color: '#059669', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                    <Calendar size={13} /> Opens: <strong>{formatShortDate(item.openDate)}</strong>
+                                  </span>
+                                )}
+                                {item.deadline && (
+                                  <span style={{ color: '#dc2626', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                    <Clock size={13} /> Deadline: <strong>{formatShortDate(item.deadline)}</strong>
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                {item.speakerName && (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                    <User size={13} style={{ color: theme.accentColor }} />
+                                    <span>Speaker: <strong>{item.speakerName}</strong></span>
+                                  </span>
+                                )}
+                                {formattedTime && (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: theme.accentColor, fontWeight: 800 }}>
+                                    <Clock size={13} />
+                                    <span>{formattedTime}</span>
+                                  </span>
+                                )}
+                              </>
+                            )}
                             {isInOtherWeek && (
                               <span style={{ color: '#d97706', fontWeight: 700 }}>
                                 Currently in Module {item.weekNumber} (in {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'})
