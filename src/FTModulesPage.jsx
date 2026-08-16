@@ -197,7 +197,7 @@ function isEventPassed(startStr, endStr) {
   }
 }
 
-// Stage Submissions Definitions per Track
+// Stage Submissions Definitions per Track matching official Roadmap
 const TRACK_STAGE_SUBMISSIONS = {
   pop_science: [
     {
@@ -205,10 +205,10 @@ const TRACK_STAGE_SUBMISSIONS = {
       stageId: 1,
       isSubmission: true,
       type: 'Submission',
-      title: 'Stage 1 Official Submission: Short Pop Video',
+      title: 'Short Video Submission',
       sub: 'Reels / TikTok SciComm Video (max 90 seconds)',
-      defaultOpenDate: '2026-08-15T00:00',
-      defaultDeadline: '2026-09-01T23:59',
+      defaultOpenDate: '2026-08-23T17:00',
+      defaultDeadline: '2026-09-06T17:00',
       targetTrack: 'pop_science',
       description: 'Produce a punchy, highly engaging 90-second short video introducing a core scientific concept for social media.'
     },
@@ -217,10 +217,10 @@ const TRACK_STAGE_SUBMISSIONS = {
       stageId: 2,
       isSubmission: true,
       type: 'Submission',
-      title: 'Stage 2 Official Submission: Long Pop Video',
+      title: 'Long Video Submission',
       sub: 'YouTube SciComm Video (up to 3 minutes)',
-      defaultOpenDate: '2026-09-02T00:00',
-      defaultDeadline: '2026-09-20T23:59',
+      defaultOpenDate: '2026-09-20T17:00',
+      defaultDeadline: '2026-10-01T17:00',
       targetTrack: 'pop_science',
       description: 'Deep scientific storytelling featuring comprehensive explanation, visual graphics, and clear narration.'
     },
@@ -229,49 +229,61 @@ const TRACK_STAGE_SUBMISSIONS = {
       stageId: 3,
       isSubmission: true,
       type: 'Stage Milestone',
-      title: 'Stage 3 (Finals): Grand Finale Live Stage Show',
+      title: 'Stage 3 (Finals): Live Stage Show',
       sub: 'Interactive Live Presentation (5 mins on stage)',
-      defaultOpenDate: '2026-09-21T00:00',
-      defaultDeadline: '2026-10-10T23:59',
+      defaultOpenDate: '2026-10-02T00:00',
+      defaultDeadline: '2026-10-25T23:59',
       targetTrack: 'pop_science',
       description: 'Deliver an interactive live science presentation on stage before expert judges, audience, and broadcast.'
     }
   ],
   science_journalism: [
     {
-      id: 'stage_jour_1',
+      id: 'stage_jour_1_pre',
       stageId: 1,
       isSubmission: true,
       type: 'Submission',
-      title: 'Stage 1 Official Submission: Pre-Interview Preparation',
+      title: 'Pre-Interview Submission',
       sub: 'Topic Research, Profile & Field Interview Prep',
-      defaultOpenDate: '2026-08-15T00:00',
-      defaultDeadline: '2026-09-01T23:59',
+      defaultOpenDate: '2026-08-23T17:00',
+      defaultDeadline: '2026-08-30T17:00',
       targetTrack: 'science_journalism',
       googleFormUrl: 'https://forms.gle/tzgEf9QxBj3nG43S9',
       description: 'Submit your Pre-Interview Preparation document via Google Form demonstrating thorough literature review and interview planning.'
+    },
+    {
+      id: 'stage_jour_1_post',
+      stageId: 1,
+      isSubmission: true,
+      type: 'Submission',
+      title: 'Post-Interview Submission',
+      sub: 'Field Interview Records & Transcripts',
+      defaultOpenDate: '2026-09-06T17:00',
+      defaultDeadline: '2026-09-25T17:00',
+      targetTrack: 'science_journalism',
+      description: 'Submit your completed field interview transcripts, recordings, and source documentation.'
     },
     {
       id: 'stage_jour_2',
       stageId: 2,
       isSubmission: true,
       type: 'Submission',
-      title: 'Stage 2 Official Submission: Article Publication PDF',
-      sub: 'Simplified Science Article Publication',
-      defaultOpenDate: '2026-09-02T00:00',
-      defaultDeadline: '2026-09-20T23:59',
+      title: 'Article & TV Report Submission',
+      sub: 'Simplified Science Article & TV Report',
+      defaultOpenDate: '2026-10-29T17:00',
+      defaultDeadline: '2026-11-06T17:00',
       targetTrack: 'science_journalism',
-      description: 'Write and upload a formatted science article PDF document ready for digital publishing and magazine editorial review.'
+      description: 'Write and upload your formatted science article PDF document and TV report package ready for digital publishing.'
     },
     {
       id: 'stage_jour_3',
       stageId: 3,
       isSubmission: true,
       type: 'Stage Milestone',
-      title: 'Stage 3 (Finals): Live Talk Show Showcase',
+      title: 'Stage 3 (Finals): Live Stage Show',
       sub: 'Live Science Talk Show Interview on Stage',
-      defaultOpenDate: '2026-09-21T00:00',
-      defaultDeadline: '2026-10-10T23:59',
+      defaultOpenDate: '2026-11-07T00:00',
+      defaultDeadline: '2026-11-30T23:59',
       targetTrack: 'science_journalism',
       description: 'Host a simulated live science talk show interview on stage in front of expert judges and public audience.'
     }
