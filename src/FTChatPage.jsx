@@ -667,16 +667,16 @@ export default function FTChatPage({ user: userProp }) {
   }, [getMyAllIdentifiers, getContactAllIdentifiers, user]);
 
   // Helper to fetch the last message info
-  const getLastMessageInfo = (recipId) => {
+  const getLastMessageInfo = useCallback((recipId) => {
     if (!rawMessages) return null;
     const msgs = rawMessages.filter(msg => isMessageWithContact(msg, recipId));
     if (msgs.length === 0) return null;
     const sorted = [...msgs].sort((a,b) => new Date(a.createdAt || a.timestamp || 0).getTime() - new Date(b.createdAt || b.timestamp || 0).getTime());
     return sorted[sorted.length - 1];
-  };
+  }, [rawMessages, isMessageWithContact]);
 
   // Robust Unread Count helper per contact
-  const getUnreadCount = (recipId) => {
+  const getUnreadCount = useCallback((recipId) => {
     if (!rawMessages || !user) return 0;
     const myIds = getMyAllIdentifiers();
     const contactIds = getContactAllIdentifiers(recipId);
@@ -693,7 +693,7 @@ export default function FTChatPage({ user: userProp }) {
       return isFromContact && isForMe && !isFromMe;
     });
     return unread.length;
-  };
+  }, [rawMessages, user, getMyAllIdentifiers, getContactAllIdentifiers]);
 
   // Total unread messages across all conversations
   const totalUnreadMessages = useMemo(() => {
@@ -794,32 +794,34 @@ export default function FTChatPage({ user: userProp }) {
     : (allAccounts || []).find(s => String(s.id) === String(activeRecipient) || s.username === activeRecipient);
 
   // Filter sidebar contacts to ONLY show accounts with recent chat history, active selection, or matching search query
-  const filteredContacts = (allAccounts || [])
-    .filter(acc => {
-      const accId = String(acc.id || acc.username);
-      if (accId === String(myId)) return false;
+  const filteredContacts = useMemo(() => {
+    return (allAccounts || [])
+      .filter(acc => {
+        const accId = String(acc.id || acc.username);
+        if (accId === String(myId)) return false;
 
-      const hasHistory = getLastMessageInfo(accId) !== null;
-      const isCurrentlySelected = activeRecipient === accId;
+        const hasHistory = getLastMessageInfo(accId) !== null;
+        const isCurrentlySelected = activeRecipient === accId;
 
-      // If user types in search box, allow searching all contacts
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        return (acc.name || '').toLowerCase().includes(q) || (acc.username || '').toLowerCase().includes(q) || (acc.department || '').toLowerCase().includes(q);
-      }
+        // If user types in search box, allow searching all contacts
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          return (acc.name || '').toLowerCase().includes(q) || (acc.username || '').toLowerCase().includes(q) || (acc.department || '').toLowerCase().includes(q);
+        }
 
-      // Default sidebar view: Only show accounts with existing chat history or currently opened chat
-      return hasHistory || isCurrentlySelected;
-    })
-    .sort((a, b) => {
-      const accIdA = String(a.id || a.username);
-      const accIdB = String(b.id || b.username);
-      const msgA = getLastMessageInfo(accIdA);
-      const msgB = getLastMessageInfo(accIdB);
-      const timeA = msgA ? new Date(msgA.createdAt || msgA.timestamp || 0).getTime() : 0;
-      const timeB = msgB ? new Date(msgB.createdAt || msgB.timestamp || 0).getTime() : 0;
-      return timeB - timeA;
-    });
+        // Default sidebar view: Only show accounts with existing chat history or currently opened chat
+        return hasHistory || isCurrentlySelected;
+      })
+      .sort((a, b) => {
+        const accIdA = String(a.id || a.username);
+        const accIdB = String(b.id || b.username);
+        const msgA = getLastMessageInfo(accIdA);
+        const msgB = getLastMessageInfo(accIdB);
+        const timeA = msgA ? new Date(msgA.createdAt || msgA.timestamp || 0).getTime() : 0;
+        const timeB = msgB ? new Date(msgB.createdAt || msgB.timestamp || 0).getTime() : 0;
+        return timeB - timeA;
+      });
+  }, [allAccounts, myId, getLastMessageInfo, activeRecipient, searchQuery]);
 
   // Automatically select the first contact with chat history if none is currently active
   useEffect(() => {
