@@ -5,7 +5,7 @@ import {
   Send, User, Users, MessageSquare, Smile, Paperclip, X, FileText, 
   ChevronLeft, MoreVertical, ExternalLink, Download, ZoomIn, ZoomOut, 
   RotateCw, Plus, Search, Check, Globe, Radio, Megaphone, CheckCircle2, 
-  Video, BookOpen, AlertCircle, Sparkles, Trash2 
+  Video, BookOpen, AlertCircle, Sparkles, Trash2, Eye 
 } from 'lucide-react';
 import { FT_ROLE_COLORS, FT_ROLE_LABELS, getCleanAcademicTitle, normalizeTrackKey } from './ftConstants';
 
@@ -1607,6 +1607,114 @@ export default function FTChatPage({ user: userProp }) {
                     <Paperclip size={15} /> Attach Image or PDF Document (Optional)
                   </button>
                 )}
+              </div>
+
+              {/* Step 5: Live Recipient Message Preview */}
+              <div style={{
+                background: '#f8fafc',
+                borderRadius: '16px',
+                border: '1.5px solid #cbd5e1',
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.65rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Eye size={16} style={{ color: '#be123c' }} />
+                    <span>Live Message Preview (How recipients see it in private chat):</span>
+                  </div>
+                  <span style={{
+                    fontSize: '0.72rem', color: '#1e293b', background: '#e2e8f0',
+                    padding: '0.2rem 0.55rem', borderRadius: '9999px', fontWeight: 700
+                  }}>
+                    Sample Recipient: <strong>{broadcastRecipients[0]?.name || 'Participant Name'}</strong>
+                  </span>
+                </div>
+
+                {/* Simulated Chat View */}
+                <div style={{
+                  background: 'linear-gradient(180deg, #f1f5f9 0%, #ffffff 100%)',
+                  borderRadius: '14px',
+                  padding: '1rem',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'flex-start' }}>
+                    <img
+                      src={user?.avatarUrl || user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || myName}`}
+                      alt={myName}
+                      style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #be123c', flexShrink: 0 }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                      <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.25rem' }}>
+                        {myName} <span style={{ fontSize: '0.68rem', color: '#be123c', fontWeight: 700 }}>({FT_ROLE_LABELS[user?.role] || 'Staff'})</span>
+                      </div>
+
+                      <div
+                        dir="auto"
+                        className="ft-chat-bubble-text"
+                        style={{
+                          background: '#ffffff',
+                          color: '#0f172a',
+                          border: '1.5px solid #cbd5e1',
+                          borderRadius: '16px',
+                          borderBottomLeftRadius: '3px',
+                          padding: '0.85rem 1.1rem',
+                          boxShadow: '0 4px 14px rgba(0,0,0,0.04)',
+                          fontSize: '0.88rem',
+                          lineHeight: 1.65,
+                          maxWidth: '100%',
+                          width: '100%',
+                          boxSizing: 'border-box',
+                          wordBreak: 'break-word',
+                          whiteSpace: 'pre-wrap',
+                          unicodeBidi: 'plaintext'
+                        }}
+                      >
+                        {/* Attachment Preview */}
+                        {broadcastFilePreview && (
+                          <div style={{ marginBottom: broadcastText ? '0.6rem' : 0 }}>
+                            {broadcastFilePreview.isImage ? (
+                              <img
+                                src={broadcastFilePreview.data}
+                                alt={broadcastFilePreview.name}
+                                style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '10px', border: '1px solid #e2e8f0' }}
+                              />
+                            ) : (
+                              <div style={{
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                background: '#f1f5f9', color: '#0f172a', padding: '0.5rem 0.75rem',
+                                borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700
+                              }}>
+                                <FileText size={16} style={{ color: '#be123c' }} />
+                                <span>{broadcastFilePreview.name}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Text preview with tag interpolation */}
+                        {broadcastText.trim() ? (
+                          renderMessageText(
+                            broadcastText
+                              .replace(/\{name\}/gi, broadcastRecipients[0]?.name || 'Ahmed Ashraf')
+                              .replace(/\{username\}/gi, broadcastRecipients[0]?.username || 'Ahmed'),
+                            false,
+                            allAccounts
+                          )
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.82rem' }}>
+                            (Type your message above to see the live formatted preview...)
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ fontSize: '0.66rem', color: '#94a3b8', fontWeight: 600, marginTop: '0.3rem', paddingLeft: '0.2rem' }}>
+                        Just now • Direct Private Message
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Broadcasting Live Progress */}
