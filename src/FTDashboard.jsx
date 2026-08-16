@@ -787,17 +787,17 @@ export default function FTDashboard() {
             </div>
           </div>
 
-          {/* 2-Column Grid (desktop) / Vertical Stack (mobile) */}
+          {/* 2-Column Grid (desktop) / Vertical Stack with separators (mobile) */}
           <div className="ft-agenda-grid-container">
             
-            {/* ── COLUMN 1: 📌 مهام أساسية (Required) ── */}
-            <div>
+            {/* ── SECTION 1: 📌 مهام أساسية (Required) ── */}
+            <div className="ft-agenda-section-group">
               <div className="ft-agenda-section-label required-label">
                 <span>📌</span>
                 <span>مهام أساسية</span>
-                <span className={`ft-agenda-track-badge track-primary`}>
-                  {primaryTrackKey === 'pop_science' ? '🎥 المسار الأول — الفيديوهات العلمية' : '📰 المسار الثاني — الصحافة العلمية'}
-                </span>
+              </div>
+              <div className={`ft-agenda-track-badge track-primary`}>
+                {primaryTrackKey === 'pop_science' ? '🎥 المسار الأول — الفيديوهات العلمية' : '📰 المسار الثاني — الصحافة العلمية'}
               </div>
 
               {primaryUpcoming.length === 0 ? (
@@ -838,7 +838,7 @@ export default function FTDashboard() {
 
                   return (
                     <div key={item.id || idx} className={cardClass}>
-                      {/* Row 1: Status + Track (inline) */}
+                      {/* Row 1: Status + Type (inline compact) */}
                       <div className="ft-agenda-card-toprow">
                         {status.isLive ? (
                           <span className="ft-agenda-status-badge live">
@@ -923,14 +923,17 @@ export default function FTDashboard() {
               )}
             </div>
 
-            {/* ── COLUMN 2: ✨ أنشطة إضافية (Optional) ── */}
-            <div>
+            {/* ── Mobile separator ── */}
+            <div className="ft-agenda-mobile-separator" />
+
+            {/* ── SECTION 2: ✨ أنشطة إضافية (Optional) ── */}
+            <div className="ft-agenda-section-group">
               <div className="ft-agenda-section-label optional-label">
                 <span>✨</span>
                 <span>أنشطة إضافية</span>
-                <span className={`ft-agenda-track-badge track-secondary`}>
-                  {secondaryTrackKey === 'pop_science' ? '🎥 المسار الأول — الفيديوهات العلمية' : '📰 المسار الثاني — الصحافة العلمية'}
-                </span>
+              </div>
+              <div className={`ft-agenda-track-badge track-secondary`}>
+                {secondaryTrackKey === 'pop_science' ? '🎥 المسار الأول — الفيديوهات العلمية' : '📰 المسار الثاني — الصحافة العلمية'}
               </div>
 
               {optionalUpcoming.length === 0 ? (
