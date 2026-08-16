@@ -250,6 +250,8 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
     endDate: '',
     meetingLink: '',
     location: '',
+    fileName: '',
+    fileUrl: '',
     description: ''
   });
 
@@ -321,6 +323,8 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
       endDate: '',
       meetingLink: '',
       location: '',
+      fileName: '',
+      fileUrl: '',
       description: ''
     });
     setSelectedTrainer(null);
@@ -355,6 +359,8 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
       endDate: formatForInput(ws.endDate),
       meetingLink: ws.meetingLink || '',
       location: ws.location || '',
+      fileName: ws.fileName || '',
+      fileUrl: ws.fileUrl || ws.presentationLink || '',
       description: ws.description || ''
     });
 
@@ -437,6 +443,8 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
         endDate: finalEndDate,
         meetingLink: form.meetingLink || '',
         location: form.location || 'Online Session',
+        fileName: form.fileName || '',
+        fileUrl: form.fileUrl || '',
         description: form.description || '',
         updatedAt: new Date().toISOString()
       };
@@ -466,7 +474,7 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
 
       setShowModal(false);
       setEditingId(null);
-      setForm({ title: '', type: 'Workshop', targetTrack: 'both', trainerName: '', trainerId: '', startDate: '', endDate: '', meetingLink: '', location: '', description: '' });
+      setForm({ title: '', type: 'Workshop', targetTrack: 'both', trainerName: '', trainerId: '', startDate: '', endDate: '', meetingLink: '', location: '', fileName: '', fileUrl: '', description: '' });
       setSelectedTrainer(null);
       setTrainerQuery('');
     } catch (err) {
@@ -984,6 +992,22 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
                     )
                   )}
 
+                  {/* Attached Workshop File Pill */}
+                  {ws.fileUrl && (
+                    <a
+                      href={ws.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        background: '#eff6ff', color: '#2563eb', border: '1.5px solid #bfdbfe',
+                        padding: '0.45rem 0.85rem', borderRadius: '12px', fontWeight: 800, fontSize: '0.82rem',
+                        textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.35rem'
+                      }}
+                    >
+                      📎 {ws.fileName || 'View Linked File'} <ExternalLink size={13} />
+                    </a>
+                  )}
+
                   {/* Admin / Trainer Controls for Workshops */}
                   {!isStage && (isAdmin || isTrainer) && (
                     <button
@@ -1190,6 +1214,17 @@ export default function WorkshopManager({ isAdmin = true, isTrainer = true, curr
               <div>
                 <label className="ft-label">Meeting Link (Zoom / Teams URL)</label>
                 <input type="url" className="ft-input" placeholder="https://zoom.us/j/..." value={form.meetingLink} onChange={e => setForm({ ...form, meetingLink: e.target.value })} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label className="ft-label">Resource / Slides File Name</label>
+                  <input type="text" className="ft-input" placeholder="e.g. Orientation_Presentation.pdf" value={form.fileName} onChange={e => setForm({ ...form, fileName: e.target.value })} />
+                </div>
+                <div>
+                  <label className="ft-label">Resource File URL (Google Drive / PDF)</label>
+                  <input type="url" className="ft-input" placeholder="https://drive.google.com/..." value={form.fileUrl} onChange={e => setForm({ ...form, fileUrl: e.target.value })} />
+                </div>
               </div>
 
               <div>
