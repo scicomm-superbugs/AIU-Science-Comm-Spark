@@ -255,6 +255,7 @@ export default function FTModulesPage() {
   const dynamicWorkshops = useLiveCollection('workshops') || [];
   const customWeekTitles = useLiveCollection('ft_week_titles') || [];
   const timelineConfig = useLiveCollection('timeline_config') || [];
+  const moduleItemAssignments = useLiveCollection('ft_module_items') || [];
 
   const isAdmin = ['admin', 'master'].includes(user?.role);
   const isTrainer = ['trainer', 'trainer_judge'].includes(user?.role);
@@ -326,7 +327,7 @@ export default function FTModulesPage() {
     return normTrack === 'pop_science';
   };
 
-  // ── 1. POOL OF ALL AVAILABLE ITEMS FOR CURRENT TRACK ────────────────
+  // ── 1. POOL OF ALL AVAILABLE ITEMS FOR CURRENT TRACK (TRACK-ISOLATED ASSIGNMENT) ──
   const allTrackAvailableItems = useMemo(() => {
     const normTrack = selectedTrack === 'science_journalism' ? 'science_journalism' : 'pop_science';
     const items = [];
@@ -339,12 +340,27 @@ export default function FTModulesPage() {
         const isPassed = isEventPassed(ws.startDate, ws.endDate);
         const normTarget = normalizeTrackKey(rawTarget);
 
+        // Find track-specific assignment in ft_module_items
+        const assignmentDoc = moduleItemAssignments.find(a => 
+          a.track === normTrack && (a.itemId === ws.id || a.id === `${normTrack}_${ws.id}`)
+        );
+
+        let assignedWeek = 0;
+        if (assignmentDoc && typeof assignmentDoc.weekNumber !== 'undefined') {
+          assignedWeek = Number(assignmentDoc.weekNumber) || 0;
+        } else if (normTrack === 'pop_science' && typeof ws.popScienceWeek !== 'undefined') {
+          assignedWeek = Number(ws.popScienceWeek) || 0;
+        } else if (normTrack === 'science_journalism' && typeof ws.scienceJournalismWeek !== 'undefined') {
+          assignedWeek = Number(ws.scienceJournalismWeek) || 0;
+        }
+
         items.push({
           id: ws.id,
           source: 'workshop',
           isSubmission: false,
           title: ws.title,
-          weekNumber: Number(ws.weekNumber) || 0,
+          weekNumber: assignedWeek,
+          currentTrackWeek: assignedWeek,
           fileName: ws.fileName || (fileUrl ? 'Workshop_Materials_Presentation.pdf' : ''),
           fileUrl: fileUrl,
           hasFile: Boolean(fileUrl),
@@ -385,6 +401,20 @@ export default function FTModulesPage() {
         windowStatus = 'closed';
       }
 
+      // Find track-specific assignment in ft_module_items
+      const assignmentDoc = moduleItemAssignments.find(a => 
+        a.track === normTrack && (a.itemId === defStage.id || a.id === `${normTrack}_${defStage.id}`)
+      );
+
+      let assignedWeek = 0;
+      if (assignmentDoc && typeof assignmentDoc.weekNumber !== 'undefined') {
+        assignedWeek = Number(assignmentDoc.weekNumber) || 0;
+      } else if (normTrack === 'pop_science' && typeof custom?.popScienceWeek !== 'undefined') {
+        assignedWeek = Number(custom.popScienceWeek) || 0;
+      } else if (normTrack === 'science_journalism' && typeof custom?.scienceJournalismWeek !== 'undefined') {
+        assignedWeek = Number(custom.scienceJournalismWeek) || 0;
+      }
+
       items.push({
         id: defStage.id,
         source: 'stage_submission',
@@ -393,7 +423,8 @@ export default function FTModulesPage() {
         stageId: defStage.stageId,
         title: custom?.title || defStage.title,
         sub: defStage.sub,
-        weekNumber: Number(custom?.weekNumber) || 0,
+        weekNumber: assignedWeek,
+        currentTrackWeek: assignedWeek,
         openDate: openDate || '',
         deadline: deadline || '',
         startDate: openDate || '',
@@ -408,18 +439,18 @@ export default function FTModulesPage() {
     });
 
     return items;
-  }, [dynamicWorkshops, timelineConfig, selectedTrack]);
+  }, [dynamicWorkshops, timelineConfig, moduleItemAssignments, selectedTrack]);
 
-  // ── 2. GROUPED MODULES FOR DISPLAY ──────────────────────────────────
+  // ── 2. GROUPED MODULES FOR DISPLAY (100% ISOLATED PER TRACK) ────────
   const groupedWeeks = useMemo(() => {
     const normTrack = selectedTrack === 'science_journalism' ? 'science_journalism' : 'pop_science';
     const weekMapByNum = new Map();
 
-    // Only load modules that are explicitly saved and created in Firestore ft_week_titles for this track
+    // Only load modules that are explicitly saved in ft_week_titles FOR THIS SPECIFIC TRACK
     customWeekTitles.forEach(c => {
       if (c.deleted) return;
       const cTrack = normalizeTrackKey(c.track || normTrack);
-      if (cTrack !== normTrack && c.track) return;
+      if (cTrack !== normTrack) return; // Strict track isolation!
 
       const wNum = Number(c.weekNumber);
       if (!wNum || isNaN(wNum)) return;
@@ -432,7 +463,7 @@ export default function FTModulesPage() {
       });
     });
 
-    // Distribute items that are explicitly assigned to a module
+    // Distribute items that are explicitly assigned to this track's modules
     allTrackAvailableItems.forEach(item => {
       const wNum = Number(item.weekNumber);
       if (wNum > 0 && weekMapByNum.has(wNum)) {
@@ -463,7 +494,7 @@ export default function FTModulesPage() {
     return result;
   }, [customWeekTitles, allTrackAvailableItems, selectedTrack, searchQuery]);
 
-  // ── DRAG AND DROP HANDLERS ACROSS WEEKS ──────────────────────────────
+  // ── DRAG AND DROP HANDLERS ACROSS WEEKS (TRACK-SCOPED) ──────────────
   const handleDragStart = (e, item) => {
     if (!canManage) return;
     setDraggedItem(item);
@@ -497,14 +528,20 @@ export default function FTModulesPage() {
     }
 
     try {
-      const updatePayload = {
+      const docId = `${selectedTrack}_${draggedItem.id}`;
+      await db.ft_module_items.set(docId, {
+        id: docId,
+        track: selectedTrack,
+        itemId: draggedItem.id,
         weekNumber: Number(targetWeekNum),
         updatedAt: new Date().toISOString()
-      };
-      if (draggedItem.isSubmission) {
-        await db.timeline_config.set(draggedItem.id, updatePayload);
+      });
+
+      const trackField = selectedTrack === 'pop_science' ? 'popScienceWeek' : 'scienceJournalismWeek';
+      if (!draggedItem.isSubmission) {
+        await db.workshops.update(draggedItem.id, { [trackField]: Number(targetWeekNum), updatedAt: new Date().toISOString() });
       } else {
-        await db.workshops.update(draggedItem.id, updatePayload);
+        await db.timeline_config.set(draggedItem.id, { [trackField]: Number(targetWeekNum), updatedAt: new Date().toISOString() });
       }
     } catch (err) {
       alert('Failed to move item: ' + err.message);
@@ -518,14 +555,20 @@ export default function FTModulesPage() {
     e.preventDefault();
     if (!moveModalItem) return;
     try {
-      const updatePayload = {
+      const docId = `${selectedTrack}_${moveModalItem.id}`;
+      await db.ft_module_items.set(docId, {
+        id: docId,
+        track: selectedTrack,
+        itemId: moveModalItem.id,
         weekNumber: Number(targetMoveWeek),
         updatedAt: new Date().toISOString()
-      };
-      if (moveModalItem.isSubmission) {
-        await db.timeline_config.set(moveModalItem.id, updatePayload);
+      });
+
+      const trackField = selectedTrack === 'pop_science' ? 'popScienceWeek' : 'scienceJournalismWeek';
+      if (!moveModalItem.isSubmission) {
+        await db.workshops.update(moveModalItem.id, { [trackField]: Number(targetMoveWeek), updatedAt: new Date().toISOString() });
       } else {
-        await db.workshops.update(moveModalItem.id, updatePayload);
+        await db.timeline_config.set(moveModalItem.id, { [trackField]: Number(targetMoveWeek), updatedAt: new Date().toISOString() });
       }
       setMoveModalItem(null);
     } catch (err) {
@@ -533,23 +576,35 @@ export default function FTModulesPage() {
     }
   };
 
-  // Assign or Remove Item from a Module
+  // Assign or Remove Item from a Module (Track-Isolated)
   const handleToggleItemAssignment = async (item, targetWeekNum) => {
     if (!canManage) return;
     setIsAssigningItem(true);
     try {
-      const isAlreadyInThisWeek = Number(item.weekNumber) === Number(targetWeekNum);
+      const isAlreadyInThisWeek = Number(item.currentTrackWeek) === Number(targetWeekNum);
       const newWeekNum = isAlreadyInThisWeek ? 0 : Number(targetWeekNum);
 
-      const updatePayload = {
+      const docId = `${selectedTrack}_${item.id}`;
+      await db.ft_module_items.set(docId, {
+        id: docId,
+        track: selectedTrack,
+        itemId: item.id,
         weekNumber: newWeekNum,
-        updatedAt: new Date().toISOString()
-      };
+        updatedAt: new Date().toISOString(),
+        updatedBy: user?.username || user?.email || 'admin'
+      });
 
-      if (item.isSubmission) {
-        await db.timeline_config.set(item.id, updatePayload);
+      const trackField = selectedTrack === 'pop_science' ? 'popScienceWeek' : 'scienceJournalismWeek';
+      if (!item.isSubmission) {
+        await db.workshops.update(item.id, {
+          [trackField]: newWeekNum,
+          updatedAt: new Date().toISOString()
+        });
       } else {
-        await db.workshops.update(item.id, updatePayload);
+        await db.timeline_config.set(item.id, {
+          [trackField]: newWeekNum,
+          updatedAt: new Date().toISOString()
+        });
       }
     } catch (err) {
       alert('Failed to update item assignment: ' + err.message);
@@ -628,24 +683,18 @@ export default function FTModulesPage() {
   // Handle Deleting a Week from Selected Track cleanly
   const handleDeleteWeek = async (weekGroup) => {
     const trackName = selectedTrack === 'pop_science' ? 'Track 1 (Pop Science)' : 'Track 2 (Science Journalism)';
-    if (!window.confirm(`Are you sure you want to delete "${weekGroup.weekTitle}" from ${trackName}? All assigned items will be unassigned.`)) return;
+    if (!window.confirm(`Are you sure you want to delete "${weekGroup.weekTitle}" from ${trackName}? All assigned items will be unassigned in this track.`)) return;
 
     try {
       const wNum = Number(weekGroup.weekNumber);
 
-      // 1. Unassign all workshops in this week
-      const workshopsInThisWeek = dynamicWorkshops.filter(ws => (Number(ws.weekNumber) || 0) === wNum);
-      for (const ws of workshopsInThisWeek) {
-        await db.workshops.update(ws.id, { weekNumber: 0, updatedAt: new Date().toISOString() });
+      // 1. Unassign all items in this track for this week
+      const assignmentsInThisWeek = moduleItemAssignments.filter(a => a.track === selectedTrack && Number(a.weekNumber) === wNum);
+      for (const a of assignmentsInThisWeek) {
+        await db.ft_module_items.set(a.id, { ...a, weekNumber: 0, updatedAt: new Date().toISOString() });
       }
 
-      // 2. Unassign all submissions in this week
-      const submissionsInThisWeek = timelineConfig.filter(c => (Number(c.weekNumber) || 0) === wNum);
-      for (const s of submissionsInThisWeek) {
-        await db.timeline_config.set(s.id, { weekNumber: 0, updatedAt: new Date().toISOString() });
-      }
-
-      // 3. Mark module as deleted in Firestore for this track
+      // 2. Mark module as deleted in Firestore for this track
       const docId = `${selectedTrack}_week_${wNum}`;
       await db.ft_week_titles.set(docId, {
         id: docId,
@@ -657,7 +706,7 @@ export default function FTModulesPage() {
         updatedAt: new Date().toISOString()
       });
 
-      // 4. Also delete any legacy un-prefixed key
+      // 3. Also delete legacy key
       try {
         await db.ft_week_titles.delete(`week_${wNum}`);
       } catch {}
@@ -666,31 +715,33 @@ export default function FTModulesPage() {
     }
   };
 
-  // Reset / Clear All Modules in Both Tracks
+  // Reset / Clear All Modules in Current Track
   const handleClearAllModules = async () => {
-    if (!window.confirm('⚠️ Are you sure you want to delete and reset all modules across both tracks? All workshops and submissions will be safely preserved and unassigned so you can build clean modules manually.')) return;
+    const trackName = selectedTrack === 'pop_science' ? 'Track 1 (Pop Science)' : 'Track 2 (Science Journalism)';
+    if (!window.confirm(`⚠️ Are you sure you want to delete and reset all modules in ${trackName}? All items in this track will be safely unassigned so you can build clean modules manually.`)) return;
 
     try {
-      // 1. Unassign all workshops
+      // 1. Unassign all items in ft_module_items for this track
+      const thisTrackAssignments = moduleItemAssignments.filter(a => a.track === selectedTrack);
+      for (const a of thisTrackAssignments) {
+        await db.ft_module_items.set(a.id, { ...a, weekNumber: 0, updatedAt: new Date().toISOString() });
+      }
+
+      // 2. Clear workshops legacy track fields
+      const trackField = selectedTrack === 'pop_science' ? 'popScienceWeek' : 'scienceJournalismWeek';
       for (const ws of dynamicWorkshops) {
-        if (ws.weekNumber) {
-          await db.workshops.update(ws.id, { weekNumber: 0, updatedAt: new Date().toISOString() });
+        if (ws[trackField]) {
+          await db.workshops.update(ws.id, { [trackField]: 0, updatedAt: new Date().toISOString() });
         }
       }
 
-      // 2. Unassign all submissions
-      for (const s of timelineConfig) {
-        if (s.weekNumber) {
-          await db.timeline_config.set(s.id, { weekNumber: 0, updatedAt: new Date().toISOString() });
-        }
-      }
-
-      // 3. Mark all custom week titles deleted
-      for (const c of customWeekTitles) {
+      // 3. Mark custom week titles for this track as deleted
+      const thisTrackTitles = customWeekTitles.filter(c => normalizeTrackKey(c.track || selectedTrack) === selectedTrack);
+      for (const c of thisTrackTitles) {
         await db.ft_week_titles.set(c.id, { ...c, deleted: true, updatedAt: new Date().toISOString() });
       }
 
-      alert('🎉 All modules cleared! You can now create clean custom modules and add lectures, workshops, files, and submissions manually.');
+      alert(`🎉 All modules in ${trackName} cleared! You can now create custom modules and add content manually.`);
     } catch (err) {
       alert('Failed to clear modules: ' + err.message);
     }
@@ -774,14 +825,14 @@ export default function FTModulesPage() {
                   <button
                     type="button"
                     onClick={handleClearAllModules}
-                    title="Clear and reset all modules across tracks"
+                    title="Clear and reset modules for this track"
                     style={{
                       padding: '0.6rem 0.9rem', borderRadius: '12px', background: '#fff1f2',
                       border: '1.5px solid #fecdd3', color: '#dc2626', fontWeight: 800, fontSize: '0.82rem',
                       cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem'
                     }}
                   >
-                    <RotateCcw size={15} /> Clear All Modules
+                    <RotateCcw size={15} /> Clear {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'} Modules
                   </button>
                 )}
               </>
@@ -898,7 +949,7 @@ export default function FTModulesPage() {
             No Modules Created Yet in {selectedTrack === 'pop_science' ? 'Track 1 (Pop Science)' : 'Track 2 (Science Journalism)'}
           </h2>
           <p style={{ fontSize: '0.9rem', color: '#64748b', maxWidth: '520px', margin: '0 auto 1.5rem auto', fontWeight: 600 }}>
-            Click the button below to create your first module and then manually add workshops, lectures, office hours, and submissions.
+            Click the button below to create your first module for {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'} and manually pick its contents.
           </p>
           {canManage && (
             <button
@@ -1300,7 +1351,7 @@ export default function FTModulesPage() {
                                     <button
                                       type="button"
                                       onClick={() => handleToggleItemAssignment(item, weekGroup.weekNumber)}
-                                      title="Remove from this module"
+                                      title="Remove from this module in this track"
                                       style={{
                                         background: '#fff1f2', border: '1px solid #fecdd3', color: '#dc2626',
                                         height: '34px', padding: '0 0.55rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800,
@@ -1474,7 +1525,7 @@ export default function FTModulesPage() {
                                   <button
                                     type="button"
                                     onClick={() => handleToggleItemAssignment(item, weekGroup.weekNumber)}
-                                    title="Remove from this module"
+                                    title="Remove from this module in this track"
                                     style={{
                                       background: '#fff1f2', border: '1px solid #fecdd3', color: '#dc2626',
                                       height: '32px', padding: '0 0.55rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800,
@@ -1715,7 +1766,7 @@ export default function FTModulesPage() {
                             {formattedTime && <span>Date: <strong>{formattedTime}</strong></span>}
                             {isInOtherWeek && (
                               <span style={{ color: '#d97706', fontWeight: 700 }}>
-                                Currently in Module {item.weekNumber}
+                                Currently in Module {item.weekNumber} (in {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'})
                               </span>
                             )}
                           </div>
@@ -1792,7 +1843,7 @@ export default function FTModulesPage() {
                   <Plus size={22} style={{ color: '#be123c' }} /> Add Module to {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}
                 </h2>
                 <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0.25rem 0 0 0', fontWeight: 600 }}>
-                  Create an empty module and then manually pick content to add.
+                  Create an independent module specifically for {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}.
                 </p>
               </div>
               <button
@@ -1830,7 +1881,7 @@ export default function FTModulesPage() {
               </div>
 
               <div style={{ background: '#eff6ff', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #bfdbfe', fontSize: '0.8rem', color: '#1e40af', fontWeight: 600 }}>
-                💡 After creating this module, click "+ Add Item" to choose from all matching lectures, workshops, files, and submissions.
+                💡 Modules and their contents in {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'} are completely separated and independent from the other track.
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
