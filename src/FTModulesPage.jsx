@@ -4,7 +4,7 @@ import {
   BookOpen, FileText, ChevronDown, ChevronRight, ExternalLink, Plus, 
   Calendar, Clock, User, CheckCircle2, Search, Layers, GripVertical, 
   Video, Pencil, Trash2, X, Sparkles, Paperclip, Check, AlertCircle, 
-  Download, ArrowRightLeft, MoveRight
+  Download, ArrowRightLeft, MoveRight, Award, Send, CheckCircle, Flame
 } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { db, useLiveCollection } from './db';
@@ -53,6 +53,30 @@ function formatExactDateTime(startStr, endStr) {
 }
 
 /**
+ * Format date nicely for submission windows
+ */
+function formatShortDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+
+  const datePart = d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+
+  const hasTime = String(dateStr).includes('T') || String(dateStr).includes(':');
+  const timePart = hasTime ? d.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  }) : '';
+
+  return timePart ? `${datePart}, ${timePart}` : datePart;
+}
+
+/**
  * Check if the workshop / session date and time has passed
  */
 function isEventPassed(startStr, endStr) {
@@ -88,6 +112,81 @@ const DEFAULT_WEEKS_BY_TRACK = {
   ]
 };
 
+// Default Official Stage Submissions per Track
+const DEFAULT_STAGE_SUBMISSIONS = {
+  pop_science: [
+    {
+      id: 'pop_stage_1',
+      stageId: 1,
+      isSubmission: true,
+      title: 'Stage 1 Official Submission: Short Pop Video',
+      sub: 'Reels / TikTok SciComm Video (max 90 seconds)',
+      defaultOpenDate: '2026-08-15T00:00',
+      defaultDeadline: '2026-09-01T23:59',
+      defaultWeek: 2,
+      description: 'Produce a punchy, highly engaging 90-second short video introducing a core scientific concept for social media.'
+    },
+    {
+      id: 'pop_stage_2',
+      stageId: 2,
+      isSubmission: true,
+      title: 'Stage 2 Official Submission: Long Pop Video',
+      sub: 'YouTube SciComm Video (up to 3 minutes)',
+      defaultOpenDate: '2026-09-02T00:00',
+      defaultDeadline: '2026-09-20T23:59',
+      defaultWeek: 4,
+      description: 'Deep scientific storytelling featuring comprehensive explanation, visual graphics, and clear narration.'
+    },
+    {
+      id: 'pop_stage_3',
+      stageId: 3,
+      isSubmission: true,
+      title: 'Stage 3 (Finals): Grand Finale Live Stage Show',
+      sub: 'Interactive Live Presentation (5 mins on stage)',
+      defaultOpenDate: '2026-09-21T00:00',
+      defaultDeadline: '2026-10-10T23:59',
+      defaultWeek: 5,
+      description: 'Deliver an interactive live science presentation on stage before expert judges, audience, and broadcast.'
+    }
+  ],
+  science_journalism: [
+    {
+      id: 'jour_stage_1',
+      stageId: 1,
+      isSubmission: true,
+      title: 'Stage 1 Official Submission: Pre-Interview Preparation',
+      sub: 'Topic Research, Profile & Field Interview Prep',
+      defaultOpenDate: '2026-08-15T00:00',
+      defaultDeadline: '2026-09-01T23:59',
+      defaultWeek: 2,
+      googleFormUrl: 'https://forms.gle/tzgEf9QxBj3nG43S9',
+      description: 'Submit your Pre-Interview Preparation document via Google Form demonstrating thorough literature review and interview planning.'
+    },
+    {
+      id: 'jour_stage_2',
+      stageId: 2,
+      isSubmission: true,
+      title: 'Stage 2 Official Submission: Article Publication PDF',
+      sub: 'Simplified Science Article Publication',
+      defaultOpenDate: '2026-09-02T00:00',
+      defaultDeadline: '2026-09-20T23:59',
+      defaultWeek: 4,
+      description: 'Write and upload a formatted science article PDF document ready for digital publishing and magazine editorial review.'
+    },
+    {
+      id: 'jour_stage_3',
+      stageId: 3,
+      isSubmission: true,
+      title: 'Stage 3 (Finals): Live Talk Show Showcase',
+      sub: 'Live Science Talk Show Interview on Stage',
+      defaultOpenDate: '2026-09-21T00:00',
+      defaultDeadline: '2026-10-10T23:59',
+      defaultWeek: 5,
+      description: 'Host a simulated live science talk show interview on stage in front of expert judges and public audience.'
+    }
+  ]
+};
+
 export default function FTModulesPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -96,6 +195,7 @@ export default function FTModulesPage() {
   const scientists = useLiveCollection('scientists') || [];
   const dynamicWorkshops = useLiveCollection('workshops') || [];
   const customWeekTitles = useLiveCollection('ft_week_titles') || [];
+  const timelineConfig = useLiveCollection('timeline_config') || [];
 
   const isAdmin = ['admin', 'master'].includes(user?.role);
   const isTrainer = ['trainer', 'trainer_judge'].includes(user?.role);
@@ -148,7 +248,7 @@ export default function FTModulesPage() {
     setCollapsedWeeks({});
   };
 
-  // Build track-specific grouped weeks with automatic workshop mapping and chronological sorting
+  // Build track-specific grouped weeks with automatic workshop mapping, stage submissions, and chronological sorting
   const groupedWeeks = useMemo(() => {
     const normTrack = selectedTrack === 'science_journalism' ? 'science_journalism' : 'pop_science';
     const allItems = [];
@@ -177,6 +277,7 @@ export default function FTModulesPage() {
         allItems.push({
           id: ws.id,
           source: 'workshop',
+          isSubmission: false,
           title: ws.title,
           weekNumber: Number(ws.weekNumber) || 0,
           fileName: ws.fileName || (fileUrl ? 'Workshop_Materials_Presentation.pdf' : ''),
@@ -194,7 +295,54 @@ export default function FTModulesPage() {
       }
     });
 
-    // 2. Search query filter
+    // 2. Map Stage Submissions for this track with open and closing dates
+    const trackSubmissions = DEFAULT_STAGE_SUBMISSIONS[normTrack] || DEFAULT_STAGE_SUBMISSIONS.pop_science;
+    trackSubmissions.forEach(defStage => {
+      // Find override in timeline_config
+      const custom = timelineConfig.find(c => 
+        c.id === defStage.id || 
+        (Number(c.stageId) === Number(defStage.stageId) && normalizeTrackKey(c.trackId || c.targetTrack) === normTrack)
+      );
+
+      const openDate = custom?.openDate || (custom?.submissions && custom.submissions[0]?.openDate) || defStage.defaultOpenDate;
+      let deadline = custom?.deadline || (custom?.submissions && custom.submissions[0]?.deadline) || defStage.defaultDeadline;
+      if (deadline && !deadline.includes('T') && deadline !== 'TBD') {
+        deadline = `${deadline}T23:59`;
+      }
+
+      const now = new Date();
+      const openD = openDate ? new Date(openDate) : null;
+      const deadD = deadline ? new Date(deadline) : null;
+
+      let windowStatus = 'active'; // 'upcoming' | 'active' | 'closed'
+      if (openD && !isNaN(openD.getTime()) && now < openD) {
+        windowStatus = 'upcoming';
+      } else if (deadD && !isNaN(deadD.getTime()) && now > deadD) {
+        windowStatus = 'closed';
+      }
+
+      allItems.push({
+        id: defStage.id,
+        source: 'stage_submission',
+        isSubmission: true,
+        stageId: defStage.stageId,
+        title: custom?.title || defStage.title,
+        sub: defStage.sub,
+        weekNumber: Number(custom?.weekNumber) || defStage.defaultWeek || defStage.stageId * 2,
+        openDate: openDate || '',
+        deadline: deadline || '',
+        startDate: openDate || '',
+        endDate: deadline || '',
+        windowStatus,
+        isPassed: windowStatus === 'closed',
+        targetTrack: normTrack,
+        googleFormUrl: custom?.googleFormUrl || (custom?.submissions && custom.submissions[0]?.googleFormUrl) || defStage.googleFormUrl || '',
+        acceptSubmissions: custom?.acceptSubmissions !== false,
+        description: custom?.details || defStage.description || ''
+      });
+    });
+
+    // 3. Search query filter
     const searchFiltered = allItems.filter(item => {
       if (!searchQuery) return true;
       const q = searchQuery.toLowerCase();
@@ -206,7 +354,7 @@ export default function FTModulesPage() {
       );
     });
 
-    // 3. Track-Specific Default Weeks
+    // 4. Track-Specific Default Weeks
     const trackDefaultWeeks = DEFAULT_WEEKS_BY_TRACK[normTrack] || DEFAULT_WEEKS_BY_TRACK.pop_science;
     const weekMap = {};
 
@@ -247,7 +395,7 @@ export default function FTModulesPage() {
       }
     });
 
-    // 4. Distribute workshops into this track's week groups
+    // 5. Distribute workshops & submissions into this track's week groups
     searchFiltered.forEach(item => {
       let weekNum = item.weekNumber;
 
@@ -279,7 +427,7 @@ export default function FTModulesPage() {
         weekMap[weekKey] = {
           weekNumber: weekNum,
           weekKey,
-          weekTitle: customTitleDoc?.title || `Week ${weekNum}: Training & Learning Modules`,
+          weekTitle: customTitleDoc?.title || `Week ${weekNum}: Training & Submissions`,
           items: []
         };
       }
@@ -287,16 +435,16 @@ export default function FTModulesPage() {
       weekMap[weekKey].items.push(item);
     });
 
-    // 5. Sort weeks by weekNumber
+    // 6. Sort weeks by weekNumber
     const result = Object.values(weekMap).sort((a, b) => a.weekNumber - b.weekNumber);
 
-    // 6. Sort items within each week chronologically by date and time
+    // 7. Sort items within each week chronologically by date and time
     result.forEach(w => {
       w.items.sort((a, b) => new Date(a.startDate || 0) - new Date(b.startDate || 0));
     });
 
     return result;
-  }, [dynamicWorkshops, customWeekTitles, selectedTrack, searchQuery]);
+  }, [dynamicWorkshops, customWeekTitles, timelineConfig, selectedTrack, searchQuery]);
 
   // ── DRAG AND DROP HANDLERS ACROSS WEEKS ──────────────────────────────
   const handleDragStart = (e, item) => {
@@ -336,9 +484,13 @@ export default function FTModulesPage() {
         weekNumber: Number(targetWeekNum),
         updatedAt: new Date().toISOString()
       };
-      await db.workshops.update(draggedItem.id, updatePayload);
+      if (draggedItem.isSubmission) {
+        await db.timeline_config.set(draggedItem.id, updatePayload);
+      } else {
+        await db.workshops.update(draggedItem.id, updatePayload);
+      }
     } catch (err) {
-      alert('Failed to move workshop: ' + err.message);
+      alert('Failed to move item: ' + err.message);
     } finally {
       setDraggedItem(null);
     }
@@ -353,7 +505,11 @@ export default function FTModulesPage() {
         weekNumber: Number(targetMoveWeek),
         updatedAt: new Date().toISOString()
       };
-      await db.workshops.update(moveModalItem.id, updatePayload);
+      if (moveModalItem.isSubmission) {
+        await db.timeline_config.set(moveModalItem.id, updatePayload);
+      } else {
+        await db.workshops.update(moveModalItem.id, updatePayload);
+      }
       setMoveModalItem(null);
     } catch (err) {
       alert('Failed to move: ' + err.message);
@@ -458,10 +614,10 @@ export default function FTModulesPage() {
               <Sparkles size={15} /> AIU SciComm Spark LMS
             </div>
             <h1 style={{ fontSize: '1.85rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <BookOpen size={28} style={{ color: '#be123c' }} /> Course & Training Modules
+              <BookOpen size={28} style={{ color: '#be123c' }} /> Course Modules & Submissions
             </h1>
             <p style={{ fontSize: '0.9rem', color: '#64748b', margin: '0.35rem 0 0 0', fontWeight: 600 }}>
-              Track-specific weekly learning modules, workshops, and downloadable course materials.
+              Track-specific learning modules, live workshops, and official stage submission windows.
             </p>
           </div>
 
@@ -561,7 +717,7 @@ export default function FTModulesPage() {
             <Search size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
             <input
               type="text"
-              placeholder={`Search ${selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'} materials...`}
+              placeholder={`Search ${selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'} modules...`}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               style={{
@@ -575,7 +731,7 @@ export default function FTModulesPage() {
 
         {canManage && (
           <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: '#64748b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-            <span>💡 <strong>Track-Isolated View:</strong> {selectedTrack === 'pop_science' ? 'Track 1 (Pop Science Videos)' : 'Track 2 (Science Journalism)'} has its own independent weeks, module titles, and workshops.</span>
+            <span>💡 <strong>Track-Isolated View:</strong> {selectedTrack === 'pop_science' ? 'Track 1 (Pop Science Videos)' : 'Track 2 (Science Journalism)'} displays its matching workshops and official stage submission deadlines.</span>
           </div>
         )}
       </div>
@@ -700,7 +856,7 @@ export default function FTModulesPage() {
                     background: itemCount > 0 ? '#eff6ff' : '#f1f5f9', color: itemCount > 0 ? '#2563eb' : '#64748b',
                     border: `1px solid ${itemCount > 0 ? '#bfdbfe' : '#cbd5e1'}`
                   }}>
-                    {itemCount} {itemCount === 1 ? 'Workshop' : 'Workshops'}
+                    {itemCount} {itemCount === 1 ? 'Item' : 'Items'}
                   </span>
 
                   {canManage && (
@@ -727,14 +883,212 @@ export default function FTModulesPage() {
                 <div>
                   {itemCount === 0 ? (
                     <div style={{ padding: '2.5rem 1.5rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem', fontStyle: 'italic', fontWeight: 600 }}>
-                      No workshops scheduled for this week in {selectedTrack === 'pop_science' ? 'Track 1 (Pop Science)' : 'Track 2 (Science Journalism)'} yet.
+                      No workshops or submissions scheduled for this week in {selectedTrack === 'pop_science' ? 'Track 1 (Pop Science)' : 'Track 2 (Science Journalism)'} yet.
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       {weekGroup.items.map((item, idx) => {
+                        const isThisItemDragged = draggedItem?.id === item.id;
+
+                        // ── RENDERING SUBMISSION ITEM ──
+                        if (item.isSubmission) {
+                          const openDateFormatted = formatShortDate(item.openDate);
+                          const deadlineFormatted = formatShortDate(item.deadline);
+                          const isClosed = item.windowStatus === 'closed';
+                          const isUpcoming = item.windowStatus === 'upcoming';
+                          const isActive = item.windowStatus === 'active';
+
+                          return (
+                            <div
+                              key={item.id || idx}
+                              draggable={canManage}
+                              onDragStart={(e) => handleDragStart(e, item)}
+                              onDragEnd={() => setDraggedItem(null)}
+                              className={isThisItemDragged ? 'lms-item-drag-active' : ''}
+                              style={{
+                                borderBottom: idx === itemCount - 1 ? 'none' : '1px solid #f1f5f9',
+                                background: isClosed ? '#fcfcfd' : 'linear-gradient(135deg, #ffffff 0%, #faf5ff 100%)',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              <div
+                                className="lms-item-row"
+                                style={{
+                                  opacity: isClosed ? 0.75 : 1,
+                                  borderLeft: `4px solid ${isClosed ? '#94a3b8' : isActive ? '#059669' : '#8b5cf6'}`
+                                }}
+                              >
+                                {/* Left Info Column */}
+                                <div className="lms-item-left-info" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem', flex: 1, minWidth: '260px' }}>
+                                  {/* Drag Grip Handle */}
+                                  {canManage && (
+                                    <div
+                                      className="lms-drag-grip"
+                                      title="Click & Drag submission milestone across weeks"
+                                      style={{ marginTop: '0.2rem', flexShrink: 0 }}
+                                    >
+                                      <GripVertical size={18} />
+                                    </div>
+                                  )}
+
+                                  {/* Submission Icon Box */}
+                                  <div style={{
+                                    width: '42px', height: '42px', borderRadius: '12px',
+                                    background: isClosed ? '#f1f5f9' : isActive ? '#ecfdf5' : '#f5f3ff',
+                                    border: `1.5px solid ${isClosed ? '#cbd5e1' : isActive ? '#a7f3d0' : '#ddd6fe'}`,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                                  }}>
+                                    <Award size={21} style={{ color: isClosed ? '#94a3b8' : isActive ? '#059669' : '#7c3aed' }} />
+                                  </div>
+
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    {/* Title, Official Submission Badge, Window Status Badge */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
+                                      <span style={{
+                                        fontSize: '1.05rem', fontWeight: 900,
+                                        color: isClosed ? '#64748b' : '#1e1b4b',
+                                        textDecoration: isClosed ? 'line-through' : 'none',
+                                        lineHeight: 1.35, wordBreak: 'break-word'
+                                      }}>
+                                        {item.title}
+                                      </span>
+
+                                      <span style={{
+                                        fontSize: '0.68rem', fontWeight: 900, padding: '0.18rem 0.6rem', borderRadius: '6px',
+                                        background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                                        color: '#ffffff', boxShadow: '0 2px 6px rgba(124, 58, 237, 0.25)'
+                                      }}>
+                                        📝 Stage Submission
+                                      </span>
+
+                                      {/* Window Status Badge */}
+                                      {isActive && (
+                                        <span style={{
+                                          fontSize: '0.68rem', fontWeight: 900, padding: '0.15rem 0.55rem', borderRadius: '6px',
+                                          background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0',
+                                          display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
+                                        }}>
+                                          <Flame size={12} /> Submissions Open Now
+                                        </span>
+                                      )}
+
+                                      {isUpcoming && (
+                                        <span style={{
+                                          fontSize: '0.68rem', fontWeight: 900, padding: '0.15rem 0.55rem', borderRadius: '6px',
+                                          background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a',
+                                          display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
+                                        }}>
+                                          <Clock size={12} /> Upcoming Window
+                                        </span>
+                                      )}
+
+                                      {isClosed && (
+                                        <span style={{
+                                          fontSize: '0.68rem', fontWeight: 900, padding: '0.15rem 0.55rem', borderRadius: '6px',
+                                          background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1'
+                                        }}>
+                                          🏁 Submission Closed
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Subtitle / Format */}
+                                    {item.sub && (
+                                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', marginBottom: '0.4rem' }}>
+                                        {item.sub}
+                                      </div>
+                                    )}
+
+                                    {/* Open Date & Closing Deadline Dates */}
+                                    <div style={{
+                                      display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap',
+                                      background: '#ffffff', padding: '0.45rem 0.85rem', borderRadius: '10px',
+                                      border: '1px solid #e2e8f0', width: 'fit-content', marginTop: '0.35rem'
+                                    }}>
+                                      {openDateFormatted && (
+                                        <span style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                                          <Calendar size={14} /> Opens: <strong>{openDateFormatted}</strong>
+                                        </span>
+                                      )}
+
+                                      {deadlineFormatted && (
+                                        <span style={{ fontSize: '0.8rem', color: isClosed ? '#94a3b8' : '#be123c', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                                          <Clock size={14} /> Deadline: <strong>{deadlineFormatted}</strong>
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Description */}
+                                    {item.description && (
+                                      <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '0.45rem', lineHeight: 1.45 }} dir="auto">
+                                        {renderFormattedDescription(item.description)}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Right Action Button for Submission */}
+                                <div className="lms-item-actions-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                                  {/* Direct Submission Action */}
+                                  {item.googleFormUrl ? (
+                                    <a
+                                      href={item.googleFormUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      style={{
+                                        background: isClosed ? '#94a3b8' : 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                                        color: '#ffffff', padding: '0.55rem 1rem', borderRadius: '10px',
+                                        fontSize: '0.82rem', fontWeight: 900, textDecoration: 'none',
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                                        boxShadow: isClosed ? 'none' : '0 3px 12px rgba(124, 58, 237, 0.3)',
+                                        pointerEvents: isClosed ? 'none' : 'auto'
+                                      }}
+                                    >
+                                      <Send size={14} /> Submit via Form <ExternalLink size={14} />
+                                    </a>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => navigate('/app/my-competition')}
+                                      style={{
+                                        background: isClosed ? '#94a3b8' : 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
+                                        color: '#ffffff', padding: '0.55rem 1rem', borderRadius: '10px',
+                                        fontSize: '0.82rem', fontWeight: 900, border: 'none', cursor: 'pointer',
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                                        boxShadow: isClosed ? 'none' : '0 3px 12px rgba(190, 18, 60, 0.3)'
+                                      }}
+                                    >
+                                      <Send size={14} /> {isClosed ? 'View Submission' : 'Go to Submit 🚀'}
+                                    </button>
+                                  )}
+
+                                  {/* Admin Move to Week */}
+                                  {canManage && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setMoveModalItem(item);
+                                        setTargetMoveWeek(item.weekNumber || 1);
+                                      }}
+                                      title="Move submission milestone to another week"
+                                      style={{
+                                        background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155',
+                                        height: '34px', padding: '0 0.55rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800,
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer'
+                                      }}
+                                    >
+                                      <ArrowRightLeft size={13} /> Move
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        // ── RENDERING WORKSHOP ITEM ──
                         const formattedTime = formatExactDateTime(item.startDate, item.endDate);
                         const isPassed = item.isPassed;
-                        const isThisItemDragged = draggedItem?.id === item.id;
 
                         return (
                           <div
@@ -1020,7 +1374,7 @@ export default function FTModulesPage() {
               </div>
 
               <div style={{ background: '#eff6ff', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #bfdbfe', fontSize: '0.8rem', color: '#1e40af', fontWeight: 600 }}>
-                💡 Workshops and files tagged for {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'} will automatically flow into this week by their date.
+                💡 Workshops and submissions tagged for {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'} will automatically flow into this week.
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
@@ -1049,10 +1403,10 @@ export default function FTModulesPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <div>
                 <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <ArrowRightLeft size={20} style={{ color: '#be123c' }} /> Move Workshop to Week
+                  <ArrowRightLeft size={20} style={{ color: '#be123c' }} /> Move Item to Week
                 </h2>
                 <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0.25rem 0 0 0', fontWeight: 600 }}>
-                  Workshop: <strong>{moveModalItem.title}</strong>
+                  Item: <strong>{moveModalItem.title}</strong>
                 </p>
               </div>
               <button
