@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { Sparkles, Video, Newspaper, Calendar, Clock, ArrowRight, Award, CheckCircle2, Play, BookOpen, Layers, GitCommit, Zap, Mic, Users, Globe, Mail, ChevronRight, FileText, Check, Radio, ExternalLink, Pencil, Upload, X } from 'lucide-react';
+import { Sparkles, Video, Newspaper, Calendar, Clock, ArrowRight, Award, CheckCircle2, Play, BookOpen, Layers, GitCommit, Zap, Mic, Users, User, Globe, Mail, ChevronRight, FileText, Check, Radio, ExternalLink, Pencil, Upload, X } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { db, useLiveCollection } from './db';
 import { COMPETITION_TRACKS, DEFAULT_JUDGING_CRITERIA, normalizeTrackKey, formatUnifiedDate, getCleanAcademicTitle, renderFormattedDescription } from './ftConstants';
