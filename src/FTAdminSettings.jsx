@@ -1,12 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
 import { db, firestore, getCollectionName, useLiveCollection } from './db';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { Settings, Save, Search, UserCheck, Plus, Trash2, Award, Key, CheckCircle2, ShieldCheck, Clock, Lock } from 'lucide-react';
+import { 
+  Settings, Save, Search, UserCheck, Plus, Trash2, Award, Key, 
+  CheckCircle2, ShieldCheck, Clock, Lock, Users, Edit3, X, Sparkles, Check 
+} from 'lucide-react';
 import { DEFAULT_JUDGING_CRITERIA, FT_DEPARTMENTS, FT_ROLE_LABELS, getUserRoleLabel } from './ftConstants';
+import { logActivity } from './activityLogger';
+import { useAuth } from './context/AuthContext';
 import WorkshopManager from './WorkshopManager';
 import './scicommspark.css';
 
 export default function FTAdminSettings() {
+  const { user: authUser } = useAuth();
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
   const [loaded, setLoaded] = useState(false);
@@ -23,10 +29,11 @@ export default function FTAdminSettings() {
   const [userSearch, setUserSearch] = useState('');
 
   const resetRequests = useLiveCollection('ft_reset_requests') || [];
+  const teams = useLiveCollection('ft_teams') || [];
   const customTracks = useLiveCollection('ft_tracks') || [];
 
-  const [resetSearch, setResetSearch] = useState('');
-  const [resetFilter, setResetFilter] = useState('all'); // 'all' | 'pending' | 'approved'
+  const [requestsSearch, setRequestsSearch] = useState('');
+  const [requestsFilter, setRequestsFilter] = useState('all'); // 'all' | 'pending' | 'teams' | 'resets' | 'approved'
 
   // Competition Tracks State
   const [newTrackTitle, setNewTrackTitle] = useState('');
@@ -229,6 +236,186 @@ export default function FTAdminSettings() {
   const pendingJudges = users.filter(u => (u.role === 'judge' || u.role === 'trainer_judge') && u.accountStatus === 'pending');
   const allJudgesAndTrainers = users.filter(u => u.role === 'judge' || u.role === 'trainer' || u.role === 'trainer_judge');
 
+  // ── 1. Team Name Change Requests (From ft_teams) ──────────────────────────
+  const teamNameChangeRequests = useMemo(() => {
+    return (teams || [])
+      .filter(t => t.pendingNameChange && t.pendingNameChange.requestedName)
+      .map(t => {
+        const p = t.pendingNameChange;
+        const leaderMember = (t.members || []).find(m => m.role === 'Team Leader') || (t.members || [])[0];
+        return {
+          id: `team_name_${t.id}`,
+          reqType: 'team_name_change',
+          teamId: t.id,
+          teamCode: t.code || t.displayId || t.id,
+          currentTeamName: t.name,
+          requestedName: p.requestedName,
+          requestedBy: p.requestedBy || leaderMember?.name || leaderMember?.username || 'Team Leader',
+          requestedById: p.requestedById || leaderMember?.userId,
+          reason: p.reason || '',
+          requestedAt: p.requestedAt || t.updatedAt || new Date().toISOString(),
+          status: p.status || 'pending',
+          track: t.track || 'pop_science',
+          members: t.members || [],
+          rawTeam: t
+        };
+      });
+  }, [teams]);
+
+  // ── 2. Password Reset Requests (From ft_reset_requests) ──────────────────
+  const passwordResetList = useMemo(() => {
+    return (resetRequests || []).map(r => ({
+      id: r.id,
+      reqType: 'password_reset',
+      username: r.username,
+      email: r.email,
+      status: r.status || 'pending',
+      createdAt: r.createdAt || new Date().toISOString(),
+      approvedAt: r.approvedAt,
+      rawReq: r
+    }));
+  }, [resetRequests]);
+
+  // Combined and sorted requests list
+  const unifiedRequestsList = useMemo(() => {
+    const list = [...teamNameChangeRequests, ...passwordResetList];
+    return list.sort((a, b) => {
+      const timeA = new Date(a.requestedAt || a.createdAt || 0).getTime();
+      const timeB = new Date(b.requestedAt || b.createdAt || 0).getTime();
+      return timeB - timeA;
+    });
+  }, [teamNameChangeRequests, passwordResetList]);
+
+  const pendingCount = useMemo(() => {
+    return unifiedRequestsList.filter(r => r.status !== 'approved').length;
+  }, [unifiedRequestsList]);
+
+  // Filtered requests by Tab and Search query
+  const filteredRequests = useMemo(() => {
+    return unifiedRequestsList.filter(item => {
+      if (requestsFilter === 'pending') return item.status !== 'approved';
+      if (requestsFilter === 'approved') return item.status === 'approved';
+      if (requestsFilter === 'teams') return item.reqType === 'team_name_change';
+      if (requestsFilter === 'resets') return item.reqType === 'password_reset';
+      return true; // 'all'
+    }).filter(item => {
+      if (!requestsSearch.trim()) return true;
+      const q = requestsSearch.toLowerCase();
+      if (item.reqType === 'team_name_change') {
+        return (
+          (item.currentTeamName && item.currentTeamName.toLowerCase().includes(q)) ||
+          (item.requestedName && item.requestedName.toLowerCase().includes(q)) ||
+          (item.requestedBy && item.requestedBy.toLowerCase().includes(q)) ||
+          (item.teamCode && item.teamCode.toLowerCase().includes(q)) ||
+          (item.reason && item.reason.toLowerCase().includes(q))
+        );
+      }
+      return (
+        (item.username && item.username.toLowerCase().includes(q)) ||
+        (item.email && item.email.toLowerCase().includes(q))
+      );
+    });
+  }, [unifiedRequestsList, requestsFilter, requestsSearch]);
+
+  // ── ADMIN APPROVE TEAM NAME CHANGE (PRESERVES 100% OF POINTS & RECORDS) ──
+  const handleApproveTeamNameChange = async (reqItem) => {
+    const team = reqItem.rawTeam;
+    if (!team || !reqItem.requestedName) return;
+
+    if (!window.confirm(`✅ Approve team name change for "${team.name}" to "${reqItem.requestedName}"?\n\nAll team points, leaderboard rank, submitted files, and member records will remain 100% intact.`)) {
+      return;
+    }
+
+    try {
+      const oldName = team.name;
+      const newName = reqItem.requestedName;
+
+      // 1. Update team name and clear pending request in ft_teams
+      await db.ft_teams.update(team.id, {
+        name: newName,
+        pendingNameChange: null,
+        updatedAt: new Date().toISOString()
+      });
+
+      // 2. Update member documents in scientists collection
+      for (const m of (team.members || [])) {
+        try {
+          await db.scientists.update(m.userId, { teamName: newName });
+        } catch (memberErr) {
+          console.warn('Member update note:', memberErr);
+        }
+
+        // Notify member
+        try {
+          await db.ft_notifications.add({
+            userId: m.userId,
+            targetUserId: m.userId,
+            type: 'team',
+            title: 'Team Name Change Approved! 🎉',
+            message: `Admin approved your team's new name: "${newName}". All your scores and records remain intact!`,
+            link: '/dashboard/our-team',
+            status: 'unread',
+            createdAt: new Date().toISOString()
+          });
+        } catch (nErr) {}
+      }
+
+      logActivity({
+        category: 'TEAMS',
+        action: 'Approved Team Name Change',
+        details: `Admin approved renaming team from "${oldName}" to "${newName}". All points, submissions, and records were preserved.`,
+        user: authUser || { role: 'admin', username: 'admin' }
+      });
+
+      setToast({ type: 'success', msg: `✅ Team name updated to "${newName}"! Points and records remain untouched.` });
+    } catch (err) {
+      alert('Failed to approve team name: ' + err.message);
+    }
+  };
+
+  // ── ADMIN REFUSE TEAM NAME CHANGE ─────────────────────────────────────────
+  const handleRejectTeamNameChange = async (reqItem) => {
+    const team = reqItem.rawTeam;
+    if (!team) return;
+
+    const reason = window.prompt(`Refuse team name change request to "${reqItem.requestedName}"?\n\nEnter an optional refusal reason for the team leader:`, 'Name does not meet guidelines.');
+    if (reason === null) return;
+
+    try {
+      await db.ft_teams.update(team.id, {
+        pendingNameChange: null,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Notify team members
+      for (const m of (team.members || [])) {
+        try {
+          await db.ft_notifications.add({
+            userId: m.userId,
+            targetUserId: m.userId,
+            type: 'team',
+            title: 'Team Name Change Declined ❌',
+            message: `Admin declined the request to rename your team to "${reqItem.requestedName}". ${reason ? `Reason: "${reason}"` : ''}`,
+            link: '/dashboard/our-team',
+            status: 'unread',
+            createdAt: new Date().toISOString()
+          });
+        } catch (nErr) {}
+      }
+
+      logActivity({
+        category: 'TEAMS',
+        action: 'Rejected Team Name Change',
+        details: `Admin rejected renaming team "${team.name}" to "${reqItem.requestedName}". Reason: ${reason || 'None'}.`,
+        user: authUser || { role: 'admin', username: 'admin' }
+      });
+
+      setToast({ type: 'info', msg: `Team name change request for "${team.name}" refused.` });
+    } catch (err) {
+      alert('Failed to refuse team name: ' + err.message);
+    }
+  };
+
   return (
     <div className="ft-animate-in">
       <div className="ft-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
@@ -250,132 +437,90 @@ export default function FTAdminSettings() {
           {toast.msg}
         </div>
       )}
-      {/* Pending Account Registrations */}
-      {users.filter(u => u.accountStatus === 'pending').length > 0 && (
-        <div className="ft-card" style={{ padding: '2rem', marginBottom: '2rem', border: '2px solid #e11d48', background: '#ffffff', boxShadow: '0 8px 30px rgba(225, 29, 72, 0.06)' }}>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.3rem', fontWeight: 800, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#be123c' }}>
-            ⏳ Pending Account Registrations ({users.filter(u => u.accountStatus === 'pending').length})
-          </h2>
-          <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem', fontWeight: 500 }}>
-            Review national IDs, university details, and profiles before accepting new users.
-          </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {users.filter(u => u.accountStatus === 'pending').map(u => {
-              const isCompetitor = u.role === 'competitor' || u.role === 'user' || !u.role;
-              return (
-                <div key={u.id} style={{
-                  padding: '1.25rem 1.5rem', borderRadius: '16px', background: '#f8fafc',
-                  border: '1.5px solid #cbd5e1', boxShadow: '0 4px 14px rgba(0,0,0,0.04)', display: 'flex', gap: '1.25rem', flexWrap: 'wrap',
-                  justifyContent: 'space-between', alignItems: 'center'
-                }}>
-                  {/* Left: Avatar & Basic Info */}
-                  <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', flex: 1, minWidth: '300px' }}>
-                    <img 
-                      src={u.avatarUrl || u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} 
-                      alt="" 
-                      style={{ width: '64px', height: '64px', borderRadius: '50%', border: '3px solid #be123c', objectFit: 'cover', flexShrink: 0, boxShadow: '0 4px 12px rgba(190, 18, 60, 0.2)' }} 
-                    />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <div style={{ fontWeight: 900, fontSize: '1.15rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                        {u.name} 
-                        <span style={{
-                          background: isCompetitor ? '#eff6ff' : '#ecfdf5',
-                          border: `1px solid ${isCompetitor ? '#93c5fd' : '#a7f3d0'}`,
-                          color: isCompetitor ? '#1d4ed8' : '#047857',
-                          fontSize: '0.75rem', fontWeight: 800, padding: '0.2rem 0.65rem', borderRadius: '8px'
-                        }}>
-                          {isCompetitor ? `Competitor (${u.registeredTrack === 'pop_science' ? 'Pop Science' : 'Science Journalism'})` : 'Judge / Speaker'}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>
-                        📧 <strong>{u.email}</strong> · 👤 @{u.username} · 📞 {u.phone || 'No phone'}
-                      </div>
-                      <div style={{ fontSize: '0.85rem', color: '#334155', marginTop: '0.35rem', display: 'flex', flexDirection: 'column', gap: '0.2rem', background: '#ffffff', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                        <div>🪪 <strong style={{ color: '#0f172a' }}>National ID:</strong> {u.nationalId || 'N/A'}</div>
-                        <div>🏫 <strong style={{ color: '#0f172a' }}>Institution:</strong> {u.institutionName || 'N/A'} {u.universityId ? `(ID: ${u.universityId})` : ''}</div>
-                        <div>🧬 <strong style={{ color: '#0f172a' }}>Department/Specialty:</strong> {u.department || 'N/A'}</div>
-                        {!isCompetitor && <div>🧑‍🏫 <strong style={{ color: '#0f172a' }}>Title:</strong> {u.title || 'N/A'}</div>}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Approve / Reject Actions */}
-                  <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button 
-                      onClick={() => handleApproveUser(u.id)} 
-                      className="ft-btn" 
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 1.1rem', background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(22, 163, 74, 0.25)' }}
-                    >
-                      <UserCheck size={16} /> Approve Account
-                    </button>
-                    <button 
-                      onClick={() => handleRejectUser(u.id)} 
-                      className="ft-btn" 
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 1.1rem', background: '#ffffff', border: '2px solid #fca5a5', color: '#dc2626', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}
-                    >
-                      <Trash2 size={16} /> Reject
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── PASSWORD RESET REQUESTS APPROVAL SECTION ── */}
-      <div className="ft-card" style={{ padding: '2rem', marginBottom: '2rem', border: resetRequests.filter(r => r.status !== 'approved').length > 0 ? '2px solid #3b82f6' : '1.5px solid #e2e8f0', background: '#ffffff', boxShadow: resetRequests.filter(r => r.status !== 'approved').length > 0 ? '0 8px 30px rgba(59, 130, 246, 0.08)' : '0 2px 10px rgba(0,0,0,0.02)' }}>
+      {/* ── UNIFIED SYSTEM & COMPETITOR REQUESTS & APPROVALS CENTER ── */}
+      <div className="ft-card" style={{
+        padding: '2rem', marginBottom: '2rem',
+        border: pendingCount > 0 ? '2px solid #3b82f6' : '1.5px solid #e2e8f0',
+        background: '#ffffff',
+        boxShadow: pendingCount > 0 ? '0 8px 30px rgba(59, 130, 246, 0.08)' : '0 2px 10px rgba(0,0,0,0.02)'
+      }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '0.75rem' }}>
           <div>
-            <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.3rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.55rem', color: '#0f172a' }}>
-              <Key size={22} style={{ color: '#2563eb' }} /> Password Reset Requests ({resetRequests.length})
+            <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.35rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#0f172a' }}>
+              <Sparkles size={24} style={{ color: '#be123c' }} /> Requests & Approvals Center ({unifiedRequestsList.length})
             </h2>
             <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '0.35rem', marginBottom: 0, fontWeight: 500 }}>
-              Review, approve, or reject user password reset requests. Approved users can set their new password from the sign-in screen.
+              Review, approve, or reject team name change proposals, password reset requests, and user inquiries across the platform.
             </p>
           </div>
 
-          {/* Filter Pills */}
-          <div style={{ display: 'flex', gap: '0.5rem', background: '#f1f5f9', padding: '0.3rem', borderRadius: '12px' }}>
+          {/* Filter Tabs */}
+          <div style={{ display: 'flex', gap: '0.45rem', background: '#f1f5f9', padding: '0.35rem', borderRadius: '14px', flexWrap: 'wrap' }}>
             <button
               type="button"
-              onClick={() => setResetFilter('all')}
+              onClick={() => setRequestsFilter('all')}
               style={{
-                background: resetFilter === 'all' ? '#ffffff' : 'transparent',
-                color: resetFilter === 'all' ? '#0f172a' : '#64748b',
-                fontWeight: 800, fontSize: '0.8rem', padding: '0.35rem 0.75rem',
-                borderRadius: '8px', border: 'none', cursor: 'pointer',
-                boxShadow: resetFilter === 'all' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
+                background: requestsFilter === 'all' ? '#ffffff' : 'transparent',
+                color: requestsFilter === 'all' ? '#0f172a' : '#64748b',
+                fontWeight: 800, fontSize: '0.8rem', padding: '0.4rem 0.8rem',
+                borderRadius: '9px', border: 'none', cursor: 'pointer',
+                boxShadow: requestsFilter === 'all' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
               }}
             >
-              All ({resetRequests.length})
+              All ({unifiedRequestsList.length})
             </button>
             <button
               type="button"
-              onClick={() => setResetFilter('pending')}
+              onClick={() => setRequestsFilter('pending')}
               style={{
-                background: resetFilter === 'pending' ? '#ffffff' : 'transparent',
-                color: resetFilter === 'pending' ? '#d97706' : '#64748b',
-                fontWeight: 800, fontSize: '0.8rem', padding: '0.35rem 0.75rem',
-                borderRadius: '8px', border: 'none', cursor: 'pointer',
-                boxShadow: resetFilter === 'pending' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
+                background: requestsFilter === 'pending' ? '#ffffff' : 'transparent',
+                color: requestsFilter === 'pending' ? '#d97706' : '#64748b',
+                fontWeight: 800, fontSize: '0.8rem', padding: '0.4rem 0.8rem',
+                borderRadius: '9px', border: 'none', cursor: 'pointer',
+                boxShadow: requestsFilter === 'pending' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
               }}
             >
-              Pending ⏳ ({resetRequests.filter(r => r.status !== 'approved').length})
+              Pending ⏳ ({pendingCount})
             </button>
             <button
               type="button"
-              onClick={() => setResetFilter('approved')}
+              onClick={() => setRequestsFilter('teams')}
               style={{
-                background: resetFilter === 'approved' ? '#ffffff' : 'transparent',
-                color: resetFilter === 'approved' ? '#16a34a' : '#64748b',
-                fontWeight: 800, fontSize: '0.8rem', padding: '0.35rem 0.75rem',
-                borderRadius: '8px', border: 'none', cursor: 'pointer',
-                boxShadow: resetFilter === 'approved' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
+                background: requestsFilter === 'teams' ? '#ffffff' : 'transparent',
+                color: requestsFilter === 'teams' ? '#2563eb' : '#64748b',
+                fontWeight: 800, fontSize: '0.8rem', padding: '0.4rem 0.8rem',
+                borderRadius: '9px', border: 'none', cursor: 'pointer',
+                boxShadow: requestsFilter === 'teams' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
               }}
             >
-              Approved ✅ ({resetRequests.filter(r => r.status === 'approved').length})
+              👥 Team Name Changes ({teamNameChangeRequests.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setRequestsFilter('resets')}
+              style={{
+                background: requestsFilter === 'resets' ? '#ffffff' : 'transparent',
+                color: requestsFilter === 'resets' ? '#7c3aed' : '#64748b',
+                fontWeight: 800, fontSize: '0.8rem', padding: '0.4rem 0.8rem',
+                borderRadius: '9px', border: 'none', cursor: 'pointer',
+                boxShadow: requestsFilter === 'resets' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
+              }}
+            >
+              🔑 Password Resets ({passwordResetList.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setRequestsFilter('approved')}
+              style={{
+                background: requestsFilter === 'approved' ? '#ffffff' : 'transparent',
+                color: requestsFilter === 'approved' ? '#16a34a' : '#64748b',
+                fontWeight: 800, fontSize: '0.8rem', padding: '0.4rem 0.8rem',
+                borderRadius: '9px', border: 'none', cursor: 'pointer',
+                boxShadow: requestsFilter === 'approved' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
+              }}
+            >
+              Approved ✅ ({unifiedRequestsList.filter(r => r.status === 'approved').length})
             </button>
           </div>
         </div>
@@ -387,63 +532,39 @@ export default function FTAdminSettings() {
             type="text"
             className="ft-input"
             style={{ paddingLeft: '2.5rem', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }}
-            placeholder="Search reset requests by username or email..."
-            value={resetSearch}
-            onChange={e => setResetSearch(e.target.value)}
+            placeholder="Search all requests by username, team name, requested name, email, or track..."
+            value={requestsSearch}
+            onChange={e => setRequestsSearch(e.target.value)}
           />
         </div>
 
-        {/* Requests List */}
-        {resetRequests
-          .filter(r => {
-            if (resetFilter === 'pending') return r.status !== 'approved';
-            if (resetFilter === 'approved') return r.status === 'approved';
-            return true;
-          })
-          .filter(r => {
-            if (!resetSearch) return true;
-            const q = resetSearch.toLowerCase();
-            return (r.username && r.username.toLowerCase().includes(q)) || (r.email && r.email.toLowerCase().includes(q));
-          })
-          .length === 0 ? (
-          <div style={{ padding: '2rem 1rem', textAlign: 'center', background: '#f8fafc', borderRadius: '16px', border: '1px dashed #cbd5e1', color: '#64748b' }}>
-            <Key size={32} style={{ color: '#94a3b8', margin: '0 auto 0.5rem auto' }} />
-            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#334155' }}>
-              {resetSearch ? 'No password reset requests match your search.' : 'No password reset requests currently in this list.'}
+        {/* Requests Cards List */}
+        {filteredRequests.length === 0 ? (
+          <div style={{ padding: '2.5rem 1rem', textAlign: 'center', background: '#f8fafc', borderRadius: '16px', border: '1.5px dashed #cbd5e1', color: '#64748b' }}>
+            <Sparkles size={36} style={{ color: '#94a3b8', margin: '0 auto 0.5rem auto' }} />
+            <div style={{ fontWeight: 800, fontSize: '1rem', color: '#334155' }}>
+              {requestsSearch ? 'No requests match your search.' : 'No requests currently in this list.'}
             </div>
-            <div style={{ fontSize: '0.82rem', marginTop: '0.25rem' }}>
-              When users request a password reset on the login screen, they will appear here for admin approval.
+            <div style={{ fontSize: '0.84rem', marginTop: '0.35rem', color: '#64748b' }}>
+              Team name changes submitted by team leaders and password reset requests will appear here for one-click admin review.
             </div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {resetRequests
-              .filter(r => {
-                if (resetFilter === 'pending') return r.status !== 'approved';
-                if (resetFilter === 'approved') return r.status === 'approved';
-                return true;
-              })
-              .filter(r => {
-                if (!resetSearch) return true;
-                const q = resetSearch.toLowerCase();
-                return (r.username && r.username.toLowerCase().includes(q)) || (r.email && r.email.toLowerCase().includes(q));
-              })
-              .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-              .map(req => {
-                const matchedUser = users.find(u => 
-                  (u.username && req.username && u.username.toLowerCase() === req.username.toLowerCase()) ||
-                  (u.email && req.email && u.email.toLowerCase() === req.email.toLowerCase())
-                );
-                const isApproved = req.status === 'approved';
+            {filteredRequests.map(item => {
+              // ── A. RENDER TEAM NAME CHANGE REQUEST CARD ──
+              if (item.reqType === 'team_name_change') {
+                const isApproved = item.status === 'approved';
+                const trackName = item.track === 'pop_science' ? 'Track 1: Pop Science' : 'Track 2: Science Journalism';
 
                 return (
                   <div
-                    key={req.id}
+                    key={item.id}
                     style={{
-                      padding: '1.25rem 1.5rem',
+                      padding: '1.35rem 1.5rem',
                       borderRadius: '16px',
-                      background: isApproved ? '#f0fdf4' : '#ffffff',
-                      border: isApproved ? '1.5px solid #86efac' : '1.5px solid #cbd5e1',
+                      background: isApproved ? '#f0fdf4' : '#fffbeb',
+                      border: isApproved ? '1.5px solid #86efac' : '2px solid #fde68a',
                       boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
                       display: 'flex',
                       justifyContent: 'space-between',
@@ -452,139 +573,232 @@ export default function FTAdminSettings() {
                       gap: '1.25rem'
                     }}
                   >
-                    {/* Left: User & Request info */}
+                    {/* Left: Team Info & Proposed Name Box */}
                     <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flex: 1, minWidth: '280px' }}>
-                      <img
-                        src={matchedUser?.avatarUrl || matchedUser?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.username || 'user'}`}
-                        alt={req.username}
-                        style={{
-                          width: '52px',
-                          height: '52px',
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                          border: isApproved ? '2px solid #16a34a' : '2px solid #2563eb',
-                          flexShrink: 0,
-                          background: '#f1f5f9'
-                        }}
-                      />
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', flex: 1 }}>
+                      <div style={{
+                        width: '52px', height: '52px', borderRadius: '14px',
+                        background: isApproved ? '#dcfce7' : '#fef3c7',
+                        border: isApproved ? '2px solid #86efac' : '2px solid #fde68a',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: isApproved ? '#16a34a' : '#b45309', flexShrink: 0
+                      }}>
+                        <Users size={26} />
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 900, fontSize: '1.05rem', color: '#0f172a' }}>
-                            {matchedUser?.name || req.username}
+                          <span style={{ fontWeight: 900, fontSize: '1.1rem', color: '#0f172a' }}>
+                            👥 Team: {item.currentTeamName}
                           </span>
-                          <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>
-                            @{req.username}
+                          <span style={{
+                            fontSize: '0.74rem', fontWeight: 800, padding: '0.15rem 0.55rem', borderRadius: '6px',
+                            background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe'
+                          }}>
+                            ID: {item.teamCode}
                           </span>
-                          <span
-                            style={{
-                              fontSize: '0.72rem',
-                              fontWeight: 800,
-                              padding: '0.15rem 0.6rem',
-                              borderRadius: '9999px',
-                              background: isApproved ? '#dcfce7' : '#fef3c7',
-                              color: isApproved ? '#15803d' : '#d97706',
-                              border: `1px solid ${isApproved ? '#86efac' : '#fde68a'}`
-                            }}
-                          >
-                            {isApproved ? 'Approved ✅' : 'Pending Approval ⏳'}
+                          <span style={{
+                            fontSize: '0.74rem', fontWeight: 800, padding: '0.15rem 0.55rem', borderRadius: '6px',
+                            background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1'
+                          }}>
+                            {trackName}
+                          </span>
+                          <span style={{
+                            fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.6rem', borderRadius: '9999px',
+                            background: isApproved ? '#dcfce7' : '#fef3c7', color: isApproved ? '#15803d' : '#d97706',
+                            border: `1px solid ${isApproved ? '#86efac' : '#fde68a'}`
+                          }}>
+                            {isApproved ? 'Approved ✅' : 'Pending Name Change ⏳'}
                           </span>
                         </div>
 
-                        <div style={{ fontSize: '0.84rem', color: '#475569', fontWeight: 500 }}>
-                          📧 <strong>{req.email}</strong>
-                          {matchedUser?.role && ` · Role: ${getUserRoleLabel(matchedUser)}`}
-                          {matchedUser?.universityId && ` · University ID: ${matchedUser.universityId}`}
-                          {matchedUser?.registeredTrack && ` · Track: ${matchedUser.registeredTrack === 'pop_science' ? 'Pop Science' : 'Science Journalism'}`}
-                        </div>
-
-                        <div style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <Clock size={13} /> Requested: {req.createdAt ? new Date(req.createdAt).toLocaleString() : 'Recently'}
-                          {isApproved && req.approvedAt && (
-                            <span style={{ color: '#16a34a', marginLeft: '0.5rem' }}>
-                              • Approved: {new Date(req.approvedAt).toLocaleString()}
-                            </span>
+                        {/* Proposed Name Highlight Banner */}
+                        <div style={{
+                          background: '#ffffff', border: '1.5px solid #fde68a', borderRadius: '12px',
+                          padding: '0.75rem 1rem', marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.25rem'
+                        }}>
+                          <div style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: 700 }}>
+                            ⚡ Requested New Name: <strong style={{ color: '#b45309', fontSize: '1.05rem', background: '#fef3c7', padding: '0.15rem 0.6rem', borderRadius: '8px' }}>"{item.requestedName}"</strong>
+                          </div>
+                          <div style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 500 }}>
+                            👤 Requested by: <strong>{item.requestedBy}</strong> · Members: {item.members?.length || 1}/3
+                          </div>
+                          {item.reason && (
+                            <div style={{ fontSize: '0.82rem', color: '#78350f', fontStyle: 'italic', background: '#fffbeb', padding: '0.35rem 0.6rem', borderRadius: '6px' }}>
+                              📝 Note from Leader: "{item.reason}"
+                            </div>
                           )}
+                          <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 700, marginTop: '0.15rem' }}>
+                            🛡️ Guaranteed: Points, leaderboard rank, submitted files, and team member records will NOT be modified.
+                          </div>
+                        </div>
+
+                        <div style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                          <Clock size={13} /> Requested: {item.requestedAt ? new Date(item.requestedAt).toLocaleString() : 'Recently'}
                         </div>
                       </div>
                     </div>
 
                     {/* Right: Actions */}
                     <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexShrink: 0 }}>
-                      {!isApproved ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleApproveReset(req.id, req)}
-                            className="ft-btn"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.4rem',
-                              padding: '0.55rem 1.1rem',
-                              background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-                              color: '#ffffff',
-                              border: 'none',
-                              borderRadius: '10px',
-                              fontWeight: 800,
-                              fontSize: '0.84rem',
-                              cursor: 'pointer',
-                              boxShadow: '0 4px 14px rgba(22, 163, 74, 0.25)'
-                            }}
-                          >
-                            <CheckCircle2 size={16} /> Approve Reset
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRejectReset(req.id)}
-                            className="ft-btn"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.4rem',
-                              padding: '0.55rem 0.95rem',
-                              background: '#ffffff',
-                              border: '1.5px solid #fca5a5',
-                              color: '#dc2626',
-                              borderRadius: '10px',
-                              fontWeight: 800,
-                              fontSize: '0.84rem',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <Trash2 size={15} /> Reject
-                          </button>
-                        </>
-                      ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                            <CheckCircle2 size={16} /> Ready for User to Reset
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleRejectReset(req.id)}
-                            title="Delete/Dismiss approved reset token"
-                            style={{
-                              background: '#ffffff',
-                              border: '1.5px solid #cbd5e1',
-                              color: '#64748b',
-                              borderRadius: '8px',
-                              padding: '0.4rem 0.6rem',
-                              cursor: 'pointer',
-                              fontSize: '0.78rem',
-                              fontWeight: 700,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.3rem'
-                            }}
-                          >
-                            <Trash2 size={14} /> Remove
-                          </button>
-                        </div>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleApproveTeamNameChange(item)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 1.15rem',
+                          background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff',
+                          border: 'none', borderRadius: '10px', fontWeight: 900, fontSize: '0.84rem', cursor: 'pointer',
+                          boxShadow: '0 4px 14px rgba(22, 163, 74, 0.25)'
+                        }}
+                      >
+                        <Check size={16} /> Approve Name
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRejectTeamNameChange(item)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 1rem',
+                          background: '#ffffff', border: '1.5px solid #fca5a5', color: '#dc2626',
+                          borderRadius: '10px', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer'
+                        }}
+                      >
+                        <X size={16} /> Refuse
+                      </button>
                     </div>
                   </div>
                 );
-              })}
+              }
+
+              // ── B. RENDER PASSWORD RESET REQUEST CARD ──
+              const req = item.rawReq || item;
+              const matchedUser = users.find(u => 
+                (u.username && req.username && u.username.toLowerCase() === req.username.toLowerCase()) ||
+                (u.email && req.email && u.email.toLowerCase() === req.email.toLowerCase())
+              );
+              const isApproved = req.status === 'approved';
+
+              return (
+                <div
+                  key={req.id}
+                  style={{
+                    padding: '1.25rem 1.5rem',
+                    borderRadius: '16px',
+                    background: isApproved ? '#f0fdf4' : '#ffffff',
+                    border: isApproved ? '1.5px solid #86efac' : '1.5px solid #cbd5e1',
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '1.25rem'
+                  }}
+                >
+                  {/* Left: User & Request info */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flex: 1, minWidth: '280px' }}>
+                    <img
+                      src={matchedUser?.avatarUrl || matchedUser?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.username || 'user'}`}
+                      alt={req.username}
+                      style={{
+                        width: '52px', height: '52px', borderRadius: '50%',
+                        objectFit: 'cover', border: isApproved ? '2px solid #16a34a' : '2px solid #2563eb',
+                        flexShrink: 0, background: '#f1f5f9'
+                      }}
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 900, fontSize: '1.05rem', color: '#0f172a' }}>
+                          {matchedUser?.name || req.username}
+                        </span>
+                        <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>
+                          @{req.username}
+                        </span>
+                        <span style={{
+                          fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.55rem', borderRadius: '6px',
+                          background: '#f3e8ff', color: '#7c3aed', border: '1px solid #d8b4fe'
+                        }}>
+                          🔑 Password Reset
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.6rem', borderRadius: '9999px',
+                            background: isApproved ? '#dcfce7' : '#fef3c7', color: isApproved ? '#15803d' : '#d97706',
+                            border: `1px solid ${isApproved ? '#86efac' : '#fde68a'}`
+                          }}
+                        >
+                          {isApproved ? 'Approved ✅' : 'Pending Approval ⏳'}
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '0.84rem', color: '#475569', fontWeight: 500 }}>
+                        📧 <strong>{req.email}</strong>
+                        {matchedUser?.role && ` · Role: ${getUserRoleLabel(matchedUser)}`}
+                        {matchedUser?.universityId && ` · University ID: ${matchedUser.universityId}`}
+                        {matchedUser?.registeredTrack && ` · Track: ${matchedUser.registeredTrack === 'pop_science' ? 'Pop Science' : 'Science Journalism'}`}
+                      </div>
+
+                      <div style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <Clock size={13} /> Requested: {req.createdAt ? new Date(req.createdAt).toLocaleString() : 'Recently'}
+                        {isApproved && req.approvedAt && (
+                          <span style={{ color: '#16a34a', marginLeft: '0.5rem' }}>
+                            • Approved: {new Date(req.approvedAt).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: Actions */}
+                  <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexShrink: 0 }}>
+                    {!isApproved ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleApproveReset(req.id, req)}
+                          className="ft-btn"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 1.1rem',
+                            background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff',
+                            border: 'none', borderRadius: '10px', fontWeight: 800, fontSize: '0.84rem',
+                            cursor: 'pointer', boxShadow: '0 4px 14px rgba(22, 163, 74, 0.25)'
+                          }}
+                        >
+                          <CheckCircle2 size={16} /> Approve Reset
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRejectReset(req.id)}
+                          className="ft-btn"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 0.95rem',
+                            background: '#ffffff', border: '1.5px solid #fca5a5', color: '#dc2626',
+                            borderRadius: '10px', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer'
+                          }}
+                        >
+                          <Trash2 size={15} /> Reject
+                        </button>
+                      </>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <CheckCircle2 size={16} /> Ready for User to Reset
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRejectReset(req.id)}
+                          title="Delete/Dismiss approved reset token"
+                          style={{
+                            background: '#ffffff', border: '1.5px solid #cbd5e1', color: '#64748b',
+                            borderRadius: '8px', padding: '0.4rem 0.6rem', cursor: 'pointer',
+                            fontSize: '0.78rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
+                          }}
+                        >
+                          <Trash2 size={14} /> Remove
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
