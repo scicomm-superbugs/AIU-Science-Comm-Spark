@@ -1,8 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './context/AuthContext';
 import { db, useLiveCollection } from './db';
-import { Send, User, Users, MessageSquare, Smile, Paperclip, X, FileText, ChevronLeft, MoreVertical, ExternalLink, Download, ZoomIn, ZoomOut, RotateCw, Plus, Search, Check, Globe } from 'lucide-react';
-import { FT_ROLE_COLORS, FT_ROLE_LABELS, getCleanAcademicTitle } from './ftConstants';
+import { 
+  Send, User, Users, MessageSquare, Smile, Paperclip, X, FileText, 
+  ChevronLeft, MoreVertical, ExternalLink, Download, ZoomIn, ZoomOut, 
+  RotateCw, Plus, Search, Check, Globe, Radio, Megaphone, CheckCircle2, 
+  Video, BookOpen, AlertCircle, Sparkles 
+} from 'lucide-react';
+import { FT_ROLE_COLORS, FT_ROLE_LABELS, getCleanAcademicTitle, normalizeTrackKey } from './ftConstants';
 
 const getUserRoleLabel = (acc) => {
   if (!acc) return 'User';
@@ -212,6 +217,181 @@ export default function FTChatPage({ user: userProp }) {
     }
     return list;
   }, [rawAccounts, defaultAdmin]);
+
+  const isAdmin = user?.role === 'master' || user?.role === 'admin' || user?.role === 'super_admin' || user?.isAdmin || user?.isMaster;
+
+  // Broadcast Modal State for Admin
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [broadcastTrack, setBroadcastTrack] = useState('pop_science'); // 'pop_science' | 'science_journalism' | 'all'
+  const [broadcastRoleFilter, setBroadcastRoleFilter] = useState('competitors'); // 'competitors' | 'all_members'
+  const [broadcastText, setBroadcastText] = useState('');
+  const [broadcastFilePreview, setBroadcastFilePreview] = useState(null);
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [broadcastProgress, setBroadcastProgress] = useState({ current: 0, total: 0 });
+  const [broadcastSuccessMsg, setBroadcastSuccessMsg] = useState('');
+  const [showRecipientListPreview, setShowRecipientListPreview] = useState(false);
+  const broadcastFileInputRef = useRef(null);
+
+  const rawTeams = useLiveCollection('ft_teams') || [];
+
+  // Helper to determine the accurate track for any account
+  const getAccountTrack = useCallback((acc) => {
+    if (!acc) return 'pop_science';
+    if (acc.registeredTrack) return normalizeTrackKey(acc.registeredTrack);
+    if (acc.track) return normalizeTrackKey(acc.track);
+    if (acc.selectedTrack) return normalizeTrackKey(acc.selectedTrack);
+    if (acc.competitionTrack) return normalizeTrackKey(acc.competitionTrack);
+    
+    // Check if member of a team
+    const accId = String(acc.id || acc.username);
+    const userTeam = rawTeams.find(t => (t.members || []).some(m => String(m.userId) === accId || String(m.username) === accId));
+    if (userTeam && userTeam.track) {
+      return normalizeTrackKey(userTeam.track);
+    }
+    return 'pop_science';
+  }, [rawTeams]);
+
+  // Compute list of eligible broadcast recipients
+  const broadcastRecipients = useMemo(() => {
+    if (!allAccounts || allAccounts.length === 0) return [];
+    
+    return allAccounts.filter(acc => {
+      const accId = String(acc.id || acc.username);
+      // Exclude self (the admin sending the broadcast)
+      if (accId === String(myId)) return false;
+
+      // Exclude system accounts/masters
+      const isStaffOrAdmin = acc.role === 'admin' || acc.role === 'master' || acc.role === 'super_admin' || acc.isAdmin || acc.isMaster;
+      if (isStaffOrAdmin) return false;
+
+      // Role filter
+      if (broadcastRoleFilter === 'competitors') {
+        const isCompetitor = acc.role === 'competitor' || acc.role === 'user' || !acc.role;
+        if (!isCompetitor) return false;
+      }
+
+      // Track filter
+      if (broadcastTrack !== 'all') {
+        const track = getAccountTrack(acc);
+        if (track !== broadcastTrack) return false;
+      }
+
+      return true;
+    });
+  }, [allAccounts, myId, broadcastRoleFilter, broadcastTrack, getAccountTrack]);
+
+  // Broadcast File Select Handler
+  const handleBroadcastFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 500 * 1024) {
+      alert('File must be less than 500KB for chat uploads.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setBroadcastFilePreview({
+        name: file.name,
+        type: file.type,
+        data: reader.result,
+        isImage: file.type.startsWith('image/')
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Broadcast Send Execution
+  const handleExecuteBroadcast = async (e) => {
+    if (e) e.preventDefault();
+    if (!broadcastText.trim() && !broadcastFilePreview) {
+      alert('Please enter a message or attach a file to broadcast.');
+      return;
+    }
+    if (broadcastRecipients.length === 0) {
+      alert('No recipients match the selected track and filter.');
+      return;
+    }
+
+    const trackName = broadcastTrack === 'pop_science' 
+      ? 'Pop Science Videos (Track 1)' 
+      : broadcastTrack === 'science_journalism' 
+        ? 'Science Journalism (Track 2)' 
+        : 'All Competition Tracks';
+
+    const confirmMsg = `Are you sure you want to send this private message to all ${broadcastRecipients.length} participants in ${trackName}? Each recipient will receive it as a personal 1-on-1 direct message.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setIsBroadcasting(true);
+    setBroadcastProgress({ current: 0, total: broadcastRecipients.length });
+
+    try {
+      let sentCount = 0;
+
+      for (let i = 0; i < broadcastRecipients.length; i++) {
+        const recip = broadcastRecipients[i];
+        const recipId = String(recip.id || recip.username);
+        const recipName = recip.name || recip.username || 'Competitor';
+
+        // Personalize text if placeholders like {name} are used
+        const personalizedText = broadcastText
+          .replace(/\{name\}/gi, recipName)
+          .replace(/\{username\}/gi, recip.username || recipName);
+
+        const msgPayload = {
+          text: personalizedText,
+          senderId: myId,
+          senderName: myName,
+          receiverId: recipId,
+          createdAt: new Date().toISOString(),
+          isBroadcast: true,
+          broadcastTrack: broadcastTrack,
+          status: 'unread'
+        };
+
+        if (broadcastFilePreview) {
+          msgPayload.attachment = {
+            name: broadcastFilePreview.name,
+            type: broadcastFilePreview.type,
+            data: broadcastFilePreview.data,
+            isImage: broadcastFilePreview.isImage
+          };
+        }
+
+        // 1. Add direct message into ft_messages
+        await db.ft_messages.add(msgPayload);
+
+        // 2. Add unread notification for the user
+        await db.ft_notifications.add({
+          targetUserId: recipId,
+          title: `💬 New Message from ${myName}`,
+          message: personalizedText.length > 75 ? personalizedText.slice(0, 72) + '...' : personalizedText,
+          type: 'chat',
+          targetTab: 'chat',
+          status: 'unread',
+          createdAt: new Date().toISOString()
+        }).catch(() => {});
+
+        sentCount++;
+        setBroadcastProgress({ current: sentCount, total: broadcastRecipients.length });
+      }
+
+      setBroadcastSuccessMsg(`🎉 Successfully delivered private message to ${sentCount} participants in ${trackName}!`);
+      setBroadcastText('');
+      setBroadcastFilePreview(null);
+      setTimeout(() => {
+        setIsBroadcasting(false);
+        setShowBroadcastModal(false);
+        setBroadcastSuccessMsg('');
+      }, 2000);
+
+    } catch (err) {
+      console.error('Broadcast error:', err);
+      alert('Error delivering broadcast: ' + err.message);
+      setIsBroadcasting(false);
+    }
+  };
 
   const emojis = ['😀','😂','😍','👍','👏','🔬','🧪','✅','❌','🔥','👀','🎉','💡','🚀','💪','❤️','🙏','🤔','😎','⚡'];
 
@@ -466,7 +646,7 @@ export default function FTChatPage({ user: userProp }) {
         }}>
           
           {/* Search Contacts Bar & New Chat Button */}
-          <div style={{ padding: '0.85rem 1rem', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ padding: '0.85rem 1rem 0.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ position: 'relative', flex: 1 }}>
               <Search size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
@@ -497,13 +677,38 @@ export default function FTChatPage({ user: userProp }) {
             </button>
           </div>
 
+          {/* Admin Broadcast Button Bar */}
+          {isAdmin && (
+            <div style={{ padding: '0.45rem 0.85rem 0.65rem', borderBottom: '1px solid #e2e8f0', background: '#f1f5f9' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBroadcastModal(true);
+                  setBroadcastSuccessMsg('');
+                }}
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                  color: '#ffffff', border: '1px solid #334155',
+                  padding: '0.55rem 0.85rem', borderRadius: '12px',
+                  fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem',
+                  boxShadow: '0 4px 12px rgba(15,23,42,0.15)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Megaphone size={14} style={{ color: '#f43f5e' }} /> Broadcast to Track (DM)
+              </button>
+            </div>
+          )}
+
           {/* Conversations List */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
 
             {/* Direct Messages List */}
             {filteredContacts.length === 0 ? (
-              <div style={{ padding: '1.5rem 0.85rem', textAlign: 'center', color: '#64748b' }}>
-                <p style={{ fontSize: '0.8rem', margin: '0 0 0.75rem 0', fontWeight: 600, color: '#64748b' }}>
+              <div style={{ padding: '1.5rem 0.85rem', textAlign: 'center', color: '#64748b', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.45rem' }}>
+                <p style={{ fontSize: '0.8rem', margin: '0 0 0.25rem 0', fontWeight: 600, color: '#64748b' }}>
                   {searchQuery ? 'No contacts match your search query.' : 'No active private chats yet.'}
                 </p>
                 <button
@@ -513,11 +718,29 @@ export default function FTChatPage({ user: userProp }) {
                     background: 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
                     color: '#ffffff', border: 'none', padding: '0.5rem 0.9rem',
                     borderRadius: '10px', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(190,18,60,0.25)'
+                    boxShadow: '0 4px 12px rgba(190,18,60,0.25)', width: 'fit-content'
                   }}
                 >
                   + Start New Chat
                 </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowBroadcastModal(true);
+                      setBroadcastSuccessMsg('');
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                      color: '#ffffff', border: 'none', padding: '0.5rem 0.9rem',
+                      borderRadius: '10px', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(15,23,42,0.2)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                      width: 'fit-content'
+                    }}
+                  >
+                    <Megaphone size={13} style={{ color: '#f43f5e' }} /> Broadcast to Track
+                  </button>
+                )}
               </div>
             ) : (
               filteredContacts.map(acc => {
@@ -1048,6 +1271,344 @@ export default function FTChatPage({ user: userProp }) {
                 })
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── BROADCAST DIRECT MESSAGE MODAL FOR ADMINS ────────── */}
+      {showBroadcastModal && (
+        <div
+          onClick={() => { if (!isBroadcasting) setShowBroadcastModal(false); }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(15,23,42,0.65)',
+            backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '1rem'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '640px',
+              maxHeight: '92vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 60px rgba(0,0,0,0.25)',
+              overflow: 'hidden', border: '1px solid #e2e8f0'
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{
+              padding: '1.25rem 1.5rem', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+              color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #334155'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(244,63,94,0.15)',
+                  border: '1px solid rgba(244,63,94,0.3)', color: '#f43f5e',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                }}>
+                  <Megaphone size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#ffffff' }}>
+                    Broadcast Direct Message to Track
+                  </h3>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.15rem' }}>
+                    Delivers a personal 1-on-1 direct message into each participant's private chat
+                  </div>
+                </div>
+              </div>
+
+              {!isBroadcasting && (
+                <button
+                  type="button"
+                  onClick={() => setShowBroadcastModal(false)}
+                  style={{
+                    background: 'rgba(255,255,255,0.1)', border: 'none', width: '32px', height: '32px',
+                    borderRadius: '50%', color: '#ffffff', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', cursor: 'pointer'
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              
+              {/* Success Message Banner */}
+              {broadcastSuccessMsg && (
+                <div style={{
+                  padding: '1rem', borderRadius: '14px', background: '#f0fdf4',
+                  border: '1.5px solid #86efac', color: '#166534', fontWeight: 800,
+                  fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.65rem'
+                }}>
+                  <CheckCircle2 size={22} style={{ color: '#16a34a', flexShrink: 0 }} />
+                  <div>{broadcastSuccessMsg}</div>
+                </div>
+              )}
+
+              {/* Step 1: Target Track Selector */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#334155', marginBottom: '0.5rem' }}>
+                  1. Select Target Track:
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.6rem' }}>
+                  {[
+                    { id: 'pop_science', label: 'Pop Science Videos', icon: <Video size={16} />, badge: 'Track 1', color: '#2563eb', bg: '#eff6ff' },
+                    { id: 'science_journalism', label: 'Science Journalism', icon: <BookOpen size={16} />, badge: 'Track 2', color: '#059669', bg: '#ecfdf5' },
+                    { id: 'all', label: 'All Competition Tracks', icon: <Globe size={16} />, badge: 'Both Tracks', color: '#be123c', bg: '#fff1f2' }
+                  ].map(t => {
+                    const isSelected = broadcastTrack === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setBroadcastTrack(t.id)}
+                        disabled={isBroadcasting}
+                        style={{
+                          padding: '0.85rem 0.95rem', borderRadius: '14px', textAlign: 'left',
+                          border: `2px solid ${isSelected ? t.color : '#e2e8f0'}`,
+                          background: isSelected ? t.bg : '#ffffff',
+                          cursor: isBroadcasting ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.15s ease', display: 'flex', flexDirection: 'column', gap: '0.35rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ color: t.color, display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 900, fontSize: '0.82rem' }}>
+                            {t.icon} {t.badge}
+                          </span>
+                          {isSelected && <span style={{ width: 8, height: 8, borderRadius: '50%', background: t.color }} />}
+                        </div>
+                        <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a' }}>
+                          {t.label}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Step 2: Role Audience Filter & Live Count */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155' }}>
+                    2. Target Audience:
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setBroadcastRoleFilter('competitors')}
+                      disabled={isBroadcasting}
+                      style={{
+                        padding: '0.25rem 0.65rem', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 800,
+                        border: `1.5px solid ${broadcastRoleFilter === 'competitors' ? '#0f172a' : '#cbd5e1'}`,
+                        background: broadcastRoleFilter === 'competitors' ? '#0f172a' : '#ffffff',
+                        color: broadcastRoleFilter === 'competitors' ? '#ffffff' : '#475569',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Competitors Only
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBroadcastRoleFilter('all_members')}
+                      disabled={isBroadcasting}
+                      style={{
+                        padding: '0.25rem 0.65rem', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 800,
+                        border: `1.5px solid ${broadcastRoleFilter === 'all_members' ? '#0f172a' : '#cbd5e1'}`,
+                        background: broadcastRoleFilter === 'all_members' ? '#0f172a' : '#ffffff',
+                        color: broadcastRoleFilter === 'all_members' ? '#ffffff' : '#475569',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      All Roles (Inc. Judges/Trainers)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Recipient Count Pill */}
+                <div style={{
+                  padding: '0.65rem 0.95rem', borderRadius: '12px', background: '#f8fafc',
+                  border: '1.5px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                }}>
+                  <span style={{ fontSize: '0.82rem', color: '#0f172a', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Users size={16} style={{ color: '#2563eb' }} />
+                    Target Recipients: <strong style={{ color: '#2563eb' }}>{broadcastRecipients.length} participants</strong>
+                  </span>
+                  {broadcastRecipients.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowRecipientListPreview(!showRecipientListPreview)}
+                      style={{
+                        background: 'none', border: 'none', color: '#be123c',
+                        fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', textDecoration: 'underline'
+                      }}
+                    >
+                      {showRecipientListPreview ? 'Hide List' : 'Preview Recipients'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Optional Expandable Recipient Preview Cloud */}
+                {showRecipientListPreview && broadcastRecipients.length > 0 && (
+                  <div style={{
+                    marginTop: '0.5rem', maxHeight: '120px', overflowY: 'auto', padding: '0.5rem',
+                    borderRadius: '10px', background: '#ffffff', border: '1px solid #cbd5e1',
+                    display: 'flex', flexWrap: 'wrap', gap: '0.35rem'
+                  }}>
+                    {broadcastRecipients.map(r => (
+                      <span
+                        key={r.id || r.username}
+                        style={{
+                          fontSize: '0.72rem', background: '#f1f5f9', color: '#334155',
+                          padding: '0.15rem 0.5rem', borderRadius: '6px', fontWeight: 700,
+                          border: '1px solid #e2e8f0'
+                        }}
+                      >
+                        {r.name || r.username}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Step 3: Message Textarea with Personalization Shortcuts */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#334155' }}>
+                    3. Message Content:
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setBroadcastText(prev => prev + ' {name} ')}
+                    disabled={isBroadcasting}
+                    style={{
+                      background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe',
+                      padding: '0.15rem 0.55rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800,
+                      cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem'
+                    }}
+                    title="Insert participant's name dynamically in their personal message"
+                  >
+                    <Sparkles size={12} /> Insert {'{name}'} Tag
+                  </button>
+                </div>
+
+                <textarea
+                  rows={5}
+                  placeholder={`Write your direct message here...\n\nExample: Hello {name}, please note that the Stage 1 deadline is approaching next Sunday. Check your Course Modules tab for full instructions!`}
+                  value={broadcastText}
+                  onChange={(e) => setBroadcastText(e.target.value)}
+                  disabled={isBroadcasting}
+                  style={{
+                    width: '100%', padding: '0.85rem 1rem', borderRadius: '14px',
+                    border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none',
+                    color: '#0f172a', fontWeight: 600, boxSizing: 'border-box',
+                    resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+
+              {/* Step 4: Optional Attachment Upload */}
+              <div>
+                <input
+                  type="file"
+                  ref={broadcastFileInputRef}
+                  onChange={handleBroadcastFileSelect}
+                  style={{ display: 'none' }}
+                  accept="image/*,.pdf,.doc,.docx"
+                />
+
+                {broadcastFilePreview ? (
+                  <div style={{
+                    padding: '0.65rem 0.95rem', borderRadius: '12px', background: '#f8fafc',
+                    border: '1.5px solid #93c5fd', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                  }}>
+                    <span style={{ fontSize: '0.82rem', color: '#2563eb', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <FileText size={16} /> {broadcastFilePreview.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setBroadcastFilePreview(null)}
+                      disabled={isBroadcasting}
+                      style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer' }}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => broadcastFileInputRef.current?.click()}
+                    disabled={isBroadcasting}
+                    style={{
+                      background: '#f8fafc', border: '1.5px dashed #cbd5e1', color: '#475569',
+                      padding: '0.55rem 1rem', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 700,
+                      cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem'
+                    }}
+                  >
+                    <Paperclip size={15} /> Attach Image or PDF Document (Optional)
+                  </button>
+                )}
+              </div>
+
+              {/* Broadcasting Live Progress */}
+              {isBroadcasting && (
+                <div style={{
+                  padding: '1rem', borderRadius: '14px', background: '#f8fafc',
+                  border: '1.5px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.5rem'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
+                    <span>Sending direct messages...</span>
+                    <span>{broadcastProgress.current} / {broadcastProgress.total} Delivered</span>
+                  </div>
+                  <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '9999px', overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${broadcastProgress.total > 0 ? (broadcastProgress.current / broadcastProgress.total) * 100 : 0}%`,
+                      height: '100%', background: 'linear-gradient(90deg, #be123c, #f43f5e)', transition: 'width 0.15s ease'
+                    }} />
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div style={{
+              padding: '1rem 1.5rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0',
+              display: 'flex', justifyContent: 'flex-end', gap: '0.65rem'
+            }}>
+              {!isBroadcasting && (
+                <button
+                  type="button"
+                  onClick={() => setShowBroadcastModal(false)}
+                  style={{
+                    padding: '0.65rem 1.25rem', borderRadius: '12px', background: '#ffffff',
+                    border: '1.5px solid #cbd5e1', color: '#475569', fontSize: '0.85rem',
+                    fontWeight: 800, cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleExecuteBroadcast}
+                disabled={isBroadcasting || (!broadcastText.trim() && !broadcastFilePreview) || broadcastRecipients.length === 0}
+                style={{
+                  padding: '0.65rem 1.4rem', borderRadius: '12px',
+                  background: isBroadcasting || (!broadcastText.trim() && !broadcastFilePreview) || broadcastRecipients.length === 0
+                    ? '#94a3b8'
+                    : 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
+                  color: '#ffffff', border: 'none', fontSize: '0.85rem', fontWeight: 900,
+                  cursor: isBroadcasting || (!broadcastText.trim() && !broadcastFilePreview) || broadcastRecipients.length === 0 ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                  boxShadow: '0 4px 14px rgba(190,18,60,0.25)'
+                }}
+              >
+                <Send size={15} /> {isBroadcasting ? 'Broadcasting...' : `Send Direct Messages (${broadcastRecipients.length}) 🚀`}
+              </button>
+            </div>
+
           </div>
         </div>
       )}
