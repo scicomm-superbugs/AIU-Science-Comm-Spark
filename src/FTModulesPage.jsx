@@ -5,12 +5,85 @@ import {
   Calendar, Clock, User, CheckCircle2, Search, Layers, GripVertical, 
   Video, Pencil, Trash2, X, Sparkles, Paperclip, Check, AlertCircle, 
   Download, ArrowRightLeft, MoveRight, Award, Send, CheckCircle, Flame,
-  FolderPlus, Filter, RotateCcw
+  FolderPlus, Filter, RotateCcw, HelpCircle
 } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { db, useLiveCollection } from './db';
 import { normalizeTrackKey, renderFormattedDescription } from './ftConstants';
 import './scicommspark.css';
+
+/**
+ * Exact color palette matching the timeline & legend:
+ * - Submission (Red): #dc2626
+ * - Stage Milestone (Gold): #d97706
+ * - Workshops (Blue): #2563eb
+ * - Office Hours (Green): #059669
+ */
+function getItemColorTheme(item) {
+  const typeStr = String(item.type || '').toLowerCase();
+  
+  // 1. Office Hours (Green)
+  if (typeStr.includes('office') || typeStr.includes('mentorship') || typeStr.includes('consultation')) {
+    return {
+      name: 'Office Hours',
+      accentColor: '#059669',
+      bgColor: '#ecfdf5',
+      borderColor: '#a7f3d0',
+      tagBg: '#ecfdf5',
+      tagColor: '#059669',
+      tagBorder: '#a7f3d0',
+      dotColor: '#059669',
+      buttonBg: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+      buttonShadow: 'rgba(5, 150, 105, 0.25)'
+    };
+  }
+
+  // 2. Stage Milestone (Gold)
+  if (typeStr.includes('milestone') || typeStr.includes('grand finale') || (item.isSubmission && item.stageId === 3)) {
+    return {
+      name: 'Stage Milestone',
+      accentColor: '#d97706',
+      bgColor: '#fffbeb',
+      borderColor: '#fde68a',
+      tagBg: '#fffbeb',
+      tagColor: '#d97706',
+      tagBorder: '#fde68a',
+      dotColor: '#d97706',
+      buttonBg: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+      buttonShadow: 'rgba(217, 119, 6, 0.28)'
+    };
+  }
+
+  // 3. Submission (Red)
+  if (item.isSubmission || typeStr.includes('submission') || item.source === 'stage_submission') {
+    return {
+      name: 'Submission',
+      accentColor: '#dc2626',
+      bgColor: '#fff1f2',
+      borderColor: '#fecdd3',
+      tagBg: '#fff1f2',
+      tagColor: '#dc2626',
+      tagBorder: '#fecdd3',
+      dotColor: '#dc2626',
+      buttonBg: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+      buttonShadow: 'rgba(220, 38, 38, 0.28)'
+    };
+  }
+
+  // 4. Workshops (Blue) - Default for workshops/lectures
+  return {
+    name: 'Workshop',
+    accentColor: '#2563eb',
+    bgColor: '#eff6ff',
+    borderColor: '#bfdbfe',
+    tagBg: '#eff6ff',
+    tagColor: '#2563eb',
+    tagBorder: '#bfdbfe',
+    dotColor: '#2563eb',
+    buttonBg: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+    buttonShadow: 'rgba(37, 99, 235, 0.28)'
+  };
+}
 
 /**
  * Format exact date and time cleanly without duplicated start/end times
@@ -100,6 +173,7 @@ const TRACK_STAGE_SUBMISSIONS = {
       id: 'stage_pop_1',
       stageId: 1,
       isSubmission: true,
+      type: 'Submission',
       title: 'Stage 1 Official Submission: Short Pop Video',
       sub: 'Reels / TikTok SciComm Video (max 90 seconds)',
       defaultOpenDate: '2026-08-15T00:00',
@@ -111,6 +185,7 @@ const TRACK_STAGE_SUBMISSIONS = {
       id: 'stage_pop_2',
       stageId: 2,
       isSubmission: true,
+      type: 'Submission',
       title: 'Stage 2 Official Submission: Long Pop Video',
       sub: 'YouTube SciComm Video (up to 3 minutes)',
       defaultOpenDate: '2026-09-02T00:00',
@@ -122,6 +197,7 @@ const TRACK_STAGE_SUBMISSIONS = {
       id: 'stage_pop_3',
       stageId: 3,
       isSubmission: true,
+      type: 'Stage Milestone',
       title: 'Stage 3 (Finals): Grand Finale Live Stage Show',
       sub: 'Interactive Live Presentation (5 mins on stage)',
       defaultOpenDate: '2026-09-21T00:00',
@@ -135,6 +211,7 @@ const TRACK_STAGE_SUBMISSIONS = {
       id: 'stage_jour_1',
       stageId: 1,
       isSubmission: true,
+      type: 'Submission',
       title: 'Stage 1 Official Submission: Pre-Interview Preparation',
       sub: 'Topic Research, Profile & Field Interview Prep',
       defaultOpenDate: '2026-08-15T00:00',
@@ -147,6 +224,7 @@ const TRACK_STAGE_SUBMISSIONS = {
       id: 'stage_jour_2',
       stageId: 2,
       isSubmission: true,
+      type: 'Submission',
       title: 'Stage 2 Official Submission: Article Publication PDF',
       sub: 'Simplified Science Article Publication',
       defaultOpenDate: '2026-09-02T00:00',
@@ -158,6 +236,7 @@ const TRACK_STAGE_SUBMISSIONS = {
       id: 'stage_jour_3',
       stageId: 3,
       isSubmission: true,
+      type: 'Stage Milestone',
       title: 'Stage 3 (Finals): Live Talk Show Showcase',
       sub: 'Live Science Talk Show Interview on Stage',
       defaultOpenDate: '2026-09-21T00:00',
@@ -252,7 +331,7 @@ export default function FTModulesPage() {
     const normTrack = selectedTrack === 'science_journalism' ? 'science_journalism' : 'pop_science';
     const items = [];
 
-    // A. Workshops & Lectures
+    // A. Workshops, Lectures & Office Hours
     (dynamicWorkshops || []).forEach(ws => {
       const rawTarget = ws.targetTrack || ws.trackKey || 'both';
       if (doesItemMatchTrack(rawTarget, normTrack)) {
@@ -310,6 +389,7 @@ export default function FTModulesPage() {
         id: defStage.id,
         source: 'stage_submission',
         isSubmission: true,
+        type: defStage.type || (defStage.stageId === 3 ? 'Stage Milestone' : 'Submission'),
         stageId: defStage.stageId,
         title: custom?.title || defStage.title,
         sub: defStage.sub,
@@ -709,66 +789,31 @@ export default function FTModulesPage() {
           </div>
         </div>
 
-        {/* Search Bar & Track Buttons */}
-        <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px dashed #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          
-          {/* 2 Track Selector Buttons */}
-          <div className="lms-track-btn-group" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={() => setSelectedTrack('pop_science')}
-              style={{
-                padding: '0.6rem 1.2rem', borderRadius: '14px', fontWeight: 900, fontSize: '0.88rem',
-                border: `2px solid ${selectedTrack === 'pop_science' ? '#be123c' : '#cbd5e1'}`,
-                background: selectedTrack === 'pop_science' ? 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)' : '#ffffff',
-                color: selectedTrack === 'pop_science' ? '#ffffff' : '#334155',
-                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                boxShadow: selectedTrack === 'pop_science' ? '0 4px 14px rgba(190, 18, 60, 0.3)' : 'none',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <span>🎥 Track 1: Pop Science Videos</span>
-              {userTrack === 'pop_science' && (
-                <span style={{
-                  fontSize: '0.68rem', fontWeight: 900, padding: '0.15rem 0.5rem', borderRadius: '8px',
-                  background: selectedTrack === 'pop_science' ? '#ffffff' : '#fef2f2',
-                  color: selectedTrack === 'pop_science' ? '#be123c' : '#dc2626',
-                  border: `1px solid ${selectedTrack === 'pop_science' ? '#fecdd3' : '#fca5a5'}`
-                }}>
-                  Your Track 🎯
-                </span>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSelectedTrack('science_journalism')}
-              style={{
-                padding: '0.6rem 1.2rem', borderRadius: '14px', fontWeight: 900, fontSize: '0.88rem',
-                border: `2px solid ${selectedTrack === 'science_journalism' ? '#be123c' : '#cbd5e1'}`,
-                background: selectedTrack === 'science_journalism' ? 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)' : '#ffffff',
-                color: selectedTrack === 'science_journalism' ? '#ffffff' : '#334155',
-                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                boxShadow: selectedTrack === 'science_journalism' ? '0 4px 14px rgba(190, 18, 60, 0.3)' : 'none',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <span>📰 Track 2: Science Journalism</span>
-              {userTrack === 'science_journalism' && (
-                <span style={{
-                  fontSize: '0.68rem', fontWeight: 900, padding: '0.15rem 0.5rem', borderRadius: '8px',
-                  background: selectedTrack === 'science_journalism' ? '#ffffff' : '#fef2f2',
-                  color: selectedTrack === 'science_journalism' ? '#be123c' : '#dc2626',
-                  border: `1px solid ${selectedTrack === 'science_journalism' ? '#fecdd3' : '#fca5a5'}`
-                }}>
-                  Your Track 🎯
-                </span>
-              )}
-            </button>
+        {/* ── COLOR SCHEME LEGEND BAR ── */}
+        <div style={{
+          marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px dashed #e2e8f0',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.82rem', fontWeight: 800 }}>
+            <span style={{ color: '#475569', fontSize: '0.8rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em', marginRight: '0.25rem' }}>
+              Categories:
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#dc2626', background: '#fff1f2', padding: '0.35rem 0.8rem', borderRadius: '20px', border: '1px solid #fecdd3' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#dc2626', boxShadow: '0 0 8px #dc2626' }} /> Submission (Red)
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#d97706', background: '#fffbeb', padding: '0.35rem 0.8rem', borderRadius: '20px', border: '1px solid #fde68a' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#d97706', boxShadow: '0 0 8px #d97706' }} /> Stage Milestone (Gold)
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#2563eb', background: '#eff6ff', padding: '0.35rem 0.8rem', borderRadius: '20px', border: '1px solid #bfdbfe' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb', boxShadow: '0 0 8px #2563eb' }} /> Workshops (Blue)
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#059669', background: '#ecfdf5', padding: '0.35rem 0.8rem', borderRadius: '20px', border: '1px solid #a7f3d0' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#059669', boxShadow: '0 0 8px #059669' }} /> Office Hours (Green)
+            </span>
           </div>
 
           {/* Search Box */}
-          <div className="lms-search-box-wrapper" style={{ position: 'relative', width: '280px' }}>
+          <div className="lms-search-box-wrapper" style={{ position: 'relative', width: '260px' }}>
             <Search size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
             <input
               type="text"
@@ -782,6 +827,61 @@ export default function FTModulesPage() {
               }}
             />
           </div>
+        </div>
+
+        {/* 2 Track Selector Tabs */}
+        <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setSelectedTrack('pop_science')}
+            style={{
+              padding: '0.6rem 1.2rem', borderRadius: '14px', fontWeight: 900, fontSize: '0.88rem',
+              border: `2px solid ${selectedTrack === 'pop_science' ? '#be123c' : '#cbd5e1'}`,
+              background: selectedTrack === 'pop_science' ? 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)' : '#ffffff',
+              color: selectedTrack === 'pop_science' ? '#ffffff' : '#334155',
+              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+              boxShadow: selectedTrack === 'pop_science' ? '0 4px 14px rgba(190, 18, 60, 0.3)' : 'none',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <span>🎥 Track 1: Pop Science Videos</span>
+            {userTrack === 'pop_science' && (
+              <span style={{
+                fontSize: '0.68rem', fontWeight: 900, padding: '0.15rem 0.5rem', borderRadius: '8px',
+                background: selectedTrack === 'pop_science' ? '#ffffff' : '#fef2f2',
+                color: selectedTrack === 'pop_science' ? '#be123c' : '#dc2626',
+                border: `1px solid ${selectedTrack === 'pop_science' ? '#fecdd3' : '#fca5a5'}`
+              }}>
+                Your Track 🎯
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSelectedTrack('science_journalism')}
+            style={{
+              padding: '0.6rem 1.2rem', borderRadius: '14px', fontWeight: 900, fontSize: '0.88rem',
+              border: `2px solid ${selectedTrack === 'science_journalism' ? '#be123c' : '#cbd5e1'}`,
+              background: selectedTrack === 'science_journalism' ? 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)' : '#ffffff',
+              color: selectedTrack === 'science_journalism' ? '#ffffff' : '#334155',
+              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+              boxShadow: selectedTrack === 'science_journalism' ? '0 4px 14px rgba(190, 18, 60, 0.3)' : 'none',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <span>📰 Track 2: Science Journalism</span>
+            {userTrack === 'science_journalism' && (
+              <span style={{
+                fontSize: '0.68rem', fontWeight: 900, padding: '0.15rem 0.5rem', borderRadius: '8px',
+                background: selectedTrack === 'science_journalism' ? '#ffffff' : '#fef2f2',
+                color: selectedTrack === 'science_journalism' ? '#be123c' : '#dc2626',
+                border: `1px solid ${selectedTrack === 'science_journalism' ? '#fecdd3' : '#fca5a5'}`
+              }}>
+                Your Track 🎯
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
@@ -798,7 +898,7 @@ export default function FTModulesPage() {
             No Modules Created Yet in {selectedTrack === 'pop_science' ? 'Track 1 (Pop Science)' : 'Track 2 (Science Journalism)'}
           </h2>
           <p style={{ fontSize: '0.9rem', color: '#64748b', maxWidth: '520px', margin: '0 auto 1.5rem auto', fontWeight: 600 }}>
-            Click the button below to add your first module. Then manually pick and assign lectures, workshops, resource files, and stage submissions!
+            Click the button below to create your first module and then manually add workshops, lectures, office hours, and submissions.
           </p>
           {canManage && (
             <button
@@ -1013,8 +1113,10 @@ export default function FTModulesPage() {
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       {weekGroup.items.map((item, idx) => {
                         const isThisItemDragged = draggedItem?.id === item.id;
+                        const theme = getItemColorTheme(item);
+                        const isPassed = item.isPassed;
 
-                        // ── RENDERING SUBMISSION ITEM ──
+                        // ── RENDERING SUBMISSION / MILESTONE ITEM ──
                         if (item.isSubmission) {
                           const openDateFormatted = formatShortDate(item.openDate);
                           const deadlineFormatted = formatShortDate(item.deadline);
@@ -1031,7 +1133,7 @@ export default function FTModulesPage() {
                               className={isThisItemDragged ? 'lms-item-drag-active' : ''}
                               style={{
                                 borderBottom: idx === itemCount - 1 ? 'none' : '1px solid #f1f5f9',
-                                background: isClosed ? '#fcfcfd' : 'linear-gradient(135deg, #ffffff 0%, #faf5ff 100%)',
+                                background: isClosed ? '#fcfcfd' : `linear-gradient(135deg, #ffffff 0%, ${theme.bgColor} 100%)`,
                                 transition: 'all 0.15s ease'
                               }}
                             >
@@ -1039,7 +1141,7 @@ export default function FTModulesPage() {
                                 className="lms-item-row"
                                 style={{
                                   opacity: isClosed ? 0.75 : 1,
-                                  borderLeft: `4px solid ${isClosed ? '#94a3b8' : isActive ? '#059669' : '#8b5cf6'}`
+                                  borderLeft: `4px solid ${isClosed ? '#94a3b8' : theme.accentColor}`
                                 }}
                               >
                                 {/* Left Info Column */}
@@ -1048,41 +1150,49 @@ export default function FTModulesPage() {
                                   {canManage && (
                                     <div
                                       className="lms-drag-grip"
-                                      title="Click & Drag submission milestone across modules"
+                                      title="Click & Drag milestone across modules"
                                       style={{ marginTop: '0.2rem', flexShrink: 0 }}
                                     >
                                       <GripVertical size={18} />
                                     </div>
                                   )}
 
-                                  {/* Submission Icon Box */}
+                                  {/* Icon Box with Theme Color */}
                                   <div style={{
                                     width: '42px', height: '42px', borderRadius: '12px',
-                                    background: isClosed ? '#f1f5f9' : isActive ? '#ecfdf5' : '#f5f3ff',
-                                    border: `1.5px solid ${isClosed ? '#cbd5e1' : isActive ? '#a7f3d0' : '#ddd6fe'}`,
+                                    background: isClosed ? '#f1f5f9' : theme.bgColor,
+                                    border: `1.5px solid ${isClosed ? '#cbd5e1' : theme.borderColor}`,
                                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                                   }}>
-                                    <Award size={21} style={{ color: isClosed ? '#94a3b8' : isActive ? '#059669' : '#7c3aed' }} />
+                                    <Award size={21} style={{ color: isClosed ? '#94a3b8' : theme.accentColor }} />
                                   </div>
 
                                   <div style={{ flex: 1, minWidth: 0 }}>
-                                    {/* Title, Official Submission Badge, Window Status Badge */}
+                                    {/* Title, Legend Theme Pill & Window Status Badge */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
                                       <span style={{
                                         fontSize: '1.05rem', fontWeight: 900,
-                                        color: isClosed ? '#64748b' : '#1e1b4b',
+                                        color: isClosed ? '#64748b' : '#0f172a',
                                         textDecoration: isClosed ? 'line-through' : 'none',
                                         lineHeight: 1.35, wordBreak: 'break-word'
                                       }}>
                                         {item.title}
                                       </span>
 
+                                      {/* Legend Matched Pill Tag */}
                                       <span style={{
-                                        fontSize: '0.68rem', fontWeight: 900, padding: '0.18rem 0.6rem', borderRadius: '6px',
-                                        background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-                                        color: '#ffffff', boxShadow: '0 2px 6px rgba(124, 58, 237, 0.25)'
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                                        fontSize: '0.68rem', fontWeight: 800, padding: '0.15rem 0.6rem', borderRadius: '20px',
+                                        background: isClosed ? '#f1f5f9' : theme.tagBg,
+                                        color: isClosed ? '#64748b' : theme.tagColor,
+                                        border: `1px solid ${isClosed ? '#cbd5e1' : theme.tagBorder}`
                                       }}>
-                                        📝 Stage Submission
+                                        <span style={{
+                                          width: 6, height: 6, borderRadius: '50%',
+                                          background: isClosed ? '#94a3b8' : theme.dotColor,
+                                          boxShadow: isClosed ? 'none' : `0 0 6px ${theme.dotColor}`
+                                        }} />
+                                        {theme.name}
                                       </span>
 
                                       {/* Window Status Badge */}
@@ -1111,7 +1221,7 @@ export default function FTModulesPage() {
                                           fontSize: '0.68rem', fontWeight: 900, padding: '0.15rem 0.55rem', borderRadius: '6px',
                                           background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1'
                                         }}>
-                                          🏁 Submission Closed
+                                          🏁 Window Closed
                                         </span>
                                       )}
                                     </div>
@@ -1136,7 +1246,7 @@ export default function FTModulesPage() {
                                       )}
 
                                       {deadlineFormatted && (
-                                        <span style={{ fontSize: '0.8rem', color: isClosed ? '#94a3b8' : '#be123c', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                                        <span style={{ fontSize: '0.8rem', color: isClosed ? '#94a3b8' : theme.accentColor, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                                           <Clock size={14} /> Deadline: <strong>{deadlineFormatted}</strong>
                                         </span>
                                       )}
@@ -1153,18 +1263,17 @@ export default function FTModulesPage() {
 
                                 {/* Right Action Button for Submission */}
                                 <div className="lms-item-actions-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                                  {/* Direct Submission Action */}
                                   {item.googleFormUrl ? (
                                     <a
                                       href={item.googleFormUrl}
                                       target="_blank"
                                       rel="noreferrer"
                                       style={{
-                                        background: isClosed ? '#94a3b8' : 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                                        background: isClosed ? '#94a3b8' : theme.buttonBg,
                                         color: '#ffffff', padding: '0.55rem 1rem', borderRadius: '10px',
                                         fontSize: '0.82rem', fontWeight: 900, textDecoration: 'none',
                                         display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                                        boxShadow: isClosed ? 'none' : '0 3px 12px rgba(124, 58, 237, 0.3)',
+                                        boxShadow: isClosed ? 'none' : `0 3px 12px ${theme.buttonShadow}`,
                                         pointerEvents: isClosed ? 'none' : 'auto'
                                       }}
                                     >
@@ -1175,11 +1284,11 @@ export default function FTModulesPage() {
                                       type="button"
                                       onClick={() => navigate('/app/my-competition')}
                                       style={{
-                                        background: isClosed ? '#94a3b8' : 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
+                                        background: isClosed ? '#94a3b8' : theme.buttonBg,
                                         color: '#ffffff', padding: '0.55rem 1rem', borderRadius: '10px',
                                         fontSize: '0.82rem', fontWeight: 900, border: 'none', cursor: 'pointer',
                                         display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                                        boxShadow: isClosed ? 'none' : '0 3px 12px rgba(190, 18, 60, 0.3)'
+                                        boxShadow: isClosed ? 'none' : `0 3px 12px ${theme.buttonShadow}`
                                       }}
                                     >
                                       <Send size={14} /> {isClosed ? 'View Submission' : 'Go to Submit 🚀'}
@@ -1207,9 +1316,8 @@ export default function FTModulesPage() {
                           );
                         }
 
-                        // ── RENDERING WORKSHOP ITEM ──
+                        // ── RENDERING WORKSHOP / LECTURE / OFFICE HOURS ITEM ──
                         const formattedTime = formatExactDateTime(item.startDate, item.endDate);
-                        const isPassed = item.isPassed;
 
                         return (
                           <div
@@ -1224,11 +1332,12 @@ export default function FTModulesPage() {
                               transition: 'all 0.15s ease'
                             }}
                           >
-                            {/* ── WORKSHOP MAIN ROW ── */}
+                            {/* ── MAIN ROW WITH MATCHING LEFT ACCENT COLOR ── */}
                             <div
                               className="lms-item-row"
                               style={{
-                                opacity: isPassed ? 0.72 : 1
+                                opacity: isPassed ? 0.72 : 1,
+                                borderLeft: `4px solid ${isPassed ? '#94a3b8' : theme.accentColor}`
                               }}
                             >
                               {/* Left Info Column */}
@@ -1238,29 +1347,29 @@ export default function FTModulesPage() {
                                 {canManage && (
                                   <div
                                     className="lms-drag-grip"
-                                    title="Click & Drag to move workshop across modules"
+                                    title="Click & Drag to move item across modules"
                                     style={{ marginTop: '0.2rem', flexShrink: 0 }}
                                   >
                                     <GripVertical size={18} />
                                   </div>
                                 )}
 
-                                {/* Icon Box */}
+                                {/* Icon Box matching Legend Theme */}
                                 <div style={{
                                   width: '40px', height: '40px', borderRadius: '12px',
-                                  background: isPassed ? '#f1f5f9' : item.meetingLink ? '#ecfdf5' : '#eff6ff',
-                                  border: `1.5px solid ${isPassed ? '#cbd5e1' : item.meetingLink ? '#a7f3d0' : '#bfdbfe'}`,
+                                  background: isPassed ? '#f1f5f9' : theme.bgColor,
+                                  border: `1.5px solid ${isPassed ? '#cbd5e1' : theme.borderColor}`,
                                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                                 }}>
                                   {item.meetingLink ? (
-                                    <Video size={19} style={{ color: isPassed ? '#94a3b8' : '#059669' }} />
+                                    <Video size={19} style={{ color: isPassed ? '#94a3b8' : theme.accentColor }} />
                                   ) : (
-                                    <BookOpen size={19} style={{ color: isPassed ? '#94a3b8' : '#be123c' }} />
+                                    <BookOpen size={19} style={{ color: isPassed ? '#94a3b8' : theme.accentColor }} />
                                   )}
                                 </div>
 
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                  {/* Title & Passed Badge */}
+                                  {/* Title & Legend Theme Pill Tag */}
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
                                     <span style={{
                                       fontSize: '1.02rem', fontWeight: 900,
@@ -1269,6 +1378,22 @@ export default function FTModulesPage() {
                                       lineHeight: 1.35, wordBreak: 'break-word'
                                     }}>
                                       {item.title}
+                                    </span>
+
+                                    {/* Matching Legend Pill Tag */}
+                                    <span style={{
+                                      display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                                      fontSize: '0.68rem', fontWeight: 800, padding: '0.15rem 0.6rem', borderRadius: '20px',
+                                      background: isPassed ? '#f1f5f9' : theme.tagBg,
+                                      color: isPassed ? '#64748b' : theme.tagColor,
+                                      border: `1px solid ${isPassed ? '#cbd5e1' : theme.tagBorder}`
+                                    }}>
+                                      <span style={{
+                                        width: 6, height: 6, borderRadius: '50%',
+                                        background: isPassed ? '#94a3b8' : theme.dotColor,
+                                        boxShadow: isPassed ? 'none' : `0 0 6px ${theme.dotColor}`
+                                      }} />
+                                      {theme.name}
                                     </span>
 
                                     {/* Passed / Past Session Status Badge */}
@@ -1287,7 +1412,7 @@ export default function FTModulesPage() {
                                   <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
                                     {item.speakerName && (
                                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                                        <User size={13} style={{ color: '#be123c' }} />
+                                        <User size={13} style={{ color: theme.accentColor }} />
                                         <span>Speaker: <strong>{item.speakerName}</strong></span>
                                       </span>
                                     )}
@@ -1295,7 +1420,7 @@ export default function FTModulesPage() {
                                     {formattedTime && (
                                       <span style={{
                                         display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                                        color: isPassed ? '#94a3b8' : '#0284c7', fontWeight: 800,
+                                        color: isPassed ? '#94a3b8' : theme.accentColor, fontWeight: 800,
                                         textDecoration: isPassed ? 'line-through' : 'none'
                                       }}>
                                         <Clock size={13} />
@@ -1315,17 +1440,17 @@ export default function FTModulesPage() {
 
                               {/* Right Action Controls for Workshop */}
                               <div className="lms-item-actions-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                                {/* Join Live Session Button (if meetingLink exists and NOT passed) */}
+                                {/* Join Live Session Button */}
                                 {item.meetingLink && !isPassed && (
                                   <a
                                     href={item.meetingLink}
                                     target="_blank"
                                     rel="noreferrer"
                                     style={{
-                                      background: '#059669', color: '#ffffff', padding: '0.5rem 0.9rem', borderRadius: '10px',
+                                      background: theme.buttonBg, color: '#ffffff', padding: '0.5rem 0.9rem', borderRadius: '10px',
                                       fontSize: '0.82rem', fontWeight: 900, textDecoration: 'none',
                                       display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                                      boxShadow: '0 3px 10px rgba(5, 150, 105, 0.25)'
+                                      boxShadow: `0 3px 10px ${theme.buttonShadow}`
                                     }}
                                   >
                                     Join Live Session <ExternalLink size={14} />
@@ -1342,14 +1467,14 @@ export default function FTModulesPage() {
                                   </span>
                                 )}
 
-                                <CheckCircle2 size={18} style={{ color: isPassed ? '#94a3b8' : '#059669' }} />
+                                <CheckCircle2 size={18} style={{ color: isPassed ? '#94a3b8' : theme.accentColor }} />
 
                                 {/* Admin Remove from Module */}
                                 {canManage && (
                                   <button
                                     type="button"
                                     onClick={() => handleToggleItemAssignment(item, weekGroup.weekNumber)}
-                                    title="Remove workshop from this module"
+                                    title="Remove from this module"
                                     style={{
                                       background: '#fff1f2', border: '1px solid #fecdd3', color: '#dc2626',
                                       height: '32px', padding: '0 0.55rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800,
@@ -1444,7 +1569,7 @@ export default function FTModulesPage() {
                   <FolderPlus size={22} style={{ color: '#2563eb' }} /> Add Content to {pickerModalWeek.weekTitle}
                 </h2>
                 <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0.25rem 0 0 0', fontWeight: 600 }}>
-                  Select from all available workshops, lecture materials, and submissions for {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}.
+                  Select from all available workshops, office hours, and stage submissions matching {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}.
                 </p>
               </div>
               <button
@@ -1455,7 +1580,7 @@ export default function FTModulesPage() {
               </button>
             </div>
 
-            {/* Filter Bar */}
+            {/* Filter Bar with Legend Scheme Colors */}
             <div style={{ padding: '1rem 1.75rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
               {/* Type Tabs */}
               <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
@@ -1463,7 +1588,7 @@ export default function FTModulesPage() {
                   type="button"
                   onClick={() => setPickerFilterType('all')}
                   style={{
-                    padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 800,
+                    padding: '0.35rem 0.75rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 800,
                     border: '1px solid #cbd5e1', cursor: 'pointer',
                     background: pickerFilterType === 'all' ? '#0f172a' : '#ffffff',
                     color: pickerFilterType === 'all' ? '#ffffff' : '#334155'
@@ -1475,34 +1600,34 @@ export default function FTModulesPage() {
                   type="button"
                   onClick={() => setPickerFilterType('workshop')}
                   style={{
-                    padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 800,
-                    border: '1px solid #cbd5e1', cursor: 'pointer',
-                    background: pickerFilterType === 'workshop' ? '#0f172a' : '#ffffff',
-                    color: pickerFilterType === 'workshop' ? '#ffffff' : '#334155'
+                    padding: '0.35rem 0.75rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 800,
+                    border: `1px solid ${pickerFilterType === 'workshop' ? '#2563eb' : '#bfdbfe'}`,
+                    background: pickerFilterType === 'workshop' ? '#eff6ff' : '#ffffff',
+                    color: '#2563eb', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
                   }}
                 >
-                  🎥 Workshops & Lectures
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#2563eb' }} /> Workshops (Blue)
                 </button>
                 <button
                   type="button"
                   onClick={() => setPickerFilterType('submission')}
                   style={{
-                    padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 800,
-                    border: '1px solid #cbd5e1', cursor: 'pointer',
-                    background: pickerFilterType === 'submission' ? '#0f172a' : '#ffffff',
-                    color: pickerFilterType === 'submission' ? '#ffffff' : '#334155'
+                    padding: '0.35rem 0.75rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 800,
+                    border: `1px solid ${pickerFilterType === 'submission' ? '#dc2626' : '#fecdd3'}`,
+                    background: pickerFilterType === 'submission' ? '#fff1f2' : '#ffffff',
+                    color: '#dc2626', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
                   }}
                 >
-                  🎯 Stage Submissions
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#dc2626' }} /> Submissions (Red)
                 </button>
                 <button
                   type="button"
                   onClick={() => setPickerFilterType('file')}
                   style={{
-                    padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 800,
+                    padding: '0.35rem 0.75rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 800,
                     border: '1px solid #cbd5e1', cursor: 'pointer',
-                    background: pickerFilterType === 'file' ? '#0f172a' : '#ffffff',
-                    color: pickerFilterType === 'file' ? '#ffffff' : '#334155'
+                    background: pickerFilterType === 'file' ? '#f1f5f9' : '#ffffff',
+                    color: '#334155'
                   }}
                 >
                   📄 Attached Files
@@ -1514,7 +1639,7 @@ export default function FTModulesPage() {
                 <Search size={14} style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                 <input
                   type="text"
-                  placeholder="Filter available list..."
+                  placeholder="Filter list..."
                   value={pickerSearchQuery}
                   onChange={e => setPickerSearchQuery(e.target.value)}
                   style={{
@@ -1526,7 +1651,7 @@ export default function FTModulesPage() {
               </div>
             </div>
 
-            {/* Modal Body: Available List */}
+            {/* Modal Body: Available List with Matching Colors */}
             <div style={{ padding: '1rem 1.75rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {pickerFilteredItems.length === 0 ? (
                 <div style={{ padding: '3rem 1rem', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: '0.9rem' }}>
@@ -1536,6 +1661,7 @@ export default function FTModulesPage() {
                 pickerFilteredItems.map(item => {
                   const isInThisWeek = Number(item.weekNumber) === Number(pickerModalWeek.weekNumber);
                   const isInOtherWeek = item.weekNumber > 0 && !isInThisWeek;
+                  const theme = getItemColorTheme(item);
                   const formattedTime = formatExactDateTime(item.startDate, item.endDate);
 
                   return (
@@ -1543,8 +1669,9 @@ export default function FTModulesPage() {
                       key={item.id}
                       style={{
                         padding: '0.9rem 1.1rem', borderRadius: '14px',
-                        border: `1.5px solid ${isInThisWeek ? '#a7f3d0' : '#e2e8f0'}`,
+                        border: `1.5px solid ${isInThisWeek ? '#a7f3d0' : theme.borderColor}`,
                         background: isInThisWeek ? '#f0fdf4' : '#ffffff',
+                        borderLeft: `4px solid ${theme.accentColor}`,
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                         flexWrap: 'wrap', gap: '0.75rem', transition: 'all 0.15s ease'
                       }}
@@ -1552,8 +1679,9 @@ export default function FTModulesPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '240px' }}>
                         <div style={{
                           width: '36px', height: '36px', borderRadius: '10px',
-                          background: item.isSubmission ? '#f5f3ff' : '#eff6ff',
-                          color: item.isSubmission ? '#7c3aed' : '#2563eb',
+                          background: theme.bgColor,
+                          color: theme.accentColor,
+                          border: `1px solid ${theme.borderColor}`,
                           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                         }}>
                           {item.isSubmission ? <Award size={18} /> : item.meetingLink ? <Video size={18} /> : <BookOpen size={18} />}
@@ -1564,14 +1692,20 @@ export default function FTModulesPage() {
                             <span style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a' }}>
                               {item.title}
                             </span>
-                            {item.isSubmission && (
-                              <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '0.1rem 0.45rem', borderRadius: '6px', background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe' }}>
-                                Stage Submission
-                              </span>
-                            )}
+                            
+                            {/* Color Legend Badge */}
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                              fontSize: '0.65rem', fontWeight: 800, padding: '0.1rem 0.5rem', borderRadius: '12px',
+                              background: theme.tagBg, color: theme.tagColor, border: `1px solid ${theme.tagBorder}`
+                            }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: theme.dotColor }} />
+                              {theme.name}
+                            </span>
+
                             {item.hasFile && (
                               <span style={{ fontSize: '0.65rem', fontWeight: 800, padding: '0.1rem 0.45rem', borderRadius: '6px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }}>
-                                Has File 📄
+                                File 📄
                               </span>
                             )}
                           </div>
@@ -1609,11 +1743,11 @@ export default function FTModulesPage() {
                             onClick={() => handleToggleItemAssignment(item, pickerModalWeek.weekNumber)}
                             disabled={isAssigningItem}
                             style={{
-                              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                              background: theme.buttonBg,
                               color: '#ffffff', border: 'none',
                               padding: '0.45rem 0.95rem', borderRadius: '10px', fontSize: '0.78rem', fontWeight: 900,
                               cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                              boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)'
+                              boxShadow: `0 2px 8px ${theme.buttonShadow}`
                             }}
                           >
                             <Plus size={14} /> {isInOtherWeek ? 'Move to This Module' : '+ Add to Module'}
