@@ -3,7 +3,8 @@ import { useOutletContext, useNavigate } from 'react-router-dom';
 import { 
   BookOpen, FileText, ChevronDown, ChevronRight, ExternalLink, Plus, 
   Calendar, Clock, User, CheckCircle2, Search, Layers, GripVertical, 
-  Video, Pencil, Trash2, X, Sparkles, Paperclip, Check, AlertCircle, Download
+  Video, Pencil, Trash2, X, Sparkles, Paperclip, Check, AlertCircle, 
+  Download, ArrowRightLeft, MoveRight
 } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { db, useLiveCollection } from './db';
@@ -11,7 +12,8 @@ import { normalizeTrackKey, renderFormattedDescription } from './ftConstants';
 import './scicommspark.css';
 
 /**
- * Format exact date and time (e.g. "Thu, Aug 6, 2026 • 7:00 PM - 8:30 PM")
+ * Format exact date and time cleanly without duplicated start/end times
+ * e.g. "Thu, Aug 6, 2026 • 5:00 PM" OR "Fri, Aug 21, 2026 • 10:00 PM - 11:00 PM"
  */
 function formatExactDateTime(startStr, endStr) {
   if (!startStr) return null;
@@ -40,7 +42,10 @@ function formatExactDateTime(startStr, endStr) {
         minute: '2-digit',
         hour12: true
       });
-      return `${dateFormatted} • ${timeFormatted} - ${endTime}`;
+      // ONLY show end time if it is genuinely different from start time and >= 1 minute apart
+      if (endTime && endTime !== timeFormatted && Math.abs(endD.getTime() - d.getTime()) >= 60000) {
+        return `${dateFormatted} • ${timeFormatted} - ${endTime}`;
+      }
     }
   }
 
@@ -89,6 +94,14 @@ export default function FTModulesPage() {
   
   // Accordion Expand/Collapse state: Map of weekKey -> boolean
   const [collapsedWeeks, setCollapsedWeeks] = useState({});
+
+  // Drag and drop state across weeks
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [dragOverWeekKey, setDragOverWeekKey] = useState(null);
+
+  // Quick Move Modal (for mobile or quick week assignment)
+  const [moveModalItem, setMoveModalItem] = useState(null);
+  const [targetMoveWeek, setTargetMoveWeek] = useState(1);
 
   // Editing Week Title state
   const [editingWeekKey, setEditingWeekKey] = useState(null);
@@ -275,6 +288,79 @@ export default function FTModulesPage() {
     return result;
   }, [dynamicWorkshops, customModules, customWeekTitles, selectedTrack, searchQuery]);
 
+  // ── DRAG AND DROP HANDLERS ACROSS WEEKS ──────────────────────────────
+  const handleDragStart = (e, item) => {
+    if (!canManage) return;
+    setDraggedItem(item);
+    e.dataTransfer.setData('text/plain', JSON.stringify({ id: item.id, source: item.source, weekNumber: item.weekNumber }));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOverWeek = (e, weekKey) => {
+    if (!canManage || !draggedItem) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverWeekKey !== weekKey) {
+      setDragOverWeekKey(weekKey);
+    }
+  };
+
+  const handleDragLeaveWeek = (e, weekKey) => {
+    if (dragOverWeekKey === weekKey) {
+      setDragOverWeekKey(null);
+    }
+  };
+
+  const handleDropOnWeek = async (e, targetWeekNum, targetWeekKey) => {
+    e.preventDefault();
+    setDragOverWeekKey(null);
+    if (!draggedItem || !canManage) return;
+
+    if (draggedItem.weekNumber === targetWeekNum) {
+      setDraggedItem(null);
+      return;
+    }
+
+    try {
+      const updatePayload = {
+        weekNumber: Number(targetWeekNum),
+        updatedAt: new Date().toISOString()
+      };
+
+      if (draggedItem.source === 'workshop') {
+        await db.workshops.update(draggedItem.id, updatePayload);
+      } else {
+        await db.ft_modules.update(draggedItem.id, updatePayload);
+      }
+    } catch (err) {
+      alert('Failed to move item: ' + err.message);
+    } finally {
+      setDraggedItem(null);
+    }
+  };
+
+  // Quick Move to Week (for mobile)
+  const handleConfirmQuickMove = async (e) => {
+    e.preventDefault();
+    if (!moveModalItem) return;
+    try {
+      const updatePayload = {
+        weekNumber: Number(targetMoveWeek),
+        updatedAt: new Date().toISOString()
+      };
+
+      if (moveModalItem.source === 'workshop') {
+        await db.workshops.update(moveModalItem.id, updatePayload);
+      } else {
+        await db.ft_modules.update(moveModalItem.id, updatePayload);
+      }
+
+      setMoveModalItem(null);
+    } catch (err) {
+      alert('Failed to move: ' + err.message);
+    }
+  };
+
   // Handle Saving Custom Week Title
   const handleSaveWeekTitle = async (weekKey, weekNumber) => {
     if (!editingWeekTitleText.trim()) return;
@@ -452,23 +538,19 @@ export default function FTModulesPage() {
   };
 
   return (
-    <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '1.5rem 1rem 4rem 1rem', fontFamily: "'Outfit', sans-serif" }}>
-      {/* ── TOP LMS HEADER BAR ──────────────────────────────── */}
-      <div style={{
-        background: '#ffffff', borderRadius: '24px', padding: '1.75rem 2rem',
-        border: '1.5px solid #e2e8f0', boxShadow: '0 8px 30px rgba(15, 23, 42, 0.04)',
-        marginBottom: '2rem'
-      }}>
+    <div className="lms-modules-container">
+      {/* ── TOP LMS HEADER CARD ──────────────────────────────── */}
+      <div className="lms-header-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem' }}>
           <div>
             <div style={{ fontSize: '0.8rem', fontWeight: 900, textTransform: 'uppercase', color: '#be123c', letterSpacing: '0.08em', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <Sparkles size={15} /> AIU SciComm Spark LMS
             </div>
             <h1 style={{ fontSize: '1.85rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <BookOpen size={30} style={{ color: '#be123c' }} /> Course & Training Modules
+              <BookOpen size={28} style={{ color: '#be123c' }} /> Course & Training Modules
             </h1>
             <p style={{ fontSize: '0.9rem', color: '#64748b', margin: '0.35rem 0 0 0', fontWeight: 600 }}>
-              Structured weekly learning modules, workshop schedules, and permanently accessible lecture resources.
+              Structured weekly learning modules, live workshops, and downloadable course materials.
             </p>
           </div>
 
@@ -506,10 +588,10 @@ export default function FTModulesPage() {
         </div>
 
         {/* Search Bar & Track Buttons */}
-        <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px dashed #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px dashed #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
           
           {/* 2 Track Selector Buttons */}
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div className="lms-track-btn-group" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={() => setSelectedTrack('pop_science')}
@@ -564,7 +646,7 @@ export default function FTModulesPage() {
           </div>
 
           {/* Search Box */}
-          <div style={{ position: 'relative', width: '280px' }}>
+          <div className="lms-search-box-wrapper" style={{ position: 'relative', width: '280px' }}>
             <Search size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
             <input
               type="text"
@@ -579,36 +661,44 @@ export default function FTModulesPage() {
             />
           </div>
         </div>
+
+        {canManage && (
+          <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: '#64748b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span>💡 <strong>Admin Tip:</strong> You can drag & drop items across weeks using the grip handle</span>
+            <GripVertical size={14} style={{ color: '#be123c' }} />
+            <span>or use the quick Move button on mobile.</span>
+          </div>
+        )}
       </div>
 
       {/* ── CANVAS LMS STYLE ACCORDION MODULE GROUPS ──────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {groupedWeeks.map((weekGroup) => {
           const isCollapsed = Boolean(collapsedWeeks[weekGroup.weekKey]);
           const itemCount = weekGroup.items.length;
           const isEditingThisTitle = editingWeekKey === weekGroup.weekKey;
+          const isWeekDragTarget = dragOverWeekKey === weekGroup.weekKey;
 
           return (
             <div
               key={weekGroup.weekKey}
-              style={{
-                background: '#ffffff', borderRadius: '20px', border: '1.5px solid #e2e8f0',
-                boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)', overflow: 'hidden',
-                transition: 'all 0.2s ease'
-              }}
+              className={`lms-week-card ${isWeekDragTarget ? 'lms-week-drag-over' : ''}`}
+              onDragOver={(e) => handleDragOverWeek(e, weekGroup.weekKey)}
+              onDragLeave={(e) => handleDragLeaveWeek(e, weekGroup.weekKey)}
+              onDrop={(e) => handleDropOnWeek(e, weekGroup.weekNumber, weekGroup.weekKey)}
             >
               {/* Accordion Week Header */}
               <div
+                className="lms-week-header"
                 style={{
-                  padding: '1.1rem 1.5rem', background: '#f8fafc', borderBottom: isCollapsed ? 'none' : '1px solid #e2e8f0',
+                  padding: '1.1rem 1.5rem', background: isWeekDragTarget ? '#fff1f2' : '#f8fafc',
+                  borderBottom: isCollapsed ? 'none' : '1px solid #e2e8f0',
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem',
                   userSelect: 'none'
                 }}
               >
                 {/* Left Week Title & Controls */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '280px' }}>
-                  <GripVertical size={18} style={{ color: '#94a3b8', flexShrink: 0 }} />
-                  
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '240px' }}>
                   <div
                     onClick={() => toggleWeek(weekGroup.weekKey)}
                     style={{
@@ -622,7 +712,7 @@ export default function FTModulesPage() {
 
                   {/* Inline Week Title Editing */}
                   {isEditingThisTitle ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }} onClick={e => e.stopPropagation()}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
                       <input
                         type="text"
                         value={editingWeekTitleText}
@@ -633,9 +723,9 @@ export default function FTModulesPage() {
                         }}
                         autoFocus
                         style={{
-                          fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', padding: '0.35rem 0.75rem',
+                          fontSize: '1rem', fontWeight: 900, color: '#0f172a', padding: '0.35rem 0.75rem',
                           borderRadius: '8px', border: '2px solid #be123c', outline: 'none', background: '#ffffff',
-                          width: '100%', maxWidth: '460px'
+                          width: '100%', maxWidth: '380px'
                         }}
                       />
                       <button
@@ -662,10 +752,11 @@ export default function FTModulesPage() {
                       </button>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <h3
+                        className="lms-week-title"
                         onClick={() => toggleWeek(weekGroup.weekKey)}
-                        style={{ fontSize: '1.12rem', fontWeight: 900, color: '#0f172a', margin: 0, cursor: 'pointer' }}
+                        style={{ fontSize: '1.12rem', fontWeight: 900, color: '#0f172a', margin: 0, cursor: 'pointer', lineHeight: 1.3 }}
                       >
                         {weekGroup.weekTitle}
                       </h3>
@@ -678,7 +769,7 @@ export default function FTModulesPage() {
                             setEditingWeekKey(weekGroup.weekKey);
                             setEditingWeekTitleText(weekGroup.weekTitle);
                           }}
-                          title="Edit Week Title (Admin/Trainer)"
+                          title="Edit Week Title"
                           style={{
                             background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px',
                             color: '#be123c', padding: '0.2rem 0.45rem', fontSize: '0.72rem', fontWeight: 800,
@@ -694,7 +785,7 @@ export default function FTModulesPage() {
                 </div>
 
                 {/* Right Badges & Count */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                   <span style={{
                     fontSize: '0.78rem', fontWeight: 800, padding: '0.22rem 0.65rem', borderRadius: '8px',
                     background: itemCount > 0 ? '#eff6ff' : '#f1f5f9', color: itemCount > 0 ? '#2563eb' : '#64748b',
@@ -727,17 +818,22 @@ export default function FTModulesPage() {
                 <div>
                   {itemCount === 0 ? (
                     <div style={{ padding: '2.5rem 1.5rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem', fontStyle: 'italic', fontWeight: 600 }}>
-                      No modules or workshops scheduled for this week yet.
+                      No modules or workshops scheduled for this week yet. Drag items here or click "+ Add Item".
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       {weekGroup.items.map((item, idx) => {
                         const formattedTime = formatExactDateTime(item.startDate, item.endDate);
                         const isPassed = item.isPassed;
+                        const isThisItemDragged = draggedItem?.id === item.id;
 
                         return (
                           <div
                             key={item.id || idx}
+                            draggable={canManage}
+                            onDragStart={(e) => handleDragStart(e, item)}
+                            onDragEnd={() => setDraggedItem(null)}
+                            className={isThisItemDragged ? 'lms-item-drag-active' : ''}
                             style={{
                               borderBottom: idx === itemCount - 1 ? 'none' : '1px solid #f1f5f9',
                               background: isPassed ? '#fcfcfd' : '#ffffff',
@@ -746,16 +842,24 @@ export default function FTModulesPage() {
                           >
                             {/* ── WORKSHOP / MODULE MAIN ROW ── */}
                             <div
+                              className="lms-item-row"
                               style={{
-                                padding: '1.15rem 1.5rem',
-                                display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-                                flexWrap: 'wrap', gap: '1rem',
                                 opacity: isPassed ? 0.72 : 1
                               }}
                             >
                               {/* Left Info Column */}
-                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem', flex: 1, minWidth: '280px' }}>
-                                <GripVertical size={16} style={{ color: '#cbd5e1', marginTop: '0.25rem', flexShrink: 0 }} />
+                              <div className="lms-item-left-info" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem', flex: 1, minWidth: '260px' }}>
+                                
+                                {/* Drag Grip Handle (Desktop & Mobile) */}
+                                {canManage && (
+                                  <div
+                                    className="lms-drag-grip"
+                                    title="Click & Drag to move across weeks"
+                                    style={{ marginTop: '0.2rem', flexShrink: 0 }}
+                                  >
+                                    <GripVertical size={18} />
+                                  </div>
+                                )}
 
                                 {/* Icon Box */}
                                 <div style={{
@@ -771,14 +875,14 @@ export default function FTModulesPage() {
                                   )}
                                 </div>
 
-                                <div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
                                   {/* Title & Track Badge & Passed Badge */}
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
                                     <span style={{
                                       fontSize: '1.02rem', fontWeight: 900,
                                       color: isPassed ? '#64748b' : '#0f172a',
                                       textDecoration: isPassed ? 'line-through' : 'none',
-                                      lineHeight: 1.3
+                                      lineHeight: 1.35, wordBreak: 'break-word'
                                     }}>
                                       {item.title}
                                     </span>
@@ -804,8 +908,8 @@ export default function FTModulesPage() {
                                     )}
                                   </div>
 
-                                  {/* Exact Date & Time, Speaker Subtitle */}
-                                  <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+                                  {/* Exact Date & Time, Speaker Subtitle (No Duplicate Time!) */}
+                                  <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
                                     {item.speakerName && (
                                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                                         <User size={13} style={{ color: '#be123c' }} />
@@ -835,7 +939,7 @@ export default function FTModulesPage() {
                               </div>
 
                               {/* Right Action Controls for Workshop */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                              <div className="lms-item-actions-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
                                 {/* Join Live Session Button (if meetingLink exists and NOT passed) */}
                                 {item.meetingLink && !isPassed && (
                                   <a
@@ -843,7 +947,7 @@ export default function FTModulesPage() {
                                     target="_blank"
                                     rel="noreferrer"
                                     style={{
-                                      background: '#059669', color: '#ffffff', padding: '0.5rem 1rem', borderRadius: '10px',
+                                      background: '#059669', color: '#ffffff', padding: '0.5rem 0.9rem', borderRadius: '10px',
                                       fontSize: '0.82rem', fontWeight: 900, textDecoration: 'none',
                                       display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
                                       boxShadow: '0 3px 10px rgba(5, 150, 105, 0.25)'
@@ -855,19 +959,19 @@ export default function FTModulesPage() {
 
                                 {item.meetingLink && isPassed && (
                                   <span style={{
-                                    fontSize: '0.78rem', color: '#94a3b8', background: '#f1f5f9',
-                                    border: '1px solid #e2e8f0', padding: '0.35rem 0.75rem', borderRadius: '8px',
+                                    fontSize: '0.76rem', color: '#94a3b8', background: '#f1f5f9',
+                                    border: '1px solid #e2e8f0', padding: '0.35rem 0.65rem', borderRadius: '8px',
                                     fontWeight: 700
                                   }}>
                                     Live Session Ended
                                   </span>
                                 )}
 
-                                <CheckCircle2 size={18} style={{ color: isPassed ? '#94a3b8' : '#059669', marginLeft: '0.25rem' }} />
+                                <CheckCircle2 size={18} style={{ color: isPassed ? '#94a3b8' : '#059669' }} />
 
                                 {/* Admin Management Controls */}
                                 {canManage && (
-                                  <div style={{ display: 'flex', gap: '0.35rem', marginLeft: '0.4rem', borderLeft: '1px solid #e2e8f0', paddingLeft: '0.5rem' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginLeft: '0.3rem', borderLeft: '1px solid #e2e8f0', paddingLeft: '0.4rem' }}>
                                     {/* Attach File Button (if no file yet) */}
                                     {!item.hasFile && (
                                       <button
@@ -887,6 +991,23 @@ export default function FTModulesPage() {
                                         <Paperclip size={13} /> + Attach File
                                       </button>
                                     )}
+
+                                    {/* Quick Move to Week Button */}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setMoveModalItem(item);
+                                        setTargetMoveWeek(item.weekNumber || 1);
+                                      }}
+                                      title="Move to another week"
+                                      style={{
+                                        background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155',
+                                        height: '32px', padding: '0 0.5rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800,
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer'
+                                      }}
+                                    >
+                                      <ArrowRightLeft size={13} /> Move
+                                    </button>
 
                                     {/* Edit Item */}
                                     <button
@@ -922,23 +1043,8 @@ export default function FTModulesPage() {
 
                             {/* ── DEDICATED ATTACHED RESOURCE FILE CARD (ALWAYS ACCESSIBLE & NOT DIMMED!) ── */}
                             {item.hasFile && (
-                              <div
-                                style={{
-                                  margin: '0 1.5rem 1.15rem 3.5rem',
-                                  padding: '0.9rem 1.25rem',
-                                  background: '#ffffff',
-                                  borderRadius: '14px',
-                                  border: '1.5px solid #bfdbfe',
-                                  boxShadow: '0 4px 14px rgba(37, 99, 235, 0.06)',
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  flexWrap: 'wrap',
-                                  gap: '0.85rem',
-                                  opacity: 1 /* ALWAYS 100% VISIBLE & NOT DIMMED */
-                                }}
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: 1, minWidth: '260px' }}>
+                              <div className="lms-attached-file-card">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '220px' }}>
                                   <div style={{
                                     width: '36px', height: '36px', borderRadius: '10px',
                                     background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
@@ -948,9 +1054,9 @@ export default function FTModulesPage() {
                                     <FileText size={18} style={{ color: '#2563eb' }} />
                                   </div>
 
-                                  <div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                                      <span style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a' }}>
+                                      <span style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a', wordBreak: 'break-word' }}>
                                         {item.fileName || 'Lecture_Presentation_Materials.pdf'}
                                       </span>
                                       <span style={{
@@ -967,7 +1073,7 @@ export default function FTModulesPage() {
                                 </div>
 
                                 {/* Right Download / Open File Button & Admin Controls */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div className="lms-attached-file-actions">
                                   <a
                                     href={item.fileUrl}
                                     target="_blank"
@@ -985,7 +1091,7 @@ export default function FTModulesPage() {
 
                                   {/* Admin Detach / Edit File option */}
                                   {canManage && (
-                                    <div style={{ display: 'flex', gap: '0.3rem', marginLeft: '0.35rem', borderLeft: '1px solid #e2e8f0', paddingLeft: '0.4rem' }}>
+                                    <div style={{ display: 'flex', gap: '0.3rem', marginLeft: '0.2rem' }}>
                                       <button
                                         type="button"
                                         onClick={() => {
@@ -1037,14 +1143,14 @@ export default function FTModulesPage() {
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 99999, padding: '1rem'
+          zIndex: 99999, padding: '0.75rem'
         }}>
           <div style={{
-            background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto',
-            padding: '2rem', boxShadow: '0 25px 60px rgba(0,0,0,0.25)', position: 'relative'
+            background: '#ffffff', borderRadius: '22px', width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto',
+            padding: '1.75rem', boxShadow: '0 25px 60px rgba(0,0,0,0.25)', position: 'relative'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <BookOpen size={22} style={{ color: '#be123c' }} /> {editingItem ? 'Edit Module / Workshop Details' : 'Add Module / Workshop Material'}
               </h2>
               <button
@@ -1069,7 +1175,7 @@ export default function FTModulesPage() {
               </div>
 
               {/* Week Assignment & Target Track */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                 <div>
                   <label className="ft-label">Assign to Week *</label>
                   <select
@@ -1101,7 +1207,7 @@ export default function FTModulesPage() {
               </div>
 
               {/* Exact Date & Time */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                 <div>
                   <label className="ft-label">Exact Start Date & Time</label>
                   <input
@@ -1127,7 +1233,7 @@ export default function FTModulesPage() {
               </div>
 
               {/* Speaker / Trainer & Live Meeting Link */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                 <div>
                   <label className="ft-label">Speaker / Trainer Name</label>
                   <input
@@ -1160,7 +1266,7 @@ export default function FTModulesPage() {
                   <Paperclip size={16} style={{ color: '#2563eb' }} /> Attached Resource File (Always Available & Not Dimmed)
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.85rem' }}>
                   <div>
                     <label className="ft-label">File Display Name</label>
                     <input
@@ -1197,7 +1303,7 @@ export default function FTModulesPage() {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                 <button type="button" className="ft-btn ft-btn-outline" onClick={() => setShowModal(false)}>Cancel</button>
                 <button type="submit" className="ft-btn ft-btn-primary">Save Changes</button>
               </div>
@@ -1212,15 +1318,15 @@ export default function FTModulesPage() {
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 99999, padding: '1rem'
+          zIndex: 99999, padding: '0.75rem'
         }}>
           <div style={{
-            background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '540px',
-            padding: '2rem', boxShadow: '0 25px 60px rgba(0,0,0,0.25)', position: 'relative'
+            background: '#ffffff', borderRadius: '22px', width: '100%', maxWidth: '540px',
+            padding: '1.75rem', boxShadow: '0 25px 60px rgba(0,0,0,0.25)', position: 'relative'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <div>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Paperclip size={20} style={{ color: '#2563eb' }} /> Attach Resource File
                 </h2>
                 <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0.25rem 0 0 0', fontWeight: 600 }}>
@@ -1264,11 +1370,66 @@ export default function FTModulesPage() {
                 💡 Attached files remain always accessible and active for competitors even if the live workshop time has passed.
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                 <button type="button" className="ft-btn ft-btn-outline" onClick={() => setAttachModalItem(null)}>Cancel</button>
                 <button type="submit" className="ft-btn ft-btn-primary" disabled={isSavingAttachment}>
                   {isSavingAttachment ? 'Attaching...' : 'Attach File'}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── QUICK MOVE TO WEEK MODAL (FOR MOBILE & FAST REASSIGNMENT) ──── */}
+      {moveModalItem && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 99999, padding: '0.75rem'
+        }}>
+          <div style={{
+            background: '#ffffff', borderRadius: '22px', width: '100%', maxWidth: '460px',
+            padding: '1.75rem', boxShadow: '0 25px 60px rgba(0,0,0,0.25)', position: 'relative'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <ArrowRightLeft size={20} style={{ color: '#be123c' }} /> Move Item to Week
+                </h2>
+                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0.25rem 0 0 0', fontWeight: 600 }}>
+                  Item: <strong>{moveModalItem.title}</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => setMoveModalItem(null)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmQuickMove} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+              <div>
+                <label className="ft-label">Select Destination Week *</label>
+                <select
+                  className="ft-select"
+                  value={targetMoveWeek}
+                  onChange={e => setTargetMoveWeek(Number(e.target.value))}
+                >
+                  {groupedWeeks.map(g => (
+                    <option key={g.weekKey} value={g.weekNumber}>
+                      {g.weekTitle}
+                    </option>
+                  ))}
+                  <option value={6}>Week 6: Additional Modules</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button type="button" className="ft-btn ft-btn-outline" onClick={() => setMoveModalItem(null)}>Cancel</button>
+                <button type="submit" className="ft-btn ft-btn-primary">Move Now</button>
               </div>
             </form>
           </div>

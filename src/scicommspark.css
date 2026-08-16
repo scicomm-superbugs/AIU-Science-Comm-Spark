@@ -4238,6 +4238,179 @@ body.ft-modal-open {
   align-items: center;
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   LMS Course Modules Page — Drag-and-Drop & Mobile Responsive System
+   ══════════════════════════════════════════════════════════════════════ */
+
+.lms-modules-container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem 1rem;
+  font-family: 'Outfit', sans-serif;
+  box-sizing: border-box;
+}
+
+.lms-header-card {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 1.75rem 2rem;
+  border: 1.5px solid #e2e8f0;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.04);
+  margin-bottom: 2rem;
+}
+
+.lms-drag-grip {
+  cursor: grab;
+  color: #94a3b8;
+  transition: color 0.15s ease, transform 0.15s ease;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.lms-drag-grip:hover {
+  color: #be123c;
+  background: #fff1f2;
+}
+
+.lms-drag-grip:active {
+  cursor: grabbing;
+}
+
+.lms-week-card {
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1.5px solid #e2e8f0;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.lms-week-drag-over {
+  border: 2px dashed #be123c !important;
+  background: #fff1f2 !important;
+  box-shadow: 0 0 25px rgba(190, 18, 60, 0.2) !important;
+  transform: scale(1.005);
+}
+
+.lms-item-drag-active {
+  opacity: 0.35 !important;
+  transform: scale(0.98);
+}
+
+.lms-item-row {
+  padding: 1.15rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  transition: background 0.15s ease;
+}
+
+.lms-attached-file-card {
+  margin: 0 1.5rem 1.15rem 3.5rem;
+  padding: 0.9rem 1.25rem;
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1.5px solid #bfdbfe;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  opacity: 1 !important;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .lms-modules-container {
+    padding: 0.85rem 0.5rem 3rem 0.5rem;
+  }
+
+  .lms-header-card {
+    padding: 1.25rem 1rem;
+    border-radius: 18px;
+    margin-bottom: 1.25rem;
+  }
+
+  .lms-header-card h1 {
+    font-size: 1.45rem !important;
+  }
+
+  .lms-track-btn-group {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  .lms-track-btn-group button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .lms-search-box-wrapper {
+    width: 100% !important;
+    margin-top: 0.5rem !important;
+  }
+
+  .lms-week-header {
+    padding: 0.9rem 1rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .lms-week-title {
+    font-size: 0.98rem !important;
+  }
+
+  .lms-item-row {
+    padding: 1rem 0.85rem !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.85rem !important;
+  }
+
+  .lms-item-left-info {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .lms-item-actions-wrapper {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+    gap: 0.45rem !important;
+    border-top: 1px dashed #e2e8f0 !important;
+    padding-top: 0.65rem !important;
+    margin-top: 0.25rem !important;
+  }
+
+  .lms-attached-file-card {
+    margin: 0.25rem 0.75rem 0.85rem 0.75rem !important;
+    padding: 0.8rem 0.85rem !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+  }
+
+  .lms-attached-file-actions {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+    gap: 0.4rem !important;
+  }
+
+  .lms-attached-file-actions a {
+    flex: 1 !important;
+    justify-content: center !important;
+  }
+}
+
+
 
 
 
