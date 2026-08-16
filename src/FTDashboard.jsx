@@ -796,10 +796,10 @@ export default function FTDashboard() {
               <span style={{
                 background: primaryTrackKey === 'pop_science' ? '#fff1f2' : '#eff6ff',
                 color: primaryTrackKey === 'pop_science' ? '#be123c' : '#2563eb',
-                fontSize: '0.72rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '8px',
+                fontSize: '0.74rem', fontWeight: 800, padding: '0.2rem 0.65rem', borderRadius: '8px',
                 border: `1px solid ${primaryTrackKey === 'pop_science' ? '#fecdd3' : '#bfdbfe'}`
               }}>
-                {primaryTrackKey === 'pop_science' ? '🎥 Pop Science Videos' : '📰 Science Journalism'}
+                {primaryTrackKey === 'pop_science' ? '🎥 Track 1: Pop Science Videos' : '📰 Track 2: Science Journalism'}
               </span>
             </div>
           </div>
@@ -819,8 +819,8 @@ export default function FTDashboard() {
                   <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>•</span>
                   <span style={{ fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.84rem', fontWeight: 800 }}>مهام أساسية مطلوبة</span>
                 </div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#be123c', background: '#fff1f2', padding: '0.15rem 0.55rem', borderRadius: '6px', border: '1px solid #fecdd3' }}>
-                  {primaryTrackKey === 'pop_science' ? 'Track 1 (Videos)' : 'Track 2 (Journalism)'}
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#be123c', background: '#fff1f2', padding: '0.15rem 0.6rem', borderRadius: '6px', border: '1px solid #fecdd3' }}>
+                  {primaryTrackKey === 'pop_science' ? 'Track 1: Pop Science Videos' : 'Track 2: Science Journalism'}
                 </span>
               </div>
 
@@ -989,8 +989,8 @@ export default function FTDashboard() {
                   <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>•</span>
                   <span style={{ fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.84rem', fontWeight: 800 }}>أنشطة اختيارية ومسارات أخرى</span>
                 </div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#2563eb', background: '#eff6ff', padding: '0.15rem 0.55rem', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
-                  {secondaryTrackKey === 'pop_science' ? 'Track 1 (Videos)' : 'Track 2 (Journalism)'}
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#2563eb', background: '#eff6ff', padding: '0.15rem 0.6rem', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
+                  {secondaryTrackKey === 'pop_science' ? 'Track 1: Pop Science Videos' : 'Track 2: Science Journalism'}
                 </span>
               </div>
 
