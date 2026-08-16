@@ -504,14 +504,6 @@ export default function FTChatPage({ user: userProp }) {
     setIsDragging(false);
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [currentMessages?.length]);
-
   // File Select Handler
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
@@ -751,6 +743,14 @@ export default function FTChatPage({ user: userProp }) {
       .filter(msg => isMessageWithContact(msg, activeRecipient))
       .sort((a, b) => new Date(a.createdAt || a.timestamp || 0).getTime() - new Date(b.createdAt || b.timestamp || 0).getTime());
   }, [rawMessages, activeRecipient, isMessageWithContact]);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [currentMessages?.length, scrollToBottom]);
 
   // Automatically mark incoming messages from active conversation as read
   useEffect(() => {

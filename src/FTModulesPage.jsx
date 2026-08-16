@@ -1207,6 +1207,9 @@ export default function FTModulesPage() {
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#059669', background: '#ecfdf5', padding: '0.35rem 0.8rem', borderRadius: '20px', border: '1px solid #a7f3d0' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#059669', boxShadow: '0 0 8px #059669' }} /> Office Hours (Green)
             </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#7c3aed', background: '#f5f3ff', padding: '0.35rem 0.8rem', borderRadius: '20px', border: '1px solid #ddd6fe' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#7c3aed', boxShadow: '0 0 8px #7c3aed' }} /> Attached Files (Purple)
+            </span>
           </div>
 
           {/* Search Box */}
@@ -1947,19 +1950,19 @@ export default function FTModulesPage() {
                                 style={{
                                   opacity: 1,
                                   filter: 'none',
-                                  background: '#ffffff',
-                                  border: '1.5px solid #93c5fd',
-                                  boxShadow: '0 4px 14px rgba(37, 99, 235, 0.08)'
+                                  background: 'linear-gradient(135deg, #ffffff 0%, #faf5ff 100%)',
+                                  border: '1.5px solid #c4b5fd',
+                                  boxShadow: '0 4px 16px rgba(124, 58, 237, 0.08)'
                                 }}
                               >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '220px' }}>
                                   <div style={{
-                                    width: '38px', height: '38px', borderRadius: '10px',
-                                    background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-                                    border: '1.5px solid #93c5fd',
+                                    width: '40px', height: '40px', borderRadius: '12px',
+                                    background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)',
+                                    border: '1.5px solid #c4b5fd',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                                   }}>
-                                    <FileText size={20} style={{ color: '#2563eb' }} />
+                                    <FileText size={20} style={{ color: '#7c3aed' }} />
                                   </div>
 
                                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -1975,7 +1978,7 @@ export default function FTModulesPage() {
                                       </span>
                                       <span style={{
                                         fontSize: '0.68rem', fontWeight: 800, padding: '0.12rem 0.5rem', borderRadius: '6px',
-                                        background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe'
+                                        background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe'
                                       }}>
                                         Always Accessible
                                       </span>
@@ -1993,11 +1996,11 @@ export default function FTModulesPage() {
                                     target="_blank"
                                     rel="noreferrer"
                                     style={{
-                                      background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                                      color: '#ffffff', padding: '0.52rem 1.15rem', borderRadius: '10px',
+                                      background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                                      color: '#ffffff', padding: '0.55rem 1.25rem', borderRadius: '10px',
                                       fontSize: '0.84rem', fontWeight: 900, textDecoration: 'none',
                                       display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
-                                      boxShadow: '0 4px 14px rgba(37, 99, 235, 0.28)',
+                                      boxShadow: '0 4px 14px rgba(124, 58, 237, 0.32)',
                                       opacity: 1, pointerEvents: 'auto'
                                     }}
                                   >
@@ -2010,7 +2013,7 @@ export default function FTModulesPage() {
                                       onClick={() => handleOpenEditMaterialModal(item, weekGroup.weekNumber)}
                                       title="Edit file details"
                                       style={{
-                                        background: '#f8fafc', border: '1px solid #cbd5e1', color: '#475569',
+                                        background: '#ffffff', border: '1px solid #cbd5e1', color: '#475569',
                                         padding: '0.45rem 0.65rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800,
                                         display: 'inline-flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer'
                                       }}
@@ -2109,12 +2112,12 @@ export default function FTModulesPage() {
                   onClick={() => setPickerFilterType('file')}
                   style={{
                     padding: '0.35rem 0.75rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 800,
-                    border: '1px solid #cbd5e1', cursor: 'pointer',
-                    background: pickerFilterType === 'file' ? '#f1f5f9' : '#ffffff',
-                    color: '#334155'
+                    border: `1px solid ${pickerFilterType === 'file' ? '#7c3aed' : '#ddd6fe'}`, cursor: 'pointer',
+                    background: pickerFilterType === 'file' ? '#f5f3ff' : '#ffffff',
+                    color: '#7c3aed', display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
                   }}
                 >
-                  📄 Attached Files
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#7c3aed' }} /> Attached Files (Purple)
                 </button>
               </div>
 
