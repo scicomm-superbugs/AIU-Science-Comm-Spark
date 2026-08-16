@@ -418,7 +418,7 @@ export default function FTDashboard() {
     const diffDays = Math.round((itemZero.getTime() - todayZero.getTime()) / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) {
-      return { en: 'LIVE NOW', ar: 'يحدث الآن', isLive: true, isTomorrow: false };
+      return { en: 'LIVE NOW', ar: 'مباشر الآن', isLive: true, isTomorrow: false };
     }
     if (diffDays === 1) {
       return { en: 'Tomorrow', ar: 'غداً', isLive: false, isTomorrow: true };
@@ -869,7 +869,7 @@ export default function FTDashboard() {
                               display: 'inline-block',
                               animation: 'pulseLiveBeacon 1.2s infinite'
                             }} />
-                            <span>LIVE NOW • يحدث الآن</span>
+                            <span>LIVE NOW • مباشر الآن</span>
                           </span>
                         ) : status.isTomorrow ? (
                           <span style={{
@@ -1039,7 +1039,7 @@ export default function FTDashboard() {
                               display: 'inline-block',
                               animation: 'pulseLiveBeacon 1.2s infinite'
                             }} />
-                            <span>LIVE NOW • يحدث الآن</span>
+                            <span>LIVE NOW • مباشر الآن</span>
                           </span>
                         ) : status.isTomorrow ? (
                           <span style={{
