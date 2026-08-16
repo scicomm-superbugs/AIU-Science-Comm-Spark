@@ -3,8 +3,9 @@ import { useOutletContext } from 'react-router-dom';
 import { db, firestore, getCollectionName } from './db';
 import { useLiveCollection } from './db';
 import { collection, getDocs } from 'firebase/firestore';
-import { Search, Download, X, Users, User, Video, BookOpen, Layers, Shield, Trash2, Edit3, Sparkles, Eye } from 'lucide-react';
+import { Search, Download, X, Users, User, Video, BookOpen, Layers, Shield, Trash2, Edit3, Sparkles, Eye, Check, Clock } from 'lucide-react';
 import { FT_DEPARTMENTS, FT_REG_STATUS_ICONS, FT_REG_STATUS_LABELS, FT_DEFAULT_REQUIRED_HOURS, normalizeTrackKey } from './ftConstants';
+import { logActivity } from './activityLogger';
 import './scicommspark.css';
 
 export default function FTAdminCompetitors() {
@@ -824,6 +825,103 @@ export default function FTAdminCompetitors() {
     }
   };
 
+  const handleAdminApproveNameChange = async (targetTeam) => {
+    if (!targetTeam?.pendingNameChange?.requestedName) return;
+    const requestedName = targetTeam.pendingNameChange.requestedName;
+
+    if (!window.confirm(`✅ Approve team name change for "${targetTeam.name}" to "${requestedName}"?\n\nAll team points, leaderboard rank, submitted files, and member records will remain 100% intact.`)) {
+      return;
+    }
+
+    try {
+      const oldName = targetTeam.name;
+
+      // 1. Update team name and clear pending request (Preserving all points, codes, and history!)
+      await db.ft_teams.update(targetTeam.id, {
+        name: requestedName,
+        pendingNameChange: null,
+        updatedAt: new Date().toISOString()
+      });
+
+      // 2. Update all team members' scientist records
+      for (const m of (targetTeam.members || [])) {
+        try {
+          await db.scientists.update(m.userId, { teamName: requestedName });
+        } catch (memberErr) {
+          console.warn('Member name update note:', memberErr);
+        }
+
+        // Notify member
+        try {
+          await db.ft_notifications.add({
+            userId: m.userId,
+            type: 'team',
+            title: 'Team Name Change Approved! 🎉',
+            message: `Admin approved your team's new name: "${requestedName}". All your scores and records remain intact!`,
+            link: '/dashboard/our-team',
+            status: 'unread',
+            createdAt: new Date().toISOString()
+          });
+        } catch (nErr) {}
+      }
+
+      logActivity({
+        category: 'TEAMS',
+        action: 'Approved Team Name Change',
+        details: `Admin approved renaming team from "${oldName}" to "${requestedName}". All points, submissions, and records were preserved.`,
+        user: meDoc
+      });
+
+      setToast({ type: 'success', text: `✅ Team name updated to "${requestedName}"! Points & records preserved.` });
+      setTimeout(() => setToast(null), 4000);
+    } catch (err) {
+      alert('Failed to approve team name: ' + err.message);
+    }
+  };
+
+  const handleAdminRejectNameChange = async (targetTeam) => {
+    if (!targetTeam?.pendingNameChange) return;
+    const requestedName = targetTeam.pendingNameChange.requestedName;
+
+    if (!window.confirm(`Refuse / decline team name change to "${requestedName}"?`)) {
+      return;
+    }
+
+    try {
+      await db.ft_teams.update(targetTeam.id, {
+        pendingNameChange: null,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Notify team leader
+      if (targetTeam.leaderId) {
+        try {
+          await db.ft_notifications.add({
+            userId: targetTeam.leaderId,
+            type: 'team',
+            title: 'Team Name Request Declined',
+            message: `Your request to change team name to "${requestedName}" was declined by an administrator.`,
+            link: '/dashboard/our-team',
+            status: 'unread',
+            createdAt: new Date().toISOString()
+          });
+        } catch (nErr) {}
+      }
+
+      logActivity({
+        category: 'TEAMS',
+        action: 'Refused Team Name Change',
+        details: `Admin refused request to rename team "${targetTeam.name}" to "${requestedName}".`,
+        user: meDoc
+      });
+
+      setToast({ type: 'success', text: `Team name change request to "${requestedName}" declined.` });
+      setTimeout(() => setToast(null), 3000);
+    } catch (err) {
+      alert('Failed to decline request: ' + err.message);
+    }
+  };
+
   return (
     <div className="ft-animate-in">
       {/* Top Header */}
@@ -1055,8 +1153,13 @@ export default function FTAdminCompetitors() {
                       <td style={{ width: '260px' }}>
                         {item.type === 'team' ? (
                           <div>
-                            <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                              👥 {item.name}
+                            <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                              <span>👥 {item.name}</span>
+                              {item.rawDoc?.pendingNameChange && (
+                                <span style={{ fontSize: '0.7rem', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', padding: '0.1rem 0.45rem', borderRadius: '6px', fontWeight: 800 }}>
+                                  ⏳ Requested: "{item.rawDoc.pendingNameChange.requestedName}"
+                                </span>
+                              )}
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.3rem' }}>
                               {(item.members || []).map((m, mIdx) => (
@@ -1207,6 +1310,56 @@ export default function FTAdminCompetitors() {
                                     </div>
                                   </div>
                                 </div>
+
+                                {/* PENDING TEAM NAME CHANGE REQUEST ADMIN BANNER */}
+                                {item.rawDoc?.pendingNameChange && (
+                                  <div style={{
+                                    background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '14px',
+                                    padding: '1rem 1.25rem', margin: '0.75rem 0', display: 'flex',
+                                    justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'
+                                  }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                      <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#fef3c7', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        <Edit3 size={20} />
+                                      </div>
+                                      <div>
+                                        <div style={{ fontSize: '0.92rem', fontWeight: 900, color: '#92400e' }}>
+                                          ⚡ Pending Team Name Change Request
+                                        </div>
+                                        <div style={{ fontSize: '0.82rem', color: '#78350f', marginTop: '0.15rem' }}>
+                                          Requested new name: <strong>"{item.rawDoc.pendingNameChange.requestedName}"</strong> by {item.rawDoc.pendingNameChange.requestedBy || 'Team Leader'}
+                                          {item.rawDoc.pendingNameChange.reason ? ` • Note: "${item.rawDoc.pendingNameChange.reason}"` : ''}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '0.6rem' }}>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); handleAdminApproveNameChange(item.rawDoc || item); }}
+                                        style={{
+                                          background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff',
+                                          border: 'none', padding: '0.45rem 0.95rem', borderRadius: '10px', fontSize: '0.82rem',
+                                          fontWeight: 900, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                                          boxShadow: '0 4px 12px rgba(22, 163, 74, 0.25)'
+                                        }}
+                                      >
+                                        <Check size={14} /> Approve Name
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); handleAdminRejectNameChange(item.rawDoc || item); }}
+                                        style={{
+                                          background: '#fff1f2', color: '#dc2626', border: '1.5px solid #fecdd3',
+                                          padding: '0.45rem 0.9rem', borderRadius: '10px', fontSize: '0.82rem',
+                                          fontWeight: 900, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem'
+                                        }}
+                                      >
+                                        <X size={14} /> Refuse
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
 
                                 {trackInfo?.description && (
                                   <p style={{ fontSize: '0.85rem', color: '#475569', margin: '0.5rem 0 0 0', background: '#f8fafc', padding: '0.65rem 0.9rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>

@@ -2,6 +2,7 @@ import { createContext, useState, useEffect, useContext } from 'react';
 import { db, firestore, getCollectionName, getFirebaseAuth, syncBroadcastMessagesForUser } from '../db';
 import { signInAnonymously, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { collection, query, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { logActivity } from '../activityLogger';
 import bcrypt from 'bcryptjs';
 
 const AuthContext = createContext(null);
@@ -261,6 +262,13 @@ export const AuthProvider = ({ children }) => {
       // Automatically sync historical track broadcasts for this user
       syncBroadcastMessagesForUser(scientist).catch(() => {});
 
+      logActivity({
+        category: 'AUTH',
+        action: 'Google Sign In',
+        details: `User "${userData.name}" (@${userData.username}) signed in via Google Auth.`,
+        user: userData
+      });
+
       try {
         if (!auth.currentUser) {
           await signInAnonymously(auth);
@@ -272,6 +280,12 @@ export const AuthProvider = ({ children }) => {
       return userData;
     } catch (err) {
       console.error('Google login failed:', err);
+      logActivity({
+        category: 'AUTH',
+        action: 'Google Sign In Failed',
+        details: err.message || 'Google authentication error',
+        level: 'warning'
+      });
       throw err;
     }
   };
@@ -371,29 +385,45 @@ export const AuthProvider = ({ children }) => {
       });
     }
 
-    const scientist = await db.scientists.get(scientistId);
-    if (scientist.accountStatus === 'pending') {
-      throw new Error('Google Registration successful! Your account is pending review and approval by an administrator.');
+    const finalDoc = await db.scientists.get(scientistId);
+
+    logActivity({
+      category: 'AUTH',
+      action: 'Account Registration Completed',
+      details: `User "${finalDoc.name}" registered with role "${role}" on track "${finalDoc.registeredTrack}".`,
+      user: finalDoc
+    });
+
+    if (accountStatus === 'pending') {
+      return { needsApproval: true };
     }
 
     const userData = {
-      id: scientist.id,
-      username: scientist.username,
-      name: scientist.name,
-      role: scientist.role || 'competitor',
-      avatar: scientist.avatar
+      id: finalDoc.id,
+      username: finalDoc.username,
+      name: finalDoc.name,
+      role: finalDoc.role || 'competitor',
+      avatar: finalDoc.avatar
     };
 
     setUser(userData);
-    localStorage.setItem('ft_userId', scientist.id);
-    sessionStorage.setItem('ft_userId', scientist.id);
+    localStorage.setItem('ft_userId', finalDoc.id);
+    sessionStorage.setItem('ft_userId', finalDoc.id);
 
     // Automatically sync historical track broadcasts for this user
-    syncBroadcastMessagesForUser(scientist).catch(() => {});
+    syncBroadcastMessagesForUser(finalDoc).catch(() => {});
     return userData;
   };
 
   const logout = async () => {
+    if (user) {
+      logActivity({
+        category: 'AUTH',
+        action: 'User Logged Out',
+        details: `User "${user.name}" (@${user.username}) signed out.`,
+        user
+      });
+    }
     setUser(null);
     setViewAsMode(null);
     localStorage.removeItem('ft_userId');

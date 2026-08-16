@@ -15,6 +15,7 @@ import FTJudgeDashboard from './FTJudgeDashboard';
 import FTProtectedRoute from './FTProtectedRoute';
 import FTTimelineManagement from './FTTimelineManagement';
 import FTEvaluationManagement from './FTEvaluationManagement';
+import FTActivityLogsPage from './FTActivityLogsPage';
 import FTTestSection from './FTTestSection';
 import FTChatPage from './FTChatPage';
 import FTModulesPage from './FTModulesPage';
@@ -111,6 +112,7 @@ function App() {
                 <Route path="settings" element={<FTAdminSettings />} />
                 <Route path="timeline-manage" element={<FTTimelineManagement />} />
                 <Route path="evaluation-management" element={<FTEvaluationManagement />} />
+                <Route path="activity-logs" element={<FTActivityLogsPage />} />
                 <Route path="submission-assignments" element={<FTAdminSubmissionAssignments />} />
                 <Route path="admin/submission-assignments" element={<FTAdminSubmissionAssignments />} />
                 <Route path="test" element={<FTTestSection />} />
@@ -130,6 +132,7 @@ function App() {
           <Route path="/settings" element={<Navigate to="/dashboard/settings" replace />} />
           <Route path="/timeline-manage" element={<Navigate to="/dashboard/timeline-manage" replace />} />
           <Route path="/evaluation-management" element={<Navigate to="/dashboard/evaluation-management" replace />} />
+          <Route path="/activity-logs" element={<Navigate to="/dashboard/activity-logs" replace />} />
           <Route path="/submission-assignments" element={<Navigate to="/dashboard/admin/submission-assignments" replace />} />
           <Route path="/admin/submission-assignments" element={<Navigate to="/dashboard/admin/submission-assignments" replace />} />
           <Route path="/judge" element={<Navigate to="/dashboard/judge" replace />} />

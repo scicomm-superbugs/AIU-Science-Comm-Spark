@@ -4,9 +4,10 @@ import { useAuth } from './context/AuthContext';
 import { db, firestore, getCollectionName, useLiveCollection, getFirebaseAuth, uploadFile, syncBroadcastMessagesForUser } from './db';
 import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { MapPin, BookOpen, Users, Settings, ClipboardCheck, LayoutDashboard, LogOut, Moon, Sun, Menu, X, ChevronDown, GraduationCap, Bell, AlertTriangle, Calendar, FileText, Globe, Camera, TestTube, RotateCcw, MessageSquare, Pencil } from 'lucide-react';
+import { MapPin, BookOpen, Users, Settings, ClipboardCheck, LayoutDashboard, LogOut, Moon, Sun, Menu, X, ChevronDown, GraduationCap, Bell, AlertTriangle, Calendar, FileText, Globe, Camera, TestTube, RotateCcw, MessageSquare, Pencil, Activity } from 'lucide-react';
 import { FT_FACULTY, FT_ROLE_LABELS, FT_ROLE_COLORS, isFacultyRole, isJudgeRole, isCompetitorRole, FT_DEFAULT_REQUIRED_HOURS } from './ftConstants';
 import { getUserConflicts } from './ftConflictUtils';
+import { initGlobalActivityTracker } from './activityLogger';
 import bcrypt from 'bcryptjs';
 import './scicommspark.css';
 
@@ -14,6 +15,10 @@ export default function FTLayout() {
   const { user, setUser, logout, viewAsMode, setViewAsMode, isRealAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    initGlobalActivityTracker();
+  }, []);
 
   const [dark, setDark] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -685,6 +690,7 @@ export default function FTLayout() {
       { path: '/dashboard/competitors', icon: <Users size={20} />, label: 'Users & Roles', roles: ['master', 'admin'] },
       { path: '/dashboard/timeline-manage', icon: <Calendar size={20} />, label: 'Timeline Management', roles: ['master', 'admin'] },
       { path: '/dashboard/evaluation-management', icon: <ClipboardCheck size={20} />, label: 'Evaluation Management', roles: ['master', 'admin'] },
+      { path: '/dashboard/activity-logs', icon: <Activity size={20} />, label: 'Activity Logs & Audit', roles: ['master', 'admin'] },
       { path: '/dashboard/settings', icon: <Settings size={20} />, label: 'Settings', roles: ['master', 'admin'] },
       { path: '/landing', icon: <Globe size={20} />, label: 'Public Landing Page', roles: ['master', 'admin'] },
     ];

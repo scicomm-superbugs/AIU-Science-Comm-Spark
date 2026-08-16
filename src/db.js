@@ -124,14 +124,35 @@ export function useLiveCollection(collectionName) {
 }
 
 // Collection Helpers (DAO pattern)
+// Collection Helpers (DAO pattern)
 const rawDb = {
   scientists: {
     add: async (scientist) => {
+      if (scientist && scientist.id) {
+        await setDoc(doc(firestore, getCollectionName('scientists'), String(scientist.id)), scientist, { merge: true });
+        return scientist.id;
+      }
       const ref = await addDoc(collection(firestore, getCollectionName('scientists')), scientist);
       return ref.id;
     },
     update: async (id, data) => {
-      await updateDoc(doc(firestore, getCollectionName('scientists'), String(id)), data);
+      if (!id) return;
+      const targetId = String(id);
+      const docRef = doc(firestore, getCollectionName('scientists'), targetId);
+      await setDoc(docRef, data, { merge: true });
+
+      // Also ensure if id is username, any matching document is updated
+      try {
+        const q = query(collection(firestore, getCollectionName('scientists')), where('username', '==', targetId));
+        const snap = await getDocs(q);
+        for (const d of snap.docs) {
+          if (d.id !== targetId) {
+            await setDoc(doc(firestore, getCollectionName('scientists'), d.id), data, { merge: true });
+          }
+        }
+      } catch (err) {
+        // Silently continue
+      }
     },
     set: async (id, data) => {
       await setDoc(doc(firestore, getCollectionName('scientists'), String(id)), data, { merge: true });
@@ -141,7 +162,10 @@ const rawDb = {
     },
     get: async (id) => {
       const d = await getDoc(doc(firestore, getCollectionName('scientists'), String(id)));
-      return d.exists() ? { id: d.id, ...d.data() } : null;
+      if (d.exists()) return { id: d.id, ...d.data() };
+      const q = query(collection(firestore, getCollectionName('scientists')), where('username', '==', String(id)));
+      const snap = await getDocs(q);
+      return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
     },
     where: (field) => {
       return {
@@ -160,11 +184,18 @@ const rawDb = {
 
   ft_places: {
     add: async (place) => {
+      if (place && place.id) {
+        await setDoc(doc(firestore, getCollectionName('ft_places'), String(place.id)), place, { merge: true });
+        return place.id;
+      }
       const ref = await addDoc(collection(firestore, getCollectionName('ft_places')), place);
       return ref.id;
     },
     update: async (id, data) => {
-      await updateDoc(doc(firestore, getCollectionName('ft_places'), String(id)), data);
+      await setDoc(doc(firestore, getCollectionName('ft_places'), String(id)), data, { merge: true });
+    },
+    set: async (id, data) => {
+      await setDoc(doc(firestore, getCollectionName('ft_places'), String(id)), data, { merge: true });
     },
     delete: async (id) => {
       await deleteDoc(doc(firestore, getCollectionName('ft_places'), String(id)));
@@ -177,11 +208,18 @@ const rawDb = {
 
   ft_registrations: {
     add: async (reg) => {
+      if (reg && reg.id) {
+        await setDoc(doc(firestore, getCollectionName('ft_registrations'), String(reg.id)), reg, { merge: true });
+        return reg.id;
+      }
       const ref = await addDoc(collection(firestore, getCollectionName('ft_registrations')), reg);
       return ref.id;
     },
     update: async (id, data) => {
-      await updateDoc(doc(firestore, getCollectionName('ft_registrations'), String(id)), data);
+      await setDoc(doc(firestore, getCollectionName('ft_registrations'), String(id)), data, { merge: true });
+    },
+    set: async (id, data) => {
+      await setDoc(doc(firestore, getCollectionName('ft_registrations'), String(id)), data, { merge: true });
     },
     delete: async (id) => {
       await deleteDoc(doc(firestore, getCollectionName('ft_registrations'), String(id)));
@@ -199,16 +237,26 @@ const rawDb = {
     },
     set: async (data) => {
       await setDoc(doc(firestore, getCollectionName('ft_settings'), 'global'), data, { merge: true });
+    },
+    update: async (id, data) => {
+      await setDoc(doc(firestore, getCollectionName('ft_settings'), 'global'), data, { merge: true });
     }
   },
 
   ft_evaluations: {
     add: async (evalData) => {
+      if (evalData && evalData.id) {
+        await setDoc(doc(firestore, getCollectionName('ft_evaluations'), String(evalData.id)), evalData, { merge: true });
+        return evalData.id;
+      }
       const ref = await addDoc(collection(firestore, getCollectionName('ft_evaluations')), evalData);
       return ref.id;
     },
     update: async (id, data) => {
-      await updateDoc(doc(firestore, getCollectionName('ft_evaluations'), String(id)), data);
+      await setDoc(doc(firestore, getCollectionName('ft_evaluations'), String(id)), data, { merge: true });
+    },
+    set: async (id, data) => {
+      await setDoc(doc(firestore, getCollectionName('ft_evaluations'), String(id)), data, { merge: true });
     },
     delete: async (id) => {
       await deleteDoc(doc(firestore, getCollectionName('ft_evaluations'), String(id)));
@@ -221,11 +269,18 @@ const rawDb = {
 
   ft_reset_requests: {
     add: async (req) => {
+      if (req && req.id) {
+        await setDoc(doc(firestore, getCollectionName('ft_reset_requests'), String(req.id)), req, { merge: true });
+        return req.id;
+      }
       const ref = await addDoc(collection(firestore, getCollectionName('ft_reset_requests')), req);
       return ref.id;
     },
     update: async (id, data) => {
-      await updateDoc(doc(firestore, getCollectionName('ft_reset_requests'), String(id)), data);
+      await setDoc(doc(firestore, getCollectionName('ft_reset_requests'), String(id)), data, { merge: true });
+    },
+    set: async (id, data) => {
+      await setDoc(doc(firestore, getCollectionName('ft_reset_requests'), String(id)), data, { merge: true });
     },
     delete: async (id) => {
       await deleteDoc(doc(firestore, getCollectionName('ft_reset_requests'), String(id)));
@@ -238,11 +293,18 @@ const rawDb = {
 
   ft_notifications: {
     add: async (notif) => {
+      if (notif && notif.id) {
+        await setDoc(doc(firestore, getCollectionName('ft_notifications'), String(notif.id)), notif, { merge: true });
+        return notif.id;
+      }
       const ref = await addDoc(collection(firestore, getCollectionName('ft_notifications')), notif);
       return ref.id;
     },
     update: async (id, data) => {
-      await updateDoc(doc(firestore, getCollectionName('ft_notifications'), String(id)), data);
+      await setDoc(doc(firestore, getCollectionName('ft_notifications'), String(id)), data, { merge: true });
+    },
+    set: async (id, data) => {
+      await setDoc(doc(firestore, getCollectionName('ft_notifications'), String(id)), data, { merge: true });
     },
     delete: async (id) => {
       await deleteDoc(doc(firestore, getCollectionName('ft_notifications'), String(id)));
@@ -255,24 +317,42 @@ const rawDb = {
 
   workshops: {
     add: async (data) => {
+      if (data && data.id) {
+        await setDoc(doc(firestore, getCollectionName('workshops'), String(data.id)), data, { merge: true });
+        return data.id;
+      }
       const ref = await addDoc(collection(firestore, getCollectionName('workshops')), data);
       return ref.id;
     },
     update: async (id, data) => {
-      await updateDoc(doc(firestore, getCollectionName('workshops'), String(id)), data);
+      await setDoc(doc(firestore, getCollectionName('workshops'), String(id)), data, { merge: true });
+    },
+    set: async (id, data) => {
+      await setDoc(doc(firestore, getCollectionName('workshops'), String(id)), data, { merge: true });
     },
     delete: async (id) => {
       await deleteDoc(doc(firestore, getCollectionName('workshops'), String(id)));
+    },
+    get: async (id) => {
+      const d = await getDoc(doc(firestore, getCollectionName('workshops'), String(id)));
+      return d.exists() ? { id: d.id, ...d.data() } : null;
     }
   },
 
   ft_teams: {
     add: async (teamData) => {
+      if (teamData && teamData.id) {
+        await setDoc(doc(firestore, getCollectionName('ft_teams'), String(teamData.id)), teamData, { merge: true });
+        return teamData.id;
+      }
       const ref = await addDoc(collection(firestore, getCollectionName('ft_teams')), teamData);
       return ref.id;
     },
     update: async (id, data) => {
-      await updateDoc(doc(firestore, getCollectionName('ft_teams'), String(id)), data);
+      await setDoc(doc(firestore, getCollectionName('ft_teams'), String(id)), data, { merge: true });
+    },
+    set: async (id, data) => {
+      await setDoc(doc(firestore, getCollectionName('ft_teams'), String(id)), data, { merge: true });
     },
     delete: async (id) => {
       await deleteDoc(doc(firestore, getCollectionName('ft_teams'), String(id)));
@@ -285,11 +365,18 @@ const rawDb = {
 
   ft_tracks: {
     add: async (trackData) => {
+      if (trackData && trackData.id) {
+        await setDoc(doc(firestore, getCollectionName('ft_tracks'), String(trackData.id)), trackData, { merge: true });
+        return trackData.id;
+      }
       const ref = await addDoc(collection(firestore, getCollectionName('ft_tracks')), trackData);
       return ref.id;
     },
     update: async (id, data) => {
-      await updateDoc(doc(firestore, getCollectionName('ft_tracks'), String(id)), data);
+      await setDoc(doc(firestore, getCollectionName('ft_tracks'), String(id)), data, { merge: true });
+    },
+    set: async (id, data) => {
+      await setDoc(doc(firestore, getCollectionName('ft_tracks'), String(id)), data, { merge: true });
     },
     delete: async (id) => {
       await deleteDoc(doc(firestore, getCollectionName('ft_tracks'), String(id)));
@@ -302,43 +389,73 @@ const rawDb = {
 
   submissions: {
     add: async (data) => {
+      if (data && data.id) {
+        await setDoc(doc(firestore, getCollectionName('submissions'), String(data.id)), data, { merge: true });
+        return data.id;
+      }
       const ref = await addDoc(collection(firestore, getCollectionName('submissions')), data);
       return ref.id;
     },
     update: async (id, data) => {
-      await updateDoc(doc(firestore, getCollectionName('submissions'), String(id)), data);
+      await setDoc(doc(firestore, getCollectionName('submissions'), String(id)), data, { merge: true });
+    },
+    set: async (id, data) => {
+      await setDoc(doc(firestore, getCollectionName('submissions'), String(id)), data, { merge: true });
     },
     delete: async (id) => {
       await deleteDoc(doc(firestore, getCollectionName('submissions'), String(id)));
+    },
+    get: async (id) => {
+      const d = await getDoc(doc(firestore, getCollectionName('submissions'), String(id)));
+      return d.exists() ? { id: d.id, ...d.data() } : null;
     }
   },
 
   teams: {
     add: async (data) => {
+      if (data && data.id) {
+        await setDoc(doc(firestore, getCollectionName('teams'), String(data.id)), data, { merge: true });
+        return data.id;
+      }
       const ref = await addDoc(collection(firestore, getCollectionName('teams')), data);
       return ref.id;
     },
     update: async (id, data) => {
-      await updateDoc(doc(firestore, getCollectionName('teams'), String(id)), data);
+      await setDoc(doc(firestore, getCollectionName('teams'), String(id)), data, { merge: true });
+    },
+    set: async (id, data) => {
+      await setDoc(doc(firestore, getCollectionName('teams'), String(id)), data, { merge: true });
     },
     delete: async (id) => {
       await deleteDoc(doc(firestore, getCollectionName('teams'), String(id)));
+    },
+    get: async (id) => {
+      const d = await getDoc(doc(firestore, getCollectionName('teams'), String(id)));
+      return d.exists() ? { id: d.id, ...d.data() } : null;
     }
   },
 
   timeline_config: {
     add: async (data) => {
+      if (data && data.id) {
+        await setDoc(doc(firestore, getCollectionName('timeline_config'), String(data.id)), data, { merge: true });
+        return data.id;
+      }
       const ref = await addDoc(collection(firestore, getCollectionName('timeline_config')), data);
       return ref.id;
     },
     update: async (id, data) => {
-      await updateDoc(doc(firestore, getCollectionName('timeline_config'), String(id)), data);
+      await setDoc(doc(firestore, getCollectionName('timeline_config'), String(id)), data, { merge: true });
     },
     set: async (id, data) => {
       await setDoc(doc(firestore, getCollectionName('timeline_config'), String(id)), data, { merge: true });
     },
     delete: async (id) => {
       await deleteDoc(doc(firestore, getCollectionName('timeline_config'), String(id)));
+    },
+    get: async (id) => {
+      const d = await getDoc(doc(firestore, getCollectionName('timeline_config'), String(id)));
+      return d.exists() ? { id: d.id, ...d.data() } : null;
     }
   },
 
@@ -377,6 +494,10 @@ const rawDb = {
     },
     delete: async (id) => {
       await deleteDoc(doc(firestore, getCollectionName('published_results'), String(id)));
+    },
+    get: async (id) => {
+      const d = await getDoc(doc(firestore, getCollectionName('published_results'), String(id)));
+      return d.exists() ? { id: d.id, ...d.data() } : null;
     }
   }
 };

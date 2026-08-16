@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { useAuth } from './context/AuthContext';
 import { useLiveCollection, db } from './db';
 import { calculateAveragedPoints, normalizeTrackKey } from './ftConstants';
-import { Users, UserPlus, Trophy, Award, Copy, Check, Star, Shield, LogOut, Trash2, Plus, Sparkles, User, Layers } from 'lucide-react';
+import { logActivity } from './activityLogger';
+import { Users, UserPlus, Trophy, Award, Copy, Check, Star, Shield, LogOut, Trash2, Plus, Sparkles, User, Layers, Pencil, Clock, AlertCircle, AlertTriangle, X } from 'lucide-react';
 import './scicommspark.css';
 
 export default function FTOurTeam() {
@@ -23,11 +24,21 @@ export default function FTOurTeam() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Team Name Change Request & Admin Approval State
+  const [showNameChangeModal, setShowNameChangeModal] = useState(false);
+  const [requestedNewName, setRequestedNewName] = useState('');
+  const [nameChangeReason, setNameChangeReason] = useState('');
+  const [isSubmittingNameChange, setIsSubmittingNameChange] = useState(false);
+  const [isProcessingAdminDecision, setIsProcessingAdminDecision] = useState(false);
+
   const [mobileLeaderboardTrack, setMobileLeaderboardTrack] = useState(() => {
     const tr = user?.registeredTrack || 'pop_science';
     return (tr === 'science_journalism' || tr === 'journalism') ? 'journalism' : 'pop_science';
   });
   const [expandedLeaderboardId, setExpandedLeaderboardId] = useState(null);
+
+  const isAdmin = ['admin', 'master'].includes(user?.role);
 
   // Find the current user's scientist doc
   const meDoc = useMemo(() => {
@@ -307,7 +318,25 @@ export default function FTOurTeam() {
       };
 
       await db.ft_teams.add(newTeam);
-      await db.scientists.update(user.id, { participationMode: 'team' });
+      
+      try {
+        const scientistId = meDoc?.id || user.id;
+        await db.scientists.update(scientistId, {
+          participationMode: 'team',
+          teamName: createTeamName.trim(),
+          teamCode: teamCode
+        });
+      } catch (userErr) {
+        console.warn('Scientist update suppressed:', userErr);
+      }
+
+      logActivity({
+        category: 'TEAMS',
+        action: 'Created New Team',
+        details: `User created team "${createTeamName.trim()}" (Code: ${teamCode}, Track: ${userTrack}).`,
+        user
+      });
+
       setSuccess(`Team "${createTeamName.trim()}" created successfully! Invite code: ${inviteCode}`);
       setCreateTeamName('');
     } catch (err) {
@@ -379,13 +408,214 @@ export default function FTOurTeam() {
       ];
 
       await db.ft_teams.update(targetTeam.id, { members: updatedMembers });
-      await db.scientists.update(user.id, { participationMode: 'team' });
+      
+      try {
+        const scientistId = meDoc?.id || user.id;
+        await db.scientists.update(scientistId, {
+          participationMode: 'team',
+          teamName: targetTeam.name,
+          teamCode: targetTeam.code
+        });
+      } catch (userErr) {
+        console.warn('Scientist update suppressed:', userErr);
+      }
+
+      logActivity({
+        category: 'TEAMS',
+        action: 'Joined Team',
+        details: `User joined team "${targetTeam.name}" (Code: ${targetTeam.code}).`,
+        user
+      });
+
       setSuccess(`Successfully joined team "${targetTeam.name}"! 🎉`);
       setJoinCodeInput('');
     } catch (err) {
       setError('Failed to join team: ' + err.message);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // ── TEAM NAME CHANGE REQUEST (TEAM LEADER) ──────────────────────────
+  const handleRequestNameChange = async (e) => {
+    e.preventDefault();
+    if (!myTeam) return;
+    const cleanName = requestedNewName.trim();
+    if (!cleanName || cleanName.length < 2) {
+      setError('Please enter a valid team name of at least 2 characters.');
+      return;
+    }
+    if (cleanName === myTeam.name) {
+      setError('The requested name is identical to the current team name.');
+      return;
+    }
+
+    setIsSubmittingNameChange(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const changePayload = {
+        requestedName: cleanName,
+        requestedBy: meDoc?.name || user?.name || user?.username,
+        requestedById: user.id,
+        requestedAt: new Date().toISOString(),
+        reason: nameChangeReason.trim()
+      };
+
+      await db.ft_teams.update(myTeam.id, { pendingNameChange: changePayload });
+
+      // Notify Admins
+      try {
+        await db.ft_notifications.add({
+          userId: 'admin',
+          type: 'team',
+          title: 'Team Name Change Request ⚡',
+          message: `Team "${myTeam.name}" (ID: ${myTeam.code || myTeam.id}) requested to change name to "${cleanName}".`,
+          link: '/dashboard/competitors',
+          status: 'unread',
+          createdAt: new Date().toISOString()
+        });
+      } catch (notifErr) {
+        console.warn('Admin notification suppressed:', notifErr);
+      }
+
+      logActivity({
+        category: 'TEAMS',
+        action: 'Requested Team Name Change',
+        details: `Team leader "${meDoc?.name || user.name}" requested to rename team from "${myTeam.name}" to "${cleanName}".`,
+        user
+      });
+
+      setShowNameChangeModal(false);
+      setNameChangeReason('');
+      setSuccess(`🎉 Name change request for "${cleanName}" submitted successfully! It is now pending Admin approval.`);
+    } catch (err) {
+      setError('Failed to submit name change request: ' + err.message);
+    } finally {
+      setIsSubmittingNameChange(false);
+    }
+  };
+
+  // Cancel Name Change Request
+  const handleCancelNameChangeRequest = async () => {
+    if (!myTeam || !myTeam.pendingNameChange) return;
+    if (!window.confirm('Cancel your pending team name change request?')) return;
+
+    try {
+      await db.ft_teams.update(myTeam.id, { pendingNameChange: null });
+      logActivity({
+        category: 'TEAMS',
+        action: 'Cancelled Team Name Change Request',
+        details: `Team leader cancelled pending name change to "${myTeam.pendingNameChange.requestedName}".`,
+        user
+      });
+      setSuccess('Team name change request cancelled.');
+    } catch (err) {
+      setError('Failed to cancel request: ' + err.message);
+    }
+  };
+
+  // ── ADMIN ACCEPT / APPROVE TEAM NAME CHANGE (PRESERVES ALL POINTS & RECORDS) ─
+  const handleApproveNameChange = async (targetTeam) => {
+    if (!isAdmin || !targetTeam?.pendingNameChange?.requestedName) return;
+    const requestedName = targetTeam.pendingNameChange.requestedName;
+
+    if (!window.confirm(`✅ Approve team name change for "${targetTeam.name}" to "${requestedName}"?\n\nAll team points, leaderboard rank, submitted files, and member records will remain 100% intact.`)) {
+      return;
+    }
+
+    setIsProcessingAdminDecision(true);
+    try {
+      const oldName = targetTeam.name;
+
+      // 1. Update team name and clear pending request (Preserving all points, codes, and history!)
+      await db.ft_teams.update(targetTeam.id, {
+        name: requestedName,
+        pendingNameChange: null,
+        updatedAt: new Date().toISOString()
+      });
+
+      // 2. Update all team members' scientist records
+      for (const m of (targetTeam.members || [])) {
+        try {
+          await db.scientists.update(m.userId, { teamName: requestedName });
+        } catch (memberErr) {
+          console.warn('Member name update note:', memberErr);
+        }
+
+        // Notify member
+        try {
+          await db.ft_notifications.add({
+            userId: m.userId,
+            type: 'team',
+            title: 'Team Name Change Approved! 🎉',
+            message: `Admin approved your team's new name: "${requestedName}". All your scores and records remain intact!`,
+            link: '/dashboard/our-team',
+            status: 'unread',
+            createdAt: new Date().toISOString()
+          });
+        } catch (nErr) {}
+      }
+
+      logActivity({
+        category: 'TEAMS',
+        action: 'Approved Team Name Change',
+        details: `Admin approved renaming team from "${oldName}" to "${requestedName}". All points, submissions, and records were preserved.`,
+        user
+      });
+
+      setSuccess(`✅ Team name successfully updated to "${requestedName}"! Points and records remain untouched.`);
+    } catch (err) {
+      setError('Failed to approve team name: ' + err.message);
+    } finally {
+      setIsProcessingAdminDecision(false);
+    }
+  };
+
+  // ── ADMIN REFUSE / REJECT TEAM NAME CHANGE ──────────────────────────
+  const handleRejectNameChange = async (targetTeam) => {
+    if (!isAdmin || !targetTeam?.pendingNameChange) return;
+    const requestedName = targetTeam.pendingNameChange.requestedName;
+
+    if (!window.confirm(`Refuse / decline team name change to "${requestedName}"?`)) {
+      return;
+    }
+
+    setIsProcessingAdminDecision(true);
+    try {
+      await db.ft_teams.update(targetTeam.id, {
+        pendingNameChange: null,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Notify team leader
+      if (targetTeam.leaderId) {
+        try {
+          await db.ft_notifications.add({
+            userId: targetTeam.leaderId,
+            type: 'team',
+            title: 'Team Name Request Declined',
+            message: `Your request to change team name to "${requestedName}" was declined by an administrator.`,
+            link: '/dashboard/our-team',
+            status: 'unread',
+            createdAt: new Date().toISOString()
+          });
+        } catch (nErr) {}
+      }
+
+      logActivity({
+        category: 'TEAMS',
+        action: 'Refused Team Name Change',
+        details: `Admin refused request to rename team "${targetTeam.name}" to "${requestedName}".`,
+        user
+      });
+
+      setSuccess(`Team name change request to "${requestedName}" declined.`);
+    } catch (err) {
+      setError('Failed to decline request: ' + err.message);
+    } finally {
+      setIsProcessingAdminDecision(false);
     }
   };
 
@@ -703,9 +933,102 @@ export default function FTOurTeam() {
                   </span>
                 </div>
 
-                <h2 style={{ fontSize: '2rem', fontWeight: 900, margin: '0 0 0.5rem 0', fontFamily: "'Outfit', sans-serif" }}>
-                  {myTeam.name}
-                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', margin: '0 0 0.4rem 0' }}>
+                  <h2 style={{ fontSize: '2rem', fontWeight: 900, margin: 0, fontFamily: "'Outfit', sans-serif" }}>
+                    {myTeam.name}
+                  </h2>
+                  
+                  {/* Team Leader Request Name Change Button */}
+                  {isLeader && !myTeam.pendingNameChange && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRequestedNewName(myTeam.name);
+                        setNameChangeReason('');
+                        setShowNameChangeModal(true);
+                      }}
+                      title="Request Team Name Change (Pending Admin Approval)"
+                      style={{
+                        background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
+                        color: '#ffffff', padding: '0.35rem 0.75rem', borderRadius: '10px',
+                        fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer',
+                        display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                        backdropFilter: 'blur(4px)', transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <Pencil size={13} /> Change Name
+                    </button>
+                  )}
+                </div>
+
+                {/* Pending Name Change Request Alert Banner */}
+                {myTeam.pendingNameChange && (
+                  <div style={{
+                    background: 'rgba(245, 158, 11, 0.18)', border: '1.5px solid rgba(245, 158, 11, 0.4)',
+                    borderRadius: '12px', padding: '0.75rem 1rem', marginBottom: '0.85rem',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <Clock size={18} style={{ color: '#fbbf24', flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 900, color: '#fef08a' }}>
+                          Name Change Pending Admin Approval
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '0.1rem' }}>
+                          Requested new name: <strong style={{ color: '#ffffff' }}>"{myTeam.pendingNameChange.requestedName}"</strong>
+                          {myTeam.pendingNameChange.reason ? ` • Note: ${myTeam.pendingNameChange.reason}` : ''}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {/* Admin Action Buttons */}
+                      {isAdmin && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={isProcessingAdminDecision}
+                            onClick={() => handleApproveNameChange(myTeam)}
+                            style={{
+                              background: '#22c55e', color: '#ffffff', border: 'none',
+                              padding: '0.35rem 0.8rem', borderRadius: '8px', fontSize: '0.76rem',
+                              fontWeight: 900, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
+                            }}
+                          >
+                            <Check size={13} /> Accept Change
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isProcessingAdminDecision}
+                            onClick={() => handleRejectNameChange(myTeam)}
+                            style={{
+                              background: '#ef4444', color: '#ffffff', border: 'none',
+                              padding: '0.35rem 0.8rem', borderRadius: '8px', fontSize: '0.76rem',
+                              fontWeight: 900, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
+                            }}
+                          >
+                            <X size={13} /> Refuse
+                          </button>
+                        </>
+                      )}
+
+                      {/* Leader Cancel Button */}
+                      {isLeader && !isAdmin && (
+                        <button
+                          type="button"
+                          onClick={handleCancelNameChangeRequest}
+                          style={{
+                            background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
+                            color: '#ffffff', padding: '0.35rem 0.75rem', borderRadius: '8px',
+                            fontSize: '0.76rem', fontWeight: 800, cursor: 'pointer'
+                          }}
+                        >
+                          Cancel Request
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Copyable Shared Team Code & Team ID */}
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -1354,6 +1677,111 @@ export default function FTOurTeam() {
                 ))
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── REQUEST TEAM NAME CHANGE MODAL (TEAM LEADER) ── */}
+      {showNameChangeModal && myTeam && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 99999, padding: '1rem'
+        }}>
+          <div style={{
+            background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '520px',
+            padding: '2rem', boxShadow: '0 25px 60px rgba(0,0,0,0.3)', position: 'relative'
+          }}>
+            <button
+              type="button"
+              onClick={() => setShowNameChangeModal(false)}
+              style={{
+                position: 'absolute', top: '1.25rem', right: '1.25rem',
+                background: '#f1f5f9', border: 'none', borderRadius: '50%',
+                width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: '#64748b'
+              }}
+            >
+              <X size={18} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#fff1f2', color: '#be123c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Pencil size={24} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
+                  Request Team Name Change
+                </h3>
+                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0.15rem 0 0 0' }}>
+                  Current Name: <strong>{myTeam.name}</strong>
+                </p>
+              </div>
+            </div>
+
+            {/* Reassurance Info Notice */}
+            <div style={{
+              background: '#ecfdf5', border: '1.5px solid #a7f3d0', borderRadius: '14px',
+              padding: '0.85rem 1rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'flex-start', gap: '0.6rem'
+            }}>
+              <Sparkles size={18} style={{ color: '#059669', flexShrink: 0, marginTop: '0.1rem' }} />
+              <div style={{ fontSize: '0.8rem', color: '#065f46', lineHeight: 1.45, fontWeight: 600 }}>
+                <strong>No records or scores will change:</strong> When approved by Admin, your team points, submissions, and leaderboard rankings remain 100% untouched.
+              </div>
+            </div>
+
+            <form onSubmit={handleRequestNameChange}>
+              <div className="ft-input-group" style={{ marginBottom: '1.15rem' }}>
+                <label className="ft-label">New Team Name *</label>
+                <input
+                  type="text"
+                  className="ft-input"
+                  required
+                  value={requestedNewName}
+                  onChange={(e) => setRequestedNewName(e.target.value)}
+                  placeholder="Enter the proposed new team name..."
+                  maxLength={60}
+                  style={{ fontWeight: 700 }}
+                />
+              </div>
+
+              <div className="ft-input-group" style={{ marginBottom: '1.5rem' }}>
+                <label className="ft-label">Reason for Change (Optional)</label>
+                <textarea
+                  className="ft-input"
+                  rows={3}
+                  value={nameChangeReason}
+                  onChange={(e) => setNameChangeReason(e.target.value)}
+                  placeholder="e.g. Updated project scope or unified team branding..."
+                  style={{ resize: 'vertical', fontSize: '0.85rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowNameChangeModal(false)}
+                  className="ft-btn"
+                  style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingNameChange}
+                  className="ft-btn"
+                  style={{
+                    background: 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)',
+                    color: '#ffffff', border: 'none', fontWeight: 900,
+                    boxShadow: '0 4px 14px rgba(190, 18, 60, 0.3)'
+                  }}
+                >
+                  {isSubmittingNameChange ? 'Submitting...' : 'Submit Request 🚀'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
