@@ -5,7 +5,7 @@ import {
   Send, User, Users, MessageSquare, Smile, Paperclip, X, FileText, 
   ChevronLeft, MoreVertical, ExternalLink, Download, ZoomIn, ZoomOut, 
   RotateCw, Plus, Search, Check, Globe, Radio, Megaphone, CheckCircle2, 
-  Video, BookOpen, AlertCircle, Sparkles 
+  Video, BookOpen, AlertCircle, Sparkles, Trash2 
 } from 'lucide-react';
 import { FT_ROLE_COLORS, FT_ROLE_LABELS, getCleanAcademicTitle, normalizeTrackKey } from './ftConstants';
 
@@ -546,6 +546,38 @@ export default function FTChatPage({ user: userProp }) {
     }
   };
 
+  // Delete message handler
+  const handleDeleteMessage = async (msg) => {
+    if (!msg?.id) return;
+    
+    if (msg.isBroadcast && isAdmin) {
+      const confirmAll = window.confirm('This message was sent via Broadcast. Do you want to delete this message for ALL recipients? (Click Cancel to delete only from this chat)');
+      if (confirmAll) {
+        try {
+          const allMatching = (rawMessages || []).filter(m => 
+            m.isBroadcast && (m.text === msg.text || m.createdAt === msg.createdAt)
+          );
+          for (const m of allMatching) {
+            await db.ft_messages.delete(m.id);
+          }
+          alert(`Successfully deleted broadcast message for all ${allMatching.length} recipients.`);
+          return;
+        } catch (err) {
+          alert('Failed to delete broadcast: ' + err.message);
+          return;
+        }
+      }
+    }
+
+    if (window.confirm('Are you sure you want to delete this message?')) {
+      try {
+        await db.ft_messages.delete(msg.id);
+      } catch (err) {
+        alert('Failed to delete message: ' + err.message);
+      }
+    }
+  };
+
   // Helper to fetch the last message info
   const getLastMessageInfo = (recipId) => {
     if (!rawMessages) return null;
@@ -987,10 +1019,26 @@ export default function FTChatPage({ user: userProp }) {
 
                     <div style={{
                       fontSize: '0.66rem', color: '#94a3b8', fontWeight: 600,
-                      marginTop: '0.2rem', padding: '0 0.3rem', display: 'flex', alignItems: 'center', gap: '0.2rem'
+                      marginTop: '0.2rem', padding: '0 0.3rem', display: 'flex', alignItems: 'center', gap: '0.35rem'
                     }}>
-                      {new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <span>{new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       {isMe && <Check size={12} style={{ color: '#be123c' }} />}
+                      {(isMe || isAdmin) && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMessage(msg)}
+                          title={msg.isBroadcast ? "Delete broadcast message" : "Delete message"}
+                          style={{
+                            background: 'none', border: 'none', padding: '0 2px',
+                            color: '#94a3b8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
+                            transition: 'color 0.15s ease', marginLeft: '0.2rem'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = '#dc2626'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; }}
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
