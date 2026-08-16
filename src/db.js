@@ -14,6 +14,7 @@ const firebaseConfig = {
 };
 
 import { getAuth } from "firebase/auth";
+import { normalizeTrackKey } from "./ftConstants";
 
 const app = initializeApp(firebaseConfig);
 export const firestore = getFirestore(app);
@@ -410,5 +411,93 @@ export const db = new Proxy(rawDb, {
     };
   }
 });
+
+export async function syncBroadcastMessagesForUser(targetUser) {
+  if (!targetUser || (!targetUser.id && !targetUser.username)) return;
+  const userId = String(targetUser.id || targetUser.username);
+  const rawTrack = targetUser.registeredTrack || targetUser.track || targetUser.selectedTrack;
+  const userTrack = normalizeTrackKey(rawTrack);
+  const userRole = (targetUser.role || 'competitor').toLowerCase();
+  const isCompetitor = userRole === 'competitor' || userRole === 'student' || !userRole;
+
+  try {
+    // 1. Fetch all active broadcast campaigns
+    const campaignsSnap = await getDocs(query(collection(firestore, getCollectionName('ft_broadcast_campaigns'))));
+    if (campaignsSnap.empty) return;
+
+    // 2. Fetch existing messages received by this user
+    const userMsgsSnap = await getDocs(query(
+      collection(firestore, getCollectionName('ft_messages')),
+      where('receiverId', '==', userId)
+    ));
+
+    const receivedCampaignIds = new Set(
+      userMsgsSnap.docs
+        .map(d => d.data().broadcastCampaignId)
+        .filter(Boolean)
+    );
+
+    const receivedTexts = new Set(
+      userMsgsSnap.docs.map(d => d.data().text)
+    );
+
+    for (const cDoc of campaignsSnap.docs) {
+      const campaign = { id: cDoc.id, ...cDoc.data() };
+      if (campaign.active === false) continue;
+
+      // Check track matching: 'all' matches everyone; otherwise must match user's track
+      const trackMatch = !campaign.targetTrack || campaign.targetTrack === 'all' || campaign.targetTrack === userTrack;
+      if (!trackMatch) continue;
+
+      // Check role matching: 'all_members' matches all; 'competitors' matches competitors/students
+      const roleMatch = campaign.roleFilter === 'all_members' || isCompetitor;
+      if (!roleMatch) continue;
+
+      // Skip if already received
+      if (receivedCampaignIds.has(campaign.id)) continue;
+
+      // Personalize name placeholder
+      const recipientName = targetUser.name || targetUser.username || 'Competitor';
+      const recipientUsername = targetUser.username || targetUser.name || 'User';
+      const personalizedText = (campaign.text || '')
+        .replace(/\{name\}/gi, recipientName)
+        .replace(/\{username\}/gi, recipientUsername);
+
+      if (receivedTexts.has(personalizedText)) continue;
+
+      // Send the private message
+      await db.ft_messages.add({
+        text: personalizedText,
+        senderId: String(campaign.senderId),
+        senderName: campaign.senderName || 'Staff',
+        receiverId: userId,
+        createdAt: campaign.createdAt || new Date().toISOString(),
+        status: 'unread',
+        attachment: campaign.attachment || null,
+        isBroadcast: true,
+        broadcastTrack: campaign.targetTrack || 'all',
+        broadcastCampaignId: campaign.id
+      });
+
+      // Send the notification
+      try {
+        await db.ft_notifications.add({
+          targetUserId: userId,
+          title: `💬 New Message from ${campaign.senderName || 'Staff'}`,
+          message: personalizedText.length > 65 ? personalizedText.slice(0, 62) + '...' : personalizedText,
+          type: 'chat',
+          targetTab: 'chat',
+          status: 'unread',
+          createdAt: campaign.createdAt || new Date().toISOString()
+        });
+      } catch (notifErr) {
+        console.warn('Notification sync suppressed:', notifErr);
+      }
+    }
+  } catch (err) {
+    console.warn('syncBroadcastMessagesForUser error:', err);
+  }
+}
+
 
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
-import { db, firestore, getCollectionName, useLiveCollection, getFirebaseAuth, uploadFile } from './db';
+import { db, firestore, getCollectionName, useLiveCollection, getFirebaseAuth, uploadFile, syncBroadcastMessagesForUser } from './db';
 import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { MapPin, BookOpen, Users, Settings, ClipboardCheck, LayoutDashboard, LogOut, Moon, Sun, Menu, X, ChevronDown, GraduationCap, Bell, AlertTriangle, Calendar, FileText, Globe, Camera, TestTube, RotateCcw, MessageSquare, Pencil } from 'lucide-react';
@@ -199,7 +199,10 @@ export default function FTLayout() {
     if (!user?.id) return;
     (async () => {
       const s = await db.scientists.get(user.id);
-      if (s) setMeDoc(s);
+      if (s) {
+        setMeDoc(s);
+        syncBroadcastMessagesForUser(s).catch(() => {});
+      }
     })();
   }, [user?.id]);
 

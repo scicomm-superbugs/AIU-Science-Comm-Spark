@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect, useContext } from 'react';
-import { db, firestore, getCollectionName, getFirebaseAuth } from '../db';
+import { db, firestore, getCollectionName, getFirebaseAuth, syncBroadcastMessagesForUser } from '../db';
 import { signInAnonymously, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { collection, query, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import bcrypt from 'bcryptjs';
@@ -83,6 +83,9 @@ export const AuthProvider = ({ children }) => {
               googleEmail: scientist.googleEmail,
               avatar: scientist.avatar
             });
+
+            // Automatically sync historical track broadcasts for this user
+            syncBroadcastMessagesForUser(scientist).catch(() => {});
             
             // Sync with Firebase auth session for firestore permissions
             try {
@@ -144,6 +147,9 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
     localStorage.setItem('ft_userId', scientist.id);
     sessionStorage.setItem('ft_userId', scientist.id);
+
+    // Automatically sync historical track broadcasts for this user
+    syncBroadcastMessagesForUser(scientist).catch(() => {});
 
     try {
       const auth = getFirebaseAuth();
@@ -251,6 +257,9 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       localStorage.setItem('ft_userId', scientist.id);
       sessionStorage.setItem('ft_userId', scientist.id);
+
+      // Automatically sync historical track broadcasts for this user
+      syncBroadcastMessagesForUser(scientist).catch(() => {});
 
       try {
         if (!auth.currentUser) {
@@ -378,6 +387,9 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
     localStorage.setItem('ft_userId', scientist.id);
     sessionStorage.setItem('ft_userId', scientist.id);
+
+    // Automatically sync historical track broadcasts for this user
+    syncBroadcastMessagesForUser(scientist).catch(() => {});
     return userData;
   };
 

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link, Navigate, useLocation } from 'react-router-dom';
-import { db, firestore, getCollectionName, uploadFile, useLiveCollection } from './db';
+import { db, firestore, getCollectionName, uploadFile, useLiveCollection, syncBroadcastMessagesForUser } from './db';
 import { collection, getDocs } from 'firebase/firestore';
 import bcrypt from 'bcryptjs';
 import { useAuth } from './context/AuthContext';
@@ -250,6 +250,15 @@ export default function Register() {
         profileViews: 0,
         createdAt: new Date().toISOString()
       });
+
+      // Automatically deliver past track-specific broadcast messages to this newly created account
+      syncBroadcastMessagesForUser({
+        id: newId,
+        username: formData.username.trim(),
+        name: formData.name.trim(),
+        role: userRole,
+        registeredTrack: isJudge ? '' : formData.registeredTrack
+      }).catch(() => {});
 
       // Send Notification to Admins for New User Registration / Approval Request
       try {

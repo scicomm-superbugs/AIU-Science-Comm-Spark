@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './context/AuthContext';
-import { db, useLiveCollection } from './db';
+import { db, useLiveCollection, syncBroadcastMessagesForUser } from './db';
 import { 
   Send, User, Users, MessageSquare, Smile, Paperclip, X, FileText, 
   ChevronLeft, MoreVertical, ExternalLink, Download, ZoomIn, ZoomOut, 
@@ -249,6 +249,13 @@ export default function FTChatPage({ user: userProp }) {
   const [showRecipientListPreview, setShowRecipientListPreview] = useState(false);
   const broadcastFileInputRef = useRef(null);
 
+  // Automatically sync any historical broadcast messages matching this user's track
+  useEffect(() => {
+    if (user && (user.id || user.username)) {
+      syncBroadcastMessagesForUser(user);
+    }
+  }, [user]);
+
   const rawTeams = useLiveCollection('ft_teams') || [];
 
   // Helper to determine the accurate track for any account
@@ -344,6 +351,27 @@ export default function FTChatPage({ user: userProp }) {
     setBroadcastProgress({ current: 0, total: broadcastRecipients.length });
 
     try {
+      // 1. Create Broadcast Campaign record so new/future accounts automatically receive it
+      const campaignPayload = {
+        senderId: String(myId),
+        senderName: myName,
+        senderAvatar: user?.avatarUrl || user?.avatar || null,
+        senderRole: user?.role || 'admin',
+        text: broadcastText.trim(),
+        attachment: broadcastFilePreview ? {
+          name: broadcastFilePreview.name,
+          type: broadcastFilePreview.type,
+          data: broadcastFilePreview.data,
+          isImage: broadcastFilePreview.isImage
+        } : null,
+        targetTrack: broadcastTrack,
+        roleFilter: broadcastRoleFilter,
+        createdAt: new Date().toISOString(),
+        active: true
+      };
+
+      const campaignId = await db.ft_broadcast_campaigns.add(campaignPayload);
+
       let sentCount = 0;
 
       for (let i = 0; i < broadcastRecipients.length; i++) {
@@ -364,6 +392,7 @@ export default function FTChatPage({ user: userProp }) {
           createdAt: new Date().toISOString(),
           isBroadcast: true,
           broadcastTrack: broadcastTrack,
+          broadcastCampaignId: campaignId,
           status: 'unread'
         };
 
@@ -572,10 +601,13 @@ export default function FTChatPage({ user: userProp }) {
       if (confirmAll) {
         try {
           const allMatching = (rawMessages || []).filter(m => 
-            m.isBroadcast && (m.text === msg.text || m.createdAt === msg.createdAt)
+            m.isBroadcast && (m.broadcastCampaignId === msg.broadcastCampaignId || m.text === msg.text || m.createdAt === msg.createdAt)
           );
           for (const m of allMatching) {
             await db.ft_messages.delete(m.id);
+          }
+          if (msg.broadcastCampaignId) {
+            await db.ft_broadcast_campaigns.delete(msg.broadcastCampaignId).catch(() => {});
           }
           alert(`Successfully deleted broadcast message for all ${allMatching.length} recipients.`);
           return;
