@@ -75,17 +75,6 @@ export default function FTDashboard() {
   const userTrack = normalizeTrackKey(user?.registeredTrack || meDoc?.registeredTrack || user?.track) || 'pop_science';
 
   const [selectedTrack, setSelectedTrack] = useState(isCompetitorUser ? userTrack : 'pop_science');
-  const [selectedModuleTrack, setSelectedModuleTrack] = useState(userTrack === 'science_journalism' ? 'science_journalism' : 'pop_science');
-  
-  const allTrackModules = useMemo(() => {
-    const normSelected = normalizeTrackKey(selectedModuleTrack);
-    const filtered = (dynamicWorkshops || []).filter(ws => {
-      const target = normalizeTrackKey(ws.targetTrack || ws.trackKey || 'both');
-      return target === 'both' || target === 'all' || target === normSelected || !ws.targetTrack;
-    });
-    return filtered.sort((a, b) => new Date(a.startDate || '2099-01-01') - new Date(b.startDate || '2099-01-01'));
-  }, [dynamicWorkshops, selectedModuleTrack]);
-
   const [selectedStepId, setSelectedStepId] = useState(1);
   const [openMobileCardId, setOpenMobileCardId] = useState(null);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
@@ -1156,203 +1145,6 @@ export default function FTDashboard() {
           })}
         </div>
 
-        {/* ── COURSE & TRAINING MODULES SECTION ──────────────────────────────── */}
-        <div id="modules-section" className="ft-card" style={{ padding: '2rem', marginTop: '2.5rem', background: '#ffffff', borderRadius: '24px', border: '1.5px solid #e2e8f0', boxShadow: '0 10px 30px rgba(15, 23, 42, 0.04)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div>
-              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <BookOpen size={24} style={{ color: '#be123c' }} /> Course & Training Modules
-              </h2>
-              <p style={{ fontSize: '0.86rem', color: '#64748b', margin: '0.25rem 0 0 0', fontWeight: 600 }}>
-                Access workshop presentations, lecture handouts, and training files ordered chronologically by date.
-              </p>
-            </div>
-
-            {/* 2 Track Selector Buttons with "Your Track 🎯" Indicator */}
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => setSelectedModuleTrack('pop_science')}
-                style={{
-                  padding: '0.65rem 1.15rem', borderRadius: '14px', fontWeight: 900, fontSize: '0.88rem',
-                  border: `2px solid ${selectedModuleTrack === 'pop_science' ? '#be123c' : '#cbd5e1'}`,
-                  background: selectedModuleTrack === 'pop_science' ? 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)' : '#ffffff',
-                  color: selectedModuleTrack === 'pop_science' ? '#ffffff' : '#334155',
-                  cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                  boxShadow: selectedModuleTrack === 'pop_science' ? '0 4px 14px rgba(190, 18, 60, 0.3)' : 'none',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span>🎥 Track 1: Pop Science Videos</span>
-                {userTrack === 'pop_science' && (
-                  <span style={{
-                    fontSize: '0.68rem', fontWeight: 900, padding: '0.15rem 0.5rem', borderRadius: '8px',
-                    background: selectedModuleTrack === 'pop_science' ? '#ffffff' : '#fef2f2',
-                    color: selectedModuleTrack === 'pop_science' ? '#be123c' : '#dc2626',
-                    border: `1px solid ${selectedModuleTrack === 'pop_science' ? '#fecdd3' : '#fca5a5'}`
-                  }}>
-                    Your Track 🎯
-                  </span>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedModuleTrack('science_journalism')}
-                style={{
-                  padding: '0.65rem 1.15rem', borderRadius: '14px', fontWeight: 900, fontSize: '0.88rem',
-                  border: `2px solid ${selectedModuleTrack === 'science_journalism' ? '#be123c' : '#cbd5e1'}`,
-                  background: selectedModuleTrack === 'science_journalism' ? 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)' : '#ffffff',
-                  color: selectedModuleTrack === 'science_journalism' ? '#ffffff' : '#334155',
-                  cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                  boxShadow: selectedModuleTrack === 'science_journalism' ? '0 4px 14px rgba(190, 18, 60, 0.3)' : 'none',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span>📰 Track 2: Science Journalism</span>
-                {userTrack === 'science_journalism' && (
-                  <span style={{
-                    fontSize: '0.68rem', fontWeight: 900, padding: '0.15rem 0.5rem', borderRadius: '8px',
-                    background: selectedModuleTrack === 'science_journalism' ? '#ffffff' : '#fef2f2',
-                    color: selectedModuleTrack === 'science_journalism' ? '#be123c' : '#dc2626',
-                    border: `1px solid ${selectedModuleTrack === 'science_journalism' ? '#fecdd3' : '#fca5a5'}`
-                  }}>
-                    Your Track 🎯
-                  </span>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Module Items List (Ordered Chronologically by Date) */}
-          {allTrackModules.length === 0 ? (
-            <div style={{ padding: '3rem 1.5rem', textAlign: 'center', background: '#f8fafc', borderRadius: '16px', border: '1.5px dashed #cbd5e1', color: '#64748b' }}>
-              <BookOpen size={36} style={{ color: '#cbd5e1', marginBottom: '0.5rem' }} />
-              <div style={{ fontWeight: 800, fontSize: '1rem', color: '#0f172a' }}>No Modules Scheduled for this Track Yet</div>
-              <div style={{ fontSize: '0.82rem', marginTop: '0.25rem' }}>Check back soon as administrators upload training materials and lecture files.</div>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
-              {allTrackModules.map((ws, idx) => {
-                const fileUrl = ws.fileUrl || ws.presentationLink;
-                const targetTrackNorm = normalizeTrackKey(ws.targetTrack || ws.trackKey || 'both');
-                const trackLabel = targetTrackNorm === 'both' || targetTrackNorm === 'all'
-                  ? 'Both Tracks (Track 1 & 2)'
-                  : targetTrackNorm === 'pop_science' ? 'Track 1: Pop Science' : 'Track 2: Science Journalism';
-
-                return (
-                  <div
-                    key={ws.id || idx}
-                    style={{
-                      padding: '1.35rem', borderRadius: '18px', background: '#ffffff',
-                      border: '1.5px solid #e2e8f0', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)',
-                      display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <div>
-                      {/* Header Badges */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.4rem' }}>
-                        <span style={{
-                          fontSize: '0.72rem', fontWeight: 900, padding: '0.2rem 0.6rem', borderRadius: '8px',
-                          background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1'
-                        }}>
-                          {ws.type || 'Workshop'}
-                        </span>
-
-                        <span style={{
-                          fontSize: '0.7rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '8px',
-                          background: targetTrackNorm === 'both' || targetTrackNorm === 'all' ? '#eff6ff' : '#fef2f2',
-                          color: targetTrackNorm === 'both' || targetTrackNorm === 'all' ? '#2563eb' : '#be123c',
-                          border: `1px solid ${targetTrackNorm === 'both' || targetTrackNorm === 'all' ? '#bfdbfe' : '#fecdd3'}`
-                        }}>
-                          {trackLabel}
-                        </span>
-                      </div>
-
-                      {/* Module Date */}
-                      <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.4rem' }}>
-                        <Clock size={13} style={{ color: '#be123c' }} />
-                        {ws.startDate ? new Date(ws.startDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Scheduled Session'}
-                      </div>
-
-                      {/* Module Title */}
-                      <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.5rem 0', lineHeight: 1.35 }}>
-                        {ws.title}
-                      </h3>
-
-                      {/* Speaker / Trainer info */}
-                      {ws.trainerName && (
-                        <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 700, marginBottom: '0.65rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                          <User size={13} style={{ color: '#2563eb' }} /> Speaker: <span style={{ color: '#0f172a' }}>{ws.trainerName}</span>
-                        </div>
-                      )}
-
-                      {/* Description */}
-                      {ws.description && (
-                        <div style={{ fontSize: '0.84rem', color: '#64748b', lineHeight: 1.45, fontWeight: 500 }} dir="auto">
-                          {renderFormattedDescription(ws.description)}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Attached File Card & Open Button */}
-                    <div style={{ paddingTop: '0.85rem', borderTop: '1px dashed #e2e8f0', marginTop: '0.5rem' }}>
-                      {fileUrl ? (
-                        <div style={{
-                          padding: '0.75rem 0.9rem', borderRadius: '14px', background: '#f8fafc',
-                          border: '1.5px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem'
-                        }}>
-                          <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <FileText size={16} style={{ color: '#2563eb', flexShrink: 0 }} />
-                            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {ws.fileName || 'Workshop Presentation Slides.pdf'}
-                            </span>
-                          </div>
-
-                          <a
-                            href={fileUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{
-                              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                              color: '#ffffff', padding: '0.45rem 0.85rem', borderRadius: '10px',
-                              fontSize: '0.78rem', fontWeight: 900, textDecoration: 'none',
-                              display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                              boxShadow: '0 3px 10px rgba(37, 99, 235, 0.25)', flexShrink: 0
-                            }}
-                          >
-                            Open File <ExternalLink size={13} />
-                          </a>
-                        </div>
-                      ) : ws.meetingLink ? (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>Live Session Link</span>
-                          <a
-                            href={ws.meetingLink}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{
-                              background: '#059669', color: '#ffffff', padding: '0.45rem 0.85rem', borderRadius: '10px',
-                              fontSize: '0.78rem', fontWeight: 900, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem'
-                            }}
-                          >
-                            Join Session <ExternalLink size={13} />
-                          </a>
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic', fontWeight: 600, textAlign: 'center' }}>
-                          📄 Presentation material pending admin upload
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
         {/* GRAPHICAL POPUP MODAL WINDOW FOR STEP DETAILS (PORTAL TO BODY) */}
         {isDetailModalOpen && activeStep && createPortal(
           <div
@@ -1572,6 +1364,42 @@ export default function FTDashboard() {
                 {activeStep.details && (
                   <div style={{ fontSize: '1rem', color: '#334155', margin: '0 0 1.75rem 0', maxWidth: '900px', lineHeight: 1.65, fontWeight: 500 }} dir="auto">
                     {renderFormattedDescription(activeStep.details)}
+                  </div>
+                )}
+
+                {/* Attached Workshop File Link inside Step Modal */}
+                {(activeStep.fileUrl || activeStep.presentationLink) && (
+                  <div style={{
+                    margin: '0 0 1.75rem 0', padding: '1rem 1.25rem', borderRadius: '16px',
+                    background: '#eff6ff', border: '1.5px solid #bfdbfe',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <FileText size={20} style={{ color: '#2563eb' }} />
+                      <div>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', color: '#2563eb', letterSpacing: '0.04em' }}>
+                          Workshop Presentation / Material
+                        </div>
+                        <div style={{ fontSize: '0.95rem', fontWeight: 900, color: '#0f172a' }}>
+                          {activeStep.fileName || 'Workshop Presentation & Material File.pdf'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <a
+                      href={activeStep.fileUrl || activeStep.presentationLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                        color: '#ffffff', padding: '0.6rem 1.25rem', borderRadius: '12px',
+                        fontSize: '0.88rem', fontWeight: 900, textDecoration: 'none',
+                        display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
+                        boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)'
+                      }}
+                    >
+                      Open File <ExternalLink size={16} />
+                    </a>
                   </div>
                 )}
 
