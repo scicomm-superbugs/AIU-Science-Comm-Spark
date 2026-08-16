@@ -354,52 +354,62 @@ export default function FTModulesPage() {
       );
     });
 
-    // 4. Track-Specific Default Weeks
+    // 4. Track-Specific Weeks strictly keyed by weekNumber (1, 2, 3, ...)
     const trackDefaultWeeks = DEFAULT_WEEKS_BY_TRACK[normTrack] || DEFAULT_WEEKS_BY_TRACK.pop_science;
-    const weekMap = {};
+    const weekMapByNum = new Map();
 
-    // Initialize with default weeks for this track unless marked deleted
-    trackDefaultWeeks.forEach(w => {
-      const customDoc = customWeekTitles.find(c => 
-        (c.track === normTrack && Number(c.weekNumber) === Number(w.weekNumber)) ||
-        c.id === w.weekKey ||
-        c.weekKey === w.weekKey
+    // Helper to find custom doc for weekNumber
+    const findCustomDocForWeek = (wNum) => {
+      return customWeekTitles.find(c => 
+        (Number(c.weekNumber) === Number(wNum) && (normalizeTrackKey(c.track || normTrack) === normTrack || !c.track)) ||
+        c.id === `${normTrack}_week_${wNum}` ||
+        c.id === `week_${wNum}` ||
+        c.weekKey === `${normTrack}_week_${wNum}` ||
+        c.weekKey === `week_${wNum}`
       );
+    };
 
-      if (customDoc?.deleted) return; // Skip deleted week
+    // 4a. Initialize default weeks
+    trackDefaultWeeks.forEach(w => {
+      const wNum = Number(w.weekNumber);
+      const customDoc = findCustomDocForWeek(wNum);
+      if (customDoc?.deleted) return; // Explicitly deleted by admin
 
-      weekMap[w.weekKey] = {
-        weekNumber: w.weekNumber,
-        weekKey: w.weekKey,
+      weekMapByNum.set(wNum, {
+        weekNumber: wNum,
+        weekKey: `${normTrack}_week_${wNum}`,
         weekTitle: customDoc?.title || w.defaultTitle,
         items: []
-      };
+      });
     });
 
-    // Add any custom added weeks for THIS SPECIFIC TRACK from Firestore
+    // 4b. Add any custom added weeks from Firestore for this track
     customWeekTitles.forEach(c => {
       if (c.deleted) return;
       const cTrack = normalizeTrackKey(c.track || normTrack);
-      if (cTrack !== normTrack) return; // Only process weeks belonging to this track!
+      if (cTrack !== normTrack && c.track) return; // Skip weeks of the other track
 
-      const weekKey = c.weekKey || c.id || `${normTrack}_week_${c.weekNumber}`;
-      if (!weekMap[weekKey]) {
-        weekMap[weekKey] = {
-          weekNumber: Number(c.weekNumber) || 1,
-          weekKey,
-          weekTitle: c.title || `Week ${c.weekNumber}: Learning Modules`,
+      const wNum = Number(c.weekNumber);
+      if (!wNum || isNaN(wNum)) return;
+
+      if (!weekMapByNum.has(wNum)) {
+        weekMapByNum.set(wNum, {
+          weekNumber: wNum,
+          weekKey: `${normTrack}_week_${wNum}`,
+          weekTitle: c.title || `Week ${wNum}: Learning Modules`,
           items: []
-        };
+        });
       } else if (c.title) {
-        weekMap[weekKey].weekTitle = c.title;
+        // If custom doc has a title, update the title on the week
+        weekMapByNum.get(wNum).weekTitle = c.title;
       }
     });
 
-    // 5. Distribute workshops & submissions into this track's week groups
+    // 4c. Distribute workshops & submissions strictly into deduplicated week numbers
     searchFiltered.forEach(item => {
-      let weekNum = item.weekNumber;
+      let weekNum = Number(item.weekNumber);
 
-      // If item has no explicit weekNumber, automatically calculate from date relative to Aug 1
+      // Auto-calculate week from date if none
       if (!weekNum && item.startDate) {
         try {
           const itemDate = new Date(item.startDate);
@@ -415,30 +425,39 @@ export default function FTModulesPage() {
         }
       }
 
-      if (!weekNum) weekNum = 1;
+      if (!weekNum || isNaN(weekNum)) weekNum = 1;
 
-      const weekKey = `${normTrack}_week_${weekNum}`;
-      if (!weekMap[weekKey]) {
-        const customTitleDoc = customWeekTitles.find(c => 
-          (c.track === normTrack && Number(c.weekNumber) === Number(weekNum)) ||
-          c.id === weekKey ||
-          c.weekKey === weekKey
-        );
-        weekMap[weekKey] = {
-          weekNumber: weekNum,
-          weekKey,
-          weekTitle: customTitleDoc?.title || `Week ${weekNum}: Training & Submissions`,
-          items: []
-        };
+      // If the target week was explicitly deleted, fallback to the nearest available active week
+      if (!weekMapByNum.has(weekNum)) {
+        const customDoc = findCustomDocForWeek(weekNum);
+        if (customDoc?.deleted) {
+          const firstAvail = Array.from(weekMapByNum.keys())[0] || 1;
+          weekNum = firstAvail;
+        }
       }
 
-      weekMap[weekKey].items.push(item);
+      // If still not in weekMapByNum (and not deleted), initialize it
+      if (!weekMapByNum.has(weekNum)) {
+        const customDoc = findCustomDocForWeek(weekNum);
+        if (!customDoc?.deleted) {
+          weekMapByNum.set(weekNum, {
+            weekNumber: weekNum,
+            weekKey: `${normTrack}_week_${weekNum}`,
+            weekTitle: customDoc?.title || `Week ${weekNum}: Learning Modules`,
+            items: []
+          });
+        }
+      }
+
+      if (weekMapByNum.has(weekNum)) {
+        weekMapByNum.get(weekNum).items.push(item);
+      }
     });
 
-    // 6. Sort weeks by weekNumber
-    const result = Object.values(weekMap).sort((a, b) => a.weekNumber - b.weekNumber);
+    // Convert map to array and sort by weekNumber (Strict 1-to-1 mapping, no duplicate week numbers!)
+    const result = Array.from(weekMapByNum.values()).sort((a, b) => a.weekNumber - b.weekNumber);
 
-    // 7. Sort items within each week chronologically by date and time
+    // Sort items within each week chronologically by date and time
     result.forEach(w => {
       w.items.sort((a, b) => new Date(a.startDate || 0) - new Date(b.startDate || 0));
     });
@@ -521,17 +540,24 @@ export default function FTModulesPage() {
     if (!editingWeekTitleText.trim()) return;
     setIsSavingWeekTitle(true);
     try {
-      const docId = `${selectedTrack}_week_${weekNumber}`;
+      const wNum = Number(weekNumber);
+      const docId = `${selectedTrack}_week_${wNum}`;
       await db.ft_week_titles.set(docId, {
         id: docId,
         weekKey: docId,
         track: selectedTrack,
-        weekNumber: Number(weekNumber),
+        weekNumber: wNum,
         title: editingWeekTitleText.trim(),
         deleted: false,
         updatedAt: new Date().toISOString(),
         updatedBy: user?.username || user?.email || 'admin'
       });
+
+      // Also delete any legacy un-prefixed key
+      try {
+        await db.ft_week_titles.delete(`week_${wNum}`);
+      } catch {}
+
       setEditingWeekKey(null);
     } catch (err) {
       alert('Failed to update week title: ' + err.message);
@@ -556,12 +582,13 @@ export default function FTModulesPage() {
     if (!newWeekTitle.trim()) return;
     setIsSavingNewWeek(true);
     try {
-      const docId = `${selectedTrack}_week_${newWeekNumber}`;
+      const wNum = Number(newWeekNumber);
+      const docId = `${selectedTrack}_week_${wNum}`;
       await db.ft_week_titles.set(docId, {
         id: docId,
         weekKey: docId,
         track: selectedTrack,
-        weekNumber: Number(newWeekNumber),
+        weekNumber: wNum,
         title: newWeekTitle.trim(),
         deleted: false,
         updatedAt: new Date().toISOString(),
@@ -576,29 +603,40 @@ export default function FTModulesPage() {
     }
   };
 
-  // Handle Deleting a Week from Selected Track
+  // Handle Deleting a Week from Selected Track cleanly
   const handleDeleteWeek = async (weekGroup) => {
     const trackName = selectedTrack === 'pop_science' ? 'Track 1 (Pop Science)' : 'Track 2 (Science Journalism)';
     if (!window.confirm(`Are you sure you want to delete "${weekGroup.weekTitle}" from ${trackName}?`)) return;
 
     try {
-      // Reassign any workshops in this week to week 1 so they are not lost
-      const workshopsInThisWeek = dynamicWorkshops.filter(ws => (Number(ws.weekNumber) || 1) === weekGroup.weekNumber);
+      const wNum = Number(weekGroup.weekNumber);
+
+      // 1. Find all remaining active weeks
+      const remainingWeeks = groupedWeeks.filter(w => w.weekNumber !== wNum);
+      const targetFallbackWeek = remainingWeeks.length > 0 ? remainingWeeks[0].weekNumber : 1;
+
+      // 2. Reassign any workshops in this week to a remaining active week
+      const workshopsInThisWeek = dynamicWorkshops.filter(ws => (Number(ws.weekNumber) || 1) === wNum);
       for (const ws of workshopsInThisWeek) {
-        await db.workshops.update(ws.id, { weekNumber: 1, updatedAt: new Date().toISOString() });
+        await db.workshops.update(ws.id, { weekNumber: targetFallbackWeek, updatedAt: new Date().toISOString() });
       }
 
-      // Mark week as deleted in Firestore for this track
-      const docId = `${selectedTrack}_week_${weekGroup.weekNumber}`;
+      // 3. Mark week as deleted in Firestore for this track
+      const docId = `${selectedTrack}_week_${wNum}`;
       await db.ft_week_titles.set(docId, {
         id: docId,
         weekKey: docId,
         track: selectedTrack,
-        weekNumber: weekGroup.weekNumber,
+        weekNumber: wNum,
         title: weekGroup.weekTitle,
         deleted: true,
         updatedAt: new Date().toISOString()
       });
+
+      // 4. Also delete any legacy un-prefixed key from Firestore
+      try {
+        await db.ft_week_titles.delete(`week_${wNum}`);
+      } catch {}
     } catch (err) {
       alert('Failed to delete week: ' + err.message);
     }
