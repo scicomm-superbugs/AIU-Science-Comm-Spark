@@ -79,20 +79,23 @@ function LinkPreview({ url, isMine }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
+      dir="ltr"
       className={`link-preview-card ${isMine ? 'link-preview-mine' : 'link-preview-other'}`}
       onClick={(e) => e.stopPropagation()}
     >
       {meta.image && (
         <div className="link-preview-image-wrapper">
-          <img src={meta.image} alt="" onError={(e) => { e.target.style.display = 'none'; }} />
+          <img src={meta.image} alt="" onError={(e) => { e.target.parentElement.style.display = 'none'; }} />
         </div>
       )}
       <div className="link-preview-container">
-        <div className="link-preview-icon">
-          <img src={meta.favicon} alt="" onError={(e) => { e.target.style.display = 'none'; }} />
-        </div>
+        {meta.favicon && (
+          <div className="link-preview-icon">
+            <img src={meta.favicon} alt="" onError={(e) => { e.target.style.display = 'none'; }} />
+          </div>
+        )}
         <div className="link-preview-body">
-          <span className="link-preview-domain">{meta.domain}</span>
+          <span className="link-preview-domain" style={{ color: isMine ? '#93c5fd' : '#2563eb' }}>{meta.domain}</span>
           <span className="link-preview-title">{meta.title}</span>
           {meta.description && (
             <span className="link-preview-description">{meta.description}</span>
@@ -109,6 +112,7 @@ function LinkPreview({ url, isMine }) {
 function renderMessageText(text, isMine, accounts) {
   if (!text) return null;
 
+  const isArabic = /[\u0600-\u06FF]/.test(text);
   const parts = text.split(/(https?:\/\/[^\s<>"']+|@\w+)/gi);
   const urls = text.match(/(https?:\/\/[^\s<>"']+)/gi) || [];
   const uniqueUrls = [...new Set(urls)];
@@ -116,13 +120,15 @@ function renderMessageText(text, isMine, accounts) {
   return (
     <>
       <div 
-        dir="auto"
+        dir={isArabic ? 'rtl' : 'ltr'}
         className="ft-chat-bubble-text"
         style={{ 
           wordBreak: 'break-word', 
           whiteSpace: 'pre-wrap', 
-          lineHeight: 1.65,
-          unicodeBidi: 'plaintext'
+          lineHeight: isArabic ? 1.8 : 1.6,
+          textAlign: isArabic ? 'right' : 'left',
+          fontFamily: isArabic ? "'Cairo', 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, sans-serif" : "inherit",
+          fontSize: isArabic ? '0.93rem' : '0.88rem'
         }}
       >
         {parts.map((part, i) => {
@@ -134,6 +140,8 @@ function renderMessageText(text, isMine, accounts) {
                 href={part}
                 target="_blank"
                 rel="noopener noreferrer"
+                dir="ltr"
+                style={{ display: 'inline-block', direction: 'ltr', wordBreak: 'break-all' }}
                 className={`chat-link ${isMine ? 'chat-link-mine' : 'chat-link-other'}`}
                 onClick={(e) => e.stopPropagation()}
               >
@@ -149,10 +157,10 @@ function renderMessageText(text, isMine, accounts) {
                 <strong
                   key={i}
                   style={{
-                    background: isMine ? 'rgba(255, 255, 255, 0.25)' : 'rgba(190, 18, 60, 0.1)',
-                    color: isMine ? '#ffffff' : '#be123c',
-                    padding: '2px 5px',
-                    borderRadius: '4px',
+                    background: isMine ? 'rgba(255, 255, 255, 0.25)' : 'rgba(37, 99, 235, 0.12)',
+                    color: isMine ? '#ffffff' : '#2563eb',
+                    padding: '2px 6px',
+                    borderRadius: '5px',
                     fontWeight: 800
                   }}
                 >
@@ -841,8 +849,8 @@ export default function FTChatPage({ user: userProp }) {
 
                       {unread > 0 && (
                         <span style={{
-                          background: '#be123c', color: '#ffffff', fontSize: '0.68rem',
-                          fontWeight: 900, borderRadius: '9999px', padding: '0.1rem 0.4rem', minWidth: '18px', height: '18px',
+                          background: '#2563eb', color: '#ffffff', fontSize: '0.68rem',
+                          fontWeight: 900, borderRadius: '9999px', padding: '0.1rem 0.45rem', minWidth: '18px', height: '18px',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                         }}>
                           {unread}
@@ -861,202 +869,205 @@ export default function FTChatPage({ user: userProp }) {
         <div className={`ft-chat-area ${mobileShowInbox ? 'ft-mobile-hide-chat' : ''}`} style={{
           flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minWidth: 0, background: '#ffffff'
         }}>
-          
-          {/* Header Bar */}
-          <div style={{
-            padding: '0.75rem 1rem', borderBottom: '1px solid #e2e8f0', background: '#ffffff',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem'
+      
+      {/* Header Bar */}
+      <div style={{
+        padding: '0.75rem 1rem', borderBottom: '1px solid #e2e8f0', background: '#ffffff',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: 1, minWidth: 0 }}>
+          {/* Mobile Back Button */}
+          <button
+            type="button"
+            className="ft-mobile-chat-back-btn"
+            onClick={() => setMobileShowInbox(true)}
+            style={{
+              background: '#f1f5f9', border: '1.5px solid #cbd5e1', borderRadius: '10px',
+              padding: '0.35rem 0.6rem', fontSize: '0.8rem', fontWeight: 800, color: '#334155',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem', flexShrink: 0
+            }}
+          >
+            <ChevronLeft size={16} /> Contacts
+          </button>
+
+          {activeRecipientAcc ? (
+            <img
+              src={activeRecipientAcc?.avatarUrl || activeRecipientAcc?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeRecipientAcc?.username || activeRecipientAcc?.name}`}
+              alt={activeRecipientAcc?.name}
+              style={{
+                width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0,
+                border: `2px solid ${FT_ROLE_COLORS[activeRecipientAcc?.role] || '#2563eb'}`
+              }}
+            />
+          ) : (
+            <div style={{
+              width: '38px', height: '38px', borderRadius: '50%', background: '#eff6ff',
+              color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+            }}>
+              💬
+            </div>
+          )}
+
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+              <span>{activeRecipient === 'global' ? 'Global Team Discussion' : (activeRecipientAcc?.name || 'Private Chat')}</span>
+              {activeRecipient !== 'global' && activeRecipientAcc && (
+                <span style={{
+                  fontSize: '0.68rem', fontWeight: 800, padding: '0.12rem 0.5rem',
+                  borderRadius: '9999px', background: `${FT_ROLE_COLORS[activeRecipientAcc?.role] || '#2563eb'}18`,
+                  color: FT_ROLE_COLORS[activeRecipientAcc?.role] || '#2563eb',
+                  border: `1px solid ${FT_ROLE_COLORS[activeRecipientAcc?.role] || '#2563eb'}40`
+                }}>
+                  {getUserRoleLabel(activeRecipientAcc)}
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {activeRecipient === 'global'
+                ? 'All judges, mentors, administrators, and competitors'
+                : (getCleanAcademicTitle(activeRecipientAcc) || activeRecipientAcc?.university || 'Direct 1-on-1 Consultation')}
+            </div>
+          </div>
+        </div>
+
+        {/* Status indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+          <span style={{
+            background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0',
+            padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: 800,
+            display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: 1, minWidth: 0 }}>
-              {/* Mobile Back Button */}
-              <button
-                type="button"
-                className="ft-mobile-chat-back-btn"
-                onClick={() => setMobileShowInbox(true)}
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#16a34a' }} />
+            Active Thread
+          </span>
+        </div>
+      </div>
+
+      {/* Messages Scroll Viewport */}
+      <div style={{
+        flex: 1, overflowY: 'auto', padding: '1rem',
+        background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)',
+        display: 'flex', flexDirection: 'column', gap: '0.85rem'
+      }}>
+        {currentMessages.length === 0 ? (
+          <div style={{ margin: 'auto', textAlign: 'center', maxWidth: '420px', padding: '2rem 1rem' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>💬</div>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.3rem 0' }}>
+              {activeRecipient === 'global' ? 'Welcome to Global Team Chat' : `Start your inquiry with ${activeRecipientAcc?.name || 'User'}`}
+            </h3>
+            <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
+              Ask questions regarding stage deliverables, evaluation criteria, or guidance. Share links, images, or documents.
+            </p>
+          </div>
+        ) : (
+          currentMessages.map(msg => {
+            const isMe = String(msg.senderId) === String(myId);
+            const isArabic = /[\u0600-\u06FF]/.test(msg.text || '');
+
+            return (
+              <div
+                key={msg.id}
                 style={{
-                  background: '#f1f5f9', border: '1.5px solid #cbd5e1', borderRadius: '10px',
-                  padding: '0.35rem 0.6rem', fontSize: '0.8rem', fontWeight: 800, color: '#334155',
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem', flexShrink: 0
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: isMe ? 'flex-end' : 'flex-start',
+                  maxWidth: '85%', alignSelf: isMe ? 'flex-end' : 'flex-start'
                 }}
               >
-                <ChevronLeft size={16} /> Contacts
-              </button>
-
-              {activeRecipientAcc ? (
-                <img
-                  src={activeRecipientAcc?.avatarUrl || activeRecipientAcc?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeRecipientAcc?.username || activeRecipientAcc?.name}`}
-                  alt={activeRecipientAcc?.name}
-                  style={{
-                    width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0,
-                    border: `2px solid ${FT_ROLE_COLORS[activeRecipientAcc?.role] || '#2563eb'}`
-                  }}
-                />
-              ) : (
                 <div style={{
-                  width: '38px', height: '38px', borderRadius: '50%', background: '#f1f5f9',
-                  color: '#be123c', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                  fontSize: '0.7rem', color: '#64748b', fontWeight: 700,
+                  marginBottom: '0.15rem', padding: '0 0.3rem'
                 }}>
-                  💬
+                  {isMe ? 'You' : (msg.senderName || 'Staff')}
                 </div>
-              )}
 
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.2 }}>
-                  {activeRecipientAcc ? (activeRecipientAcc.name || activeRecipientAcc.username) : 'Select a Conversation'}
-                </h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
-                  {activeRecipientAcc && (
-                    <span style={{
-                      fontSize: '0.62rem', fontWeight: 800, padding: '0.1rem 0.4rem', borderRadius: '6px', flexShrink: 0,
-                      background: `${FT_ROLE_COLORS[activeRecipientAcc.role] || '#2563eb'}15`,
-                      color: FT_ROLE_COLORS[activeRecipientAcc.role] || '#2563eb',
-                      border: `1px solid ${FT_ROLE_COLORS[activeRecipientAcc.role] || '#2563eb'}40`,
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {getUserRoleLabel(activeRecipientAcc)}
-                    </span>
-                  )}
-                  <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
-                    {activeRecipientAcc ? (getCleanAcademicTitle(activeRecipientAcc) || activeRecipientAcc?.department || 'Competition Staff') : 'Select a contact'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <span
-              className="ft-desktop-only-badge"
-              style={{
-                fontSize: '0.72rem', color: '#059669', background: '#ecfdf5',
-                padding: '0.2rem 0.55rem', borderRadius: '8px', border: '1.5px solid #a7f3d0',
-                fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap', flexShrink: 0
-              }}
-            >
-              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', flexShrink: 0 }} /> Active Thread
-            </span>
-          </div>
-
-          {/* Messages Scroll Feed */}
-          <div style={{
-            flex: 1, minHeight: 0, overflowY: 'auto', padding: '1.15rem 1.25rem',
-            background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)',
-            display: 'flex', flexDirection: 'column', gap: '0.85rem'
-          }}>
-            {currentMessages.length === 0 ? (
-              <div style={{ margin: 'auto', textAlign: 'center', maxWidth: '420px', padding: '2rem 1rem' }}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>💬</div>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', margin: '0 0 0.3rem 0' }}>
-                  {activeRecipient === 'global' ? 'Welcome to Global Team Chat' : `Start your inquiry with ${activeRecipientAcc?.name || 'User'}`}
-                </h3>
-                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
-                  Ask questions regarding stage deliverables, evaluation criteria, or guidance. Share links, images, or documents.
-                </p>
-              </div>
-            ) : (
-              currentMessages.map(msg => {
-                const isMe = String(msg.senderId) === String(myId);
-
-                return (
-                  <div
-                    key={msg.id}
-                    style={{
-                      display: 'flex', flexDirection: 'column',
-                      alignItems: isMe ? 'flex-end' : 'flex-start',
-                      maxWidth: '85%', alignSelf: isMe ? 'flex-end' : 'flex-start'
-                    }}
-                  >
-                    <div style={{
-                      fontSize: '0.7rem', color: '#64748b', fontWeight: 700,
-                      marginBottom: '0.15rem', padding: '0 0.3rem'
-                    }}>
-                      {isMe ? 'You' : (msg.senderName || 'Staff')}
-                    </div>
-
-                    <div
-                      dir="auto"
-                      style={{
-                        padding: '0.75rem 1rem', borderRadius: '16px',
-                        borderBottomRightRadius: isMe ? '3px' : '16px',
-                        borderBottomLeftRadius: isMe ? '16px' : '3px',
-                        background: isMe
-                          ? 'linear-gradient(135deg, #be123c 0%, #9f1239 100%)'
-                          : '#ffffff',
-                        color: isMe ? '#ffffff' : '#0f172a',
-                        border: isMe ? 'none' : '1.5px solid #e2e8f0',
-                        boxShadow: isMe
-                          ? '0 4px 14px rgba(190, 18, 60, 0.22)'
-                          : '0 2px 8px rgba(0,0,0,0.03)',
-                        fontSize: '0.88rem', lineHeight: 1.6, fontWeight: 500,
-                        whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                        textAlign: 'start'
-                      }}
-                    >
-                      {/* Message Attachment */}
-                      {msg.attachment && (
-                        <div style={{ marginBottom: msg.text ? '0.6rem' : 0 }}>
-                          {msg.attachment.isImage ? (
-                            <img
-                              src={msg.attachment.data}
-                              alt={msg.attachment.name}
-                              onClick={() => openLightbox(msg.attachment.data, msg.attachment.name)}
-                              style={{
-                                maxWidth: '100%', maxHeight: '220px', borderRadius: '12px',
-                                cursor: 'pointer', border: '1px solid rgba(0,0,0,0.1)'
-                              }}
-                            />
-                          ) : (
-                            <a
-                              href={msg.attachment.data}
-                              download={msg.attachment.name}
-                              style={{
-                                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                background: isMe ? 'rgba(255,255,255,0.2)' : '#f1f5f9',
-                                color: isMe ? '#ffffff' : '#0f172a', padding: '0.5rem 0.75rem',
-                                borderRadius: '10px', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 700
-                              }}
-                            >
-                              <FileText size={18} />
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {msg.attachment.name}
-                              </span>
-                              <Download size={14} />
-                            </a>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Render text with clickable links & mentions */}
-                      {renderMessageText(msg.text, isMe, allAccounts)}
-                    </div>
-
-                    <div style={{
-                      fontSize: '0.66rem', color: '#94a3b8', fontWeight: 600,
-                      marginTop: '0.2rem', padding: '0 0.3rem', display: 'flex', alignItems: 'center', gap: '0.35rem'
-                    }}>
-                      <span>{new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                      {isMe && <Check size={12} style={{ color: '#be123c' }} />}
-                      {(isMe || isAdmin) && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteMessage(msg)}
-                          title={msg.isBroadcast ? "Delete broadcast message" : "Delete message"}
+                <div
+                  dir={isArabic ? 'rtl' : 'ltr'}
+                  style={{
+                    padding: '0.9rem 1.2rem',
+                    borderRadius: '16px',
+                    borderBottomRightRadius: isMe ? '3px' : '16px',
+                    borderBottomLeftRadius: isMe ? '16px' : '3px',
+                    background: '#ffffff',
+                    color: '#0f172a',
+                    border: '1.5px solid #cbd5e1',
+                    boxShadow: '0 4px 14px rgba(0, 0, 0, 0.04)',
+                    fontSize: isArabic ? '0.93rem' : '0.88rem',
+                    lineHeight: isArabic ? 1.8 : 1.6,
+                    fontWeight: 500,
+                    fontFamily: isArabic ? "'Cairo', 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, sans-serif" : "inherit",
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    textAlign: isArabic ? 'right' : 'left'
+                  }}
+                >
+                  {/* Message Attachment */}
+                  {msg.attachment && (
+                    <div style={{ marginBottom: msg.text ? '0.6rem' : 0 }}>
+                      {msg.attachment.isImage ? (
+                        <img
+                          src={msg.attachment.data}
+                          alt={msg.attachment.name}
+                          onClick={() => openLightbox(msg.attachment.data, msg.attachment.name)}
                           style={{
-                            background: 'none', border: 'none', padding: '0 2px',
-                            color: '#94a3b8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
-                            transition: 'color 0.15s ease', marginLeft: '0.2rem'
+                            maxWidth: '100%', maxHeight: '220px', borderRadius: '12px',
+                            cursor: 'pointer', border: '1px solid rgba(0,0,0,0.1)'
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = '#dc2626'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; }}
+                        />
+                      ) : (
+                        <a
+                          href={msg.attachment.data}
+                          download={msg.attachment.name}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            background: '#f1f5f9',
+                            color: '#0f172a', padding: '0.5rem 0.75rem',
+                            borderRadius: '10px', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 700,
+                            border: '1px solid #e2e8f0'
+                          }}
                         >
-                          <Trash2 size={11} />
-                        </button>
+                          <FileText size={18} style={{ color: '#2563eb' }} />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {msg.attachment.name}
+                          </span>
+                          <Download size={14} />
+                        </a>
                       )}
                     </div>
-                  </div>
-                );
-              })
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+                  )}
+
+                  {/* Render text with clickable links & mentions */}
+                  {renderMessageText(msg.text, isMe, allAccounts)}
+                </div>
+
+                <div style={{
+                  fontSize: '0.66rem', color: '#94a3b8', fontWeight: 600,
+                  marginTop: '0.2rem', padding: '0 0.3rem', display: 'flex', alignItems: 'center', gap: '0.35rem'
+                }}>
+                  <span>{new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  {isMe && <Check size={12} style={{ color: '#2563eb' }} />}
+                  {(isMe || isAdmin) && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteMessage(msg)}
+                      title={msg.isBroadcast ? "Delete broadcast message" : "Delete message"}
+                      style={{
+                        background: 'none', border: 'none', padding: '0 2px',
+                        color: '#94a3b8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
+                        transition: 'color 0.15s ease', marginLeft: '0.2rem'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = '#dc2626'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; }}
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
+      </div>
 
           {/* Attachment Preview Box before sending */}
           {filePreview && (
@@ -1189,11 +1200,11 @@ export default function FTChatPage({ user: userProp }) {
                 disabled={!text.trim() && !filePreview}
                 style={{
                   background: (text.trim() || filePreview)
-                    ? 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)'
+                    ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)'
                     : '#cbd5e1',
                   color: '#ffffff', border: 'none', width: '42px', height: '42px', borderRadius: '12px',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: (text.trim() || filePreview) ? 'pointer' : 'not-allowed',
-                  boxShadow: (text.trim() || filePreview) ? '0 4px 14px rgba(190, 18, 60, 0.3)' : 'none',
+                  boxShadow: (text.trim() || filePreview) ? '0 4px 14px rgba(37, 99, 235, 0.3)' : 'none',
                   transition: 'all 0.2s ease', flexShrink: 0
                 }}
               >
@@ -1643,15 +1654,15 @@ export default function FTChatPage({ user: userProp }) {
                     <img
                       src={user?.avatarUrl || user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || myName}`}
                       alt={myName}
-                      style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #be123c', flexShrink: 0 }}
+                      style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #2563eb', flexShrink: 0 }}
                     />
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                       <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.25rem' }}>
-                        {myName} <span style={{ fontSize: '0.68rem', color: '#be123c', fontWeight: 700 }}>({FT_ROLE_LABELS[user?.role] || 'Staff'})</span>
+                        {myName} <span style={{ fontSize: '0.68rem', color: '#2563eb', fontWeight: 700 }}>({FT_ROLE_LABELS[user?.role] || 'Staff'})</span>
                       </div>
 
                       <div
-                        dir="auto"
+                        dir={/[\u0600-\u06FF]/.test(broadcastText || '') ? 'rtl' : 'ltr'}
                         className="ft-chat-bubble-text"
                         style={{
                           background: '#ffffff',
@@ -1661,14 +1672,15 @@ export default function FTChatPage({ user: userProp }) {
                           borderBottomLeftRadius: '3px',
                           padding: '0.85rem 1.1rem',
                           boxShadow: '0 4px 14px rgba(0,0,0,0.04)',
-                          fontSize: '0.88rem',
-                          lineHeight: 1.65,
+                          fontSize: /[\u0600-\u06FF]/.test(broadcastText || '') ? '0.93rem' : '0.88rem',
+                          lineHeight: /[\u0600-\u06FF]/.test(broadcastText || '') ? 1.8 : 1.6,
+                          fontFamily: /[\u0600-\u06FF]/.test(broadcastText || '') ? "'Cairo', 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, sans-serif" : "inherit",
+                          textAlign: /[\u0600-\u06FF]/.test(broadcastText || '') ? 'right' : 'left',
                           maxWidth: '100%',
                           width: '100%',
                           boxSizing: 'border-box',
                           wordBreak: 'break-word',
-                          whiteSpace: 'pre-wrap',
-                          unicodeBidi: 'plaintext'
+                          whiteSpace: 'pre-wrap'
                         }}
                       >
                         {/* Attachment Preview */}

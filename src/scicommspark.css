@@ -4057,21 +4057,17 @@ body.ft-modal-open {
   transition: all 0.2s ease;
   max-width: 100%;
 }
-.link-preview-mine {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #ffffff;
-}
+.link-preview-mine,
 .link-preview-other {
-  background: #f8fafc;
-  border: 1.5px solid #cbd5e1;
-  color: #0f172a;
+  background: #f8fafc !important;
+  border: 1.5px solid #e2e8f0 !important;
+  color: #0f172a !important;
 }
 .link-preview-image-wrapper {
   width: 100%;
-  max-height: 160px;
+  max-height: 120px;
   overflow: hidden;
-  background: #000;
+  background: #e2e8f0;
 }
 .link-preview-image-wrapper img {
   width: 100%;
@@ -4100,7 +4096,8 @@ body.ft-modal-open {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  opacity: 0.8;
+  opacity: 0.85;
+  color: #2563eb !important;
 }
 .link-preview-title {
   font-size: 0.82rem;
@@ -4108,6 +4105,7 @@ body.ft-modal-open {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #0f172a !important;
 }
 .link-preview-description {
   font-size: 0.74rem;
@@ -4116,29 +4114,25 @@ body.ft-modal-open {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  color: #475569 !important;
 }
 .link-preview-url {
   font-size: 0.68rem;
-  opacity: 0.7;
+  opacity: 0.75;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #64748b !important;
 }
-.chat-link-mine {
-  color: #ffffff;
-  text-decoration: underline;
-  font-weight: 700;
-}
+.chat-link-mine,
 .chat-link-other {
-  color: #be123c;
-  text-decoration: underline;
-  font-weight: 700;
+  color: #2563eb !important;
+  text-decoration: underline !important;
+  font-weight: 700 !important;
 }
 .ft-chat-bubble-text {
   white-space: pre-wrap !important;
   word-break: break-word !important;
-  line-height: 1.65 !important;
-  unicode-bidi: plaintext !important;
   font-family: inherit;
 }
 
