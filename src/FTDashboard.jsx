@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Sparkles, Video, Newspaper, Calendar, Clock, ArrowRight, Award, CheckCircle2, Play, BookOpen, Layers, GitCommit, Zap, Mic, Users, User, Globe, Mail, ChevronRight, FileText, Check, Radio, ExternalLink, Pencil, Upload, X } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
-import { db, useLiveCollection } from './db';
+import { db, useLiveCollection, syncBroadcastMessagesForUser } from './db';
 import { COMPETITION_TRACKS, DEFAULT_JUDGING_CRITERIA, normalizeTrackKey, formatUnifiedDate, getCleanAcademicTitle, renderFormattedDescription } from './ftConstants';
 import { CanvaTransformBox, EditableLogo } from './Landing';
 import WorkshopManager from './WorkshopManager';
@@ -28,6 +28,13 @@ export default function FTDashboard() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [modalStep, setModalStep] = useState(null);
   const modalTimerRef = useRef(null);
+
+  // Sync any historical broadcasts automatically for current user
+  useEffect(() => {
+    if (user && (user.id || user.username)) {
+      syncBroadcastMessagesForUser(user).catch(() => {});
+    }
+  }, [user]);
 
   // Helper to handle step clicks: animate laser line first, then pop up modal window
   const handleStepClick = (stepId) => {

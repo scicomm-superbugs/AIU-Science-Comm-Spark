@@ -87,11 +87,16 @@ function getItemColorTheme(item) {
 
 /**
  * Format exact date and time cleanly without duplicated start/end times
- * e.g. "Thu, Aug 6, 2026 • 5:00 PM"
+ * e.g. "Thu, Aug 13, 2026 • 5:00 PM" or "Thu, Aug 13, 2026 • 5:00 PM - 7:00 PM"
  */
 function formatExactDateTime(startStr, endStr) {
   if (!startStr) return null;
-  const d = new Date(startStr);
+  let str = String(startStr).trim();
+  const hasExplicitTime = str.includes('T') || str.includes(':') || str.includes(' ');
+  if (!hasExplicitTime && /^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    str = `${str}T17:00:00`;
+  }
+  const d = new Date(str.replace(' ', 'T'));
   if (isNaN(d.getTime())) return startStr;
 
   const dateFormatted = d.toLocaleDateString('en-US', {
@@ -101,15 +106,18 @@ function formatExactDateTime(startStr, endStr) {
     year: 'numeric'
   });
 
-  const hasTime = String(startStr).includes('T') || String(startStr).includes(':');
-  const timeFormatted = hasTime ? d.toLocaleTimeString('en-US', {
+  const timeFormatted = d.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true
-  }) : '';
+  });
 
-  if (endStr && hasTime) {
-    const endD = new Date(endStr);
+  if (endStr) {
+    let endS = String(endStr).trim();
+    if (!endS.includes('T') && !endS.includes(':') && /^\d{4}-\d{2}-\d{2}$/.test(endS)) {
+      endS = `${endS}T19:00:00`;
+    }
+    const endD = new Date(endS.replace(' ', 'T'));
     if (!isNaN(endD.getTime())) {
       const endTime = endD.toLocaleTimeString('en-US', {
         hour: 'numeric',
@@ -122,7 +130,7 @@ function formatExactDateTime(startStr, endStr) {
     }
   }
 
-  return timeFormatted ? `${dateFormatted} • ${timeFormatted}` : dateFormatted;
+  return `${dateFormatted} • ${timeFormatted}`;
 }
 
 /**
@@ -175,8 +183,8 @@ function compareModuleItems(a, b) {
     }
   }
 
-  const timeA = rawDateA ? new Date(rawDateA).getTime() : 0;
-  const timeB = rawDateB ? new Date(rawDateB).getTime() : 0;
+  const timeA = rawDateA ? new Date(rawDateA.replace(' ', 'T')).getTime() : 0;
+  const timeB = rawDateB ? new Date(rawDateB.replace(' ', 'T')).getTime() : 0;
   return timeA - timeB;
 }
 
@@ -186,11 +194,13 @@ function compareModuleItems(a, b) {
 function isEventPassed(startStr, endStr) {
   if (!startStr) return false;
   try {
-    const targetDate = endStr ? new Date(endStr) : new Date(startStr);
-    if (isNaN(targetDate.getTime())) return false;
-    if (!String(startStr).includes('T') && !String(startStr).includes(':')) {
-      targetDate.setHours(23, 59, 59, 999);
+    let checkStr = endStr || startStr;
+    let str = String(checkStr).trim();
+    if (!str.includes('T') && !str.includes(':') && /^\d{4}-\d{2}-\d{2}$/.test(str)) {
+      str = `${str}T23:59:59`;
     }
+    const targetDate = new Date(str.replace(' ', 'T'));
+    if (isNaN(targetDate.getTime())) return false;
     return new Date() > targetDate;
   } catch {
     return false;
@@ -290,6 +300,22 @@ const TRACK_STAGE_SUBMISSIONS = {
   ]
 };
 
+// Default Weekly Module Titles per Track
+const DEFAULT_TRACK_WEEKS = {
+  pop_science: [
+    { weekNumber: 1, title: 'Week 1: Foundations & Competition Orientation' },
+    { weekNumber: 2, title: 'Week 2: Scriptwriting & Scientific Storytelling' },
+    { weekNumber: 3, title: 'Week 3: On-Camera Delivery, Voice Acting & Mobile Editing' },
+    { weekNumber: 4, title: 'Week 4: Advanced Visuals & Stage Performance' }
+  ],
+  science_journalism: [
+    { weekNumber: 1, title: 'Week 1: Foundations & Competition Orientation' },
+    { weekNumber: 2, title: 'Week 2: Scriptwriting & Scientific Storytelling' },
+    { weekNumber: 3, title: 'Week 3: Interview Techniques, News Writing & Investigative Methods' },
+    { weekNumber: 4, title: 'Week 4: Feature Article Publishing & Stage Interview' }
+  ]
+};
+
 export default function FTModulesPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -333,6 +359,26 @@ export default function FTModulesPage() {
   const [newWeekNumber, setNewWeekNumber] = useState(1);
   const [newWeekTitle, setNewWeekTitle] = useState('');
   const [isSavingNewWeek, setIsSavingNewWeek] = useState(false);
+
+  // Material (Workshop/Resource/File) Add & Edit Modal State
+  const [showMaterialModal, setShowMaterialModal] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState(null);
+  const [materialFormData, setMaterialFormData] = useState({
+    id: '',
+    title: '',
+    type: 'Workshop',
+    trainerName: '',
+    targetTrack: 'both',
+    assignedWeek: 1,
+    startDate: '',
+    endDate: '',
+    description: '',
+    fileUrl: '',
+    fileName: '',
+    meetingLink: ''
+  });
+  const [isSavingMaterial, setIsSavingMaterial] = useState(false);
+  const [isDeletingMaterial, setIsDeletingMaterial] = useState(false);
 
   // Add Content / Workshop / File / Submission Picker Modal State
   const [pickerModalWeek, setPickerModalWeek] = useState(null);
@@ -492,27 +538,51 @@ export default function FTModulesPage() {
     const normTrack = selectedTrack === 'science_journalism' ? 'science_journalism' : 'pop_science';
     const weekMapByNum = new Map();
 
-    // Only load modules that are explicitly saved in ft_week_titles FOR THIS SPECIFIC TRACK
+    // 1. Pre-populate default modules for this track
+    const defaultList = DEFAULT_TRACK_WEEKS[normTrack] || DEFAULT_TRACK_WEEKS.pop_science;
+    defaultList.forEach(defW => {
+      weekMapByNum.set(defW.weekNumber, {
+        weekNumber: defW.weekNumber,
+        weekKey: `${normTrack}_week_${defW.weekNumber}`,
+        weekTitle: defW.title,
+        items: []
+      });
+    });
+
+    // 2. Load custom modules and custom titles explicitly saved in ft_week_titles FOR THIS TRACK
     customWeekTitles.forEach(c => {
-      if (c.deleted) return;
       const cTrack = normalizeTrackKey(c.track || normTrack);
       if (cTrack !== normTrack) return; // Strict track isolation!
 
       const wNum = Number(c.weekNumber);
       if (!wNum || isNaN(wNum)) return;
 
+      if (c.deleted) {
+        weekMapByNum.delete(wNum);
+        return;
+      }
+
       weekMapByNum.set(wNum, {
         weekNumber: wNum,
         weekKey: `${normTrack}_week_${wNum}`,
-        weekTitle: c.title || `Module ${wNum}`,
+        weekTitle: c.title || `Week ${wNum}: Module ${wNum}`,
         items: []
       });
     });
 
-    // Distribute items that are explicitly assigned to this track's modules
+    // 3. Distribute items that are explicitly assigned to this track's modules
     allTrackAvailableItems.forEach(item => {
       const wNum = Number(item.weekNumber);
-      if (wNum > 0 && weekMapByNum.has(wNum)) {
+      if (wNum > 0) {
+        if (!weekMapByNum.has(wNum)) {
+          weekMapByNum.set(wNum, {
+            weekNumber: wNum,
+            weekKey: `${normTrack}_week_${wNum}`,
+            weekTitle: `Week ${wNum}: Module ${wNum}`,
+            items: []
+          });
+        }
+
         // Apply search query filter if typed
         if (searchQuery) {
           const q = searchQuery.toLowerCase();
@@ -539,6 +609,156 @@ export default function FTModulesPage() {
 
     return result;
   }, [customWeekTitles, allTrackAvailableItems, selectedTrack, searchQuery]);
+
+  // ── MATERIAL / WORKSHOP ADD & EDIT HANDLERS (ADMIN / TRAINER) ─────────
+  const handleOpenAddMaterialModal = (targetWeekNum = 1) => {
+    setEditingMaterial(null);
+    setMaterialFormData({
+      id: '',
+      title: '',
+      type: 'Workshop',
+      trainerName: '',
+      targetTrack: selectedTrack,
+      assignedWeek: targetWeekNum || 1,
+      startDate: '',
+      endDate: '',
+      description: '',
+      fileUrl: '',
+      fileName: '',
+      meetingLink: ''
+    });
+    setShowMaterialModal(true);
+  };
+
+  const handleOpenEditMaterialModal = (item, currentWeekNum) => {
+    setEditingMaterial(item);
+    setMaterialFormData({
+      id: item.id,
+      title: item.title || '',
+      type: item.type || 'Workshop',
+      trainerName: item.speakerName || item.trainerName || '',
+      targetTrack: item.targetTrack || selectedTrack,
+      assignedWeek: currentWeekNum || item.weekNumber || item.currentTrackWeek || 1,
+      startDate: item.startDate || '',
+      endDate: item.endDate || '',
+      description: item.description || '',
+      fileUrl: item.fileUrl || '',
+      fileName: item.fileName || '',
+      meetingLink: item.meetingLink || ''
+    });
+    setShowMaterialModal(true);
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File is larger than 5MB. For large documents, please paste a direct cloud link (Google Drive / OneDrive / Dropbox) in the File URL field.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setMaterialFormData(prev => ({
+        ...prev,
+        fileUrl: reader.result,
+        fileName: file.name
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveMaterial = async (e) => {
+    if (e) e.preventDefault();
+    if (!materialFormData.title.trim()) {
+      alert('Please enter a title for this material / workshop.');
+      return;
+    }
+    setIsSavingMaterial(true);
+    try {
+      const isNew = !materialFormData.id;
+      const normTrack = materialFormData.targetTrack || selectedTrack;
+      const wNum = Number(materialFormData.assignedWeek) || 0;
+
+      const payload = {
+        title: materialFormData.title.trim(),
+        type: materialFormData.type || 'Workshop',
+        trainerName: materialFormData.trainerName.trim(),
+        speakerName: materialFormData.trainerName.trim(),
+        targetTrack: normTrack,
+        startDate: materialFormData.startDate || '',
+        endDate: materialFormData.endDate || materialFormData.startDate || '',
+        description: materialFormData.description.trim(),
+        fileUrl: materialFormData.fileUrl.trim(),
+        fileName: materialFormData.fileName.trim() || (materialFormData.fileUrl ? 'Workshop_Materials_Presentation.pdf' : ''),
+        meetingLink: materialFormData.meetingLink.trim(),
+        updatedAt: new Date().toISOString()
+      };
+
+      if (normTrack === 'pop_science' || normTrack === 'both') {
+        payload.popScienceWeek = wNum;
+      }
+      if (normTrack === 'science_journalism' || normTrack === 'both') {
+        payload.scienceJournalismWeek = wNum;
+      }
+
+      let savedId = materialFormData.id;
+      if (isNew) {
+        payload.createdAt = new Date().toISOString();
+        savedId = await db.workshops.add(payload);
+      } else {
+        await db.workshops.update(materialFormData.id, payload);
+      }
+
+      // Also update track assignment in ft_module_items
+      if (savedId) {
+        if (normTrack === 'pop_science' || normTrack === 'both') {
+          const docId = `pop_science_${savedId}`;
+          await db.ft_module_items.set(docId, {
+            id: docId,
+            track: 'pop_science',
+            itemId: savedId,
+            weekNumber: wNum,
+            updatedAt: new Date().toISOString()
+          });
+        }
+        if (normTrack === 'science_journalism' || normTrack === 'both') {
+          const docId = `science_journalism_${savedId}`;
+          await db.ft_module_items.set(docId, {
+            id: docId,
+            track: 'science_journalism',
+            itemId: savedId,
+            weekNumber: wNum,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      }
+
+      setShowMaterialModal(false);
+      setEditingMaterial(null);
+    } catch (err) {
+      alert('Failed to save material: ' + err.message);
+    } finally {
+      setIsSavingMaterial(false);
+    }
+  };
+
+  const handleDeleteMaterial = async (item) => {
+    if (!window.confirm(`Are you sure you want to delete "${item.title}"? This cannot be undone.`)) return;
+    setIsDeletingMaterial(true);
+    try {
+      await db.workshops.delete(item.id);
+      try {
+        await db.ft_module_items.delete(`pop_science_${item.id}`);
+        await db.ft_module_items.delete(`science_journalism_${item.id}`);
+      } catch {}
+      setShowMaterialModal(false);
+      setEditingMaterial(null);
+    } catch (err) {
+      alert('Failed to delete material: ' + err.message);
+    } finally {
+      setIsDeletingMaterial(false);
+    }
+  };
 
   // ── DRAG AND DROP HANDLERS ACROSS WEEKS (TRACK-SCOPED) ──────────────
   const handleDragStart = (e, item) => {
@@ -837,7 +1057,7 @@ export default function FTModulesPage() {
             </p>
           </div>
 
-          {/* Action Buttons & Controls: Add Module, Collapse, Reset */}
+          {/* Action Buttons & Controls: Add Material, Add Module, Collapse, Reset */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             {groupedWeeks.length > 0 && (
               <button
@@ -850,7 +1070,7 @@ export default function FTModulesPage() {
                   transition: 'all 0.2s ease'
                 }}
               >
-                <Layers size={16} /> {Object.keys(collapsedWeeks).length > 0 ? 'Expand All' : 'Collapse All'}
+                <Layers size={16} /> {Object.keys(collapsedWeeks).length > 0 ? 'Expand All Weeks' : 'Collapse All Weeks'}
               </button>
             )}
 
@@ -858,16 +1078,30 @@ export default function FTModulesPage() {
               <>
                 <button
                   type="button"
-                  onClick={handleOpenAddWeekModal}
+                  onClick={() => handleOpenAddMaterialModal(1)}
                   style={{
-                    padding: '0.65rem 1.25rem', borderRadius: '12px',
+                    padding: '0.65rem 1.35rem', borderRadius: '12px',
                     background: 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
                     color: '#ffffff', fontWeight: 900, fontSize: '0.88rem', border: 'none',
                     cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
                     boxShadow: '0 4px 16px rgba(190, 18, 60, 0.35)'
                   }}
                 >
-                  <Plus size={18} /> + Add Module to {selectedTrack === 'pop_science' ? 'Track 1' : 'Track 2'}
+                  <Plus size={18} /> + Add Module Material
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleOpenAddWeekModal}
+                  style={{
+                    padding: '0.65rem 1.15rem', borderRadius: '12px',
+                    background: '#ffffff', border: '1.5px solid #cbd5e1',
+                    color: '#334155', fontWeight: 800, fontSize: '0.85rem',
+                    cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <FolderPlus size={16} /> + New Week
                 </button>
 
                 {groupedWeeks.length > 0 && (
@@ -1509,7 +1743,7 @@ export default function FTModulesPage() {
                                   </div>
 
                                   {/* Exact Date & Time, Speaker Subtitle */}
-                                  <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
+                                  <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
                                     {item.speakerName && (
                                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                                         <User size={13} style={{ color: theme.accentColor }} />
@@ -1519,11 +1753,18 @@ export default function FTModulesPage() {
 
                                     {formattedTime && (
                                       <span style={{
-                                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                                        color: isPassed ? '#94a3b8' : theme.accentColor, fontWeight: 800,
-                                        textDecoration: isPassed ? 'line-through' : 'none'
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                                        color: isPassed ? '#64748b' : theme.accentColor,
+                                        fontWeight: 800,
+                                        fontSize: '0.8rem',
+                                        background: isPassed ? '#f1f5f9' : theme.bgColor,
+                                        border: `1px solid ${isPassed ? '#cbd5e1' : theme.borderColor}`,
+                                        padding: '0.15rem 0.55rem',
+                                        borderRadius: '8px',
+                                        textDecoration: isPassed ? 'line-through' : 'none',
+                                        opacity: isPassed ? 0.75 : 1
                                       }}>
-                                        <Clock size={13} />
+                                        <Clock size={13} style={{ color: isPassed ? '#94a3b8' : theme.accentColor }} />
                                         <span>{formattedTime}</span>
                                       </span>
                                     )}
@@ -1569,6 +1810,22 @@ export default function FTModulesPage() {
 
                                 <CheckCircle2 size={18} style={{ color: isPassed ? '#94a3b8' : theme.accentColor }} />
 
+                                {/* Admin / Trainer Edit Material Button */}
+                                {canManage && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditMaterialModal(item, weekGroup.weekNumber)}
+                                    title="Edit this workshop / material details"
+                                    style={{
+                                      background: '#eff6ff', border: '1.5px solid #bfdbfe', color: '#2563eb',
+                                      height: '32px', padding: '0 0.65rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800,
+                                      display: 'inline-flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer'
+                                    }}
+                                  >
+                                    <Pencil size={13} /> Edit
+                                  </button>
+                                )}
+
                                 {/* Admin Remove from Module */}
                                 {canManage && (
                                   <button
@@ -1587,53 +1844,84 @@ export default function FTModulesPage() {
                               </div>
                             </div>
 
-                            {/* ── DEDICATED ATTACHED RESOURCE FILE CARD ── */}
+                            {/* ── DEDICATED ATTACHED RESOURCE FILE CARD (ALWAYS ACCESSIBLE & NEVER DIMMED) ── */}
                             {item.hasFile && (
-                              <div className="lms-attached-file-card">
+                              <div
+                                className="lms-attached-file-card"
+                                style={{
+                                  opacity: 1,
+                                  filter: 'none',
+                                  background: '#ffffff',
+                                  border: '1.5px solid #93c5fd',
+                                  boxShadow: '0 4px 14px rgba(37, 99, 235, 0.08)'
+                                }}
+                              >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '220px' }}>
                                   <div style={{
-                                    width: '36px', height: '36px', borderRadius: '10px',
+                                    width: '38px', height: '38px', borderRadius: '10px',
                                     background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
                                     border: '1.5px solid #93c5fd',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                                   }}>
-                                    <FileText size={18} style={{ color: '#2563eb' }} />
+                                    <FileText size={20} style={{ color: '#2563eb' }} />
                                   </div>
 
                                   <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                                      <span style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a', wordBreak: 'break-word' }}>
-                                        {item.fileName || 'Lecture_Presentation_Materials.pdf'}
+                                      <span style={{ fontSize: '0.94rem', fontWeight: 900, color: '#0f172a', wordBreak: 'break-word' }}>
+                                        {item.fileName || 'Workshop_Materials_Presentation.pdf'}
                                       </span>
                                       <span style={{
-                                        fontSize: '0.65rem', fontWeight: 900, padding: '0.12rem 0.45rem', borderRadius: '6px',
+                                        fontSize: '0.68rem', fontWeight: 900, padding: '0.12rem 0.5rem', borderRadius: '6px',
                                         background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0'
                                       }}>
                                         Available Material 📄
                                       </span>
+                                      <span style={{
+                                        fontSize: '0.68rem', fontWeight: 800, padding: '0.12rem 0.5rem', borderRadius: '6px',
+                                        background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe'
+                                      }}>
+                                        Always Accessible
+                                      </span>
                                     </div>
-                                    <div style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: 700, marginTop: '0.15rem' }}>
-                                      Permanent Lecture Slides & Handout Resources (Always Accessible)
+                                    <div style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: 700, marginTop: '0.2rem' }}>
+                                      Permanent Presentation Slides & Lecture Resources (Always accessible for download)
                                     </div>
                                   </div>
                                 </div>
 
                                 {/* Right Download / Open File Button */}
-                                <div className="lms-attached-file-actions">
+                                <div className="lms-attached-file-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                   <a
                                     href={item.fileUrl}
                                     target="_blank"
                                     rel="noreferrer"
                                     style={{
                                       background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                                      color: '#ffffff', padding: '0.48rem 1rem', borderRadius: '10px',
-                                      fontSize: '0.82rem', fontWeight: 900, textDecoration: 'none',
-                                      display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                                      boxShadow: '0 3px 12px rgba(37, 99, 235, 0.28)'
+                                      color: '#ffffff', padding: '0.52rem 1.15rem', borderRadius: '10px',
+                                      fontSize: '0.84rem', fontWeight: 900, textDecoration: 'none',
+                                      display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
+                                      boxShadow: '0 4px 14px rgba(37, 99, 235, 0.28)',
+                                      opacity: 1, pointerEvents: 'auto'
                                     }}
                                   >
-                                    Open File <ExternalLink size={14} />
+                                    <ExternalLink size={15} /> Open File
                                   </a>
+
+                                  {canManage && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenEditMaterialModal(item, weekGroup.weekNumber)}
+                                      title="Edit file details"
+                                      style={{
+                                        background: '#f8fafc', border: '1px solid #cbd5e1', color: '#475569',
+                                        padding: '0.45rem 0.65rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800,
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer'
+                                      }}
+                                    >
+                                      <Pencil size={12} /> Edit
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             )}
@@ -2019,6 +2307,261 @@ export default function FTModulesPage() {
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
                 <button type="button" className="ft-btn ft-btn-outline" onClick={() => setMoveModalItem(null)}>Cancel</button>
                 <button type="submit" className="ft-btn ft-btn-primary">Move Now</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── ADD / EDIT MATERIAL / WORKSHOP MODAL (ADMIN & TRAINERS) ── */}
+      {showMaterialModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 99999, padding: '0.75rem'
+        }}>
+          <div style={{
+            background: '#ffffff', borderRadius: '24px', width: '100%', maxWidth: '680px',
+            maxHeight: '92vh', display: 'flex', flexDirection: 'column',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.3)', position: 'relative'
+          }}>
+            {/* Modal Header */}
+            <div style={{ padding: '1.4rem 1.75rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Sparkles size={20} style={{ color: '#be123c' }} /> {editingMaterial ? 'Edit Module Material / Workshop' : 'Add Module Material'}
+                </h2>
+                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0.2rem 0 0 0', fontWeight: 600 }}>
+                  Manage workshop title, instructor details, exact date & time, slides/materials, and module assignments.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMaterialModal(false)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleSaveMaterial} style={{ padding: '1.4rem 1.75rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+              {/* Title */}
+              <div>
+                <label className="ft-label">Material / Workshop Title *</label>
+                <input
+                  type="text"
+                  className="ft-input"
+                  placeholder="e.g. مدخل إلى الصحافة العلمية ومسار المسابقة"
+                  value={materialFormData.title}
+                  onChange={e => setMaterialFormData(prev => ({ ...prev, title: e.target.value }))}
+                  required
+                />
+              </div>
+
+              {/* Type & Speaker */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div>
+                  <label className="ft-label">Category / Type *</label>
+                  <select
+                    className="ft-select"
+                    value={materialFormData.type}
+                    onChange={e => setMaterialFormData(prev => ({ ...prev, type: e.target.value }))}
+                  >
+                    <option value="Workshop">Workshops & Lectures (Blue)</option>
+                    <option value="Lecture">Lecture & Handouts (Blue)</option>
+                    <option value="Office Hours">Office Hours & Mentorship (Green)</option>
+                    <option value="Stage Milestone">Stage Milestone (Gold)</option>
+                    <option value="Submission">Stage Submission Deliverable (Red)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="ft-label">Speaker / Trainer Name</label>
+                  <input
+                    type="text"
+                    className="ft-input"
+                    placeholder="e.g. Samaa Ebrahim"
+                    value={materialFormData.trainerName}
+                    onChange={e => setMaterialFormData(prev => ({ ...prev, trainerName: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              {/* Track & Week Assignment */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div>
+                  <label className="ft-label">Competition Track *</label>
+                  <select
+                    className="ft-select"
+                    value={materialFormData.targetTrack}
+                    onChange={e => setMaterialFormData(prev => ({ ...prev, targetTrack: e.target.value }))}
+                  >
+                    <option value="pop_science">🎥 Track 1: Pop Science Videos</option>
+                    <option value="science_journalism">📰 Track 2: Science Journalism</option>
+                    <option value="both">🌐 Both Tracks (Common to All)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="ft-label">Assign to Module / Week *</label>
+                  <select
+                    className="ft-select"
+                    value={materialFormData.assignedWeek}
+                    onChange={e => setMaterialFormData(prev => ({ ...prev, assignedWeek: Number(e.target.value) }))}
+                  >
+                    <option value={0}>Unassigned (Available in Pool)</option>
+                    {groupedWeeks.map(g => (
+                      <option key={g.weekKey} value={g.weekNumber}>
+                        {g.weekTitle}
+                      </option>
+                    ))}
+                    {[1, 2, 3, 4, 5, 6, 7, 8].filter(n => !groupedWeeks.some(g => g.weekNumber === n)).map(n => (
+                      <option key={n} value={n}>Week {n}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Exact Start Date & Time and End Date & Time */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div>
+                  <label className="ft-label">Exact Start Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    className="ft-input"
+                    value={materialFormData.startDate ? materialFormData.startDate.replace(' ', 'T').slice(0, 16) : ''}
+                    onChange={e => setMaterialFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                  />
+                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.2rem' }}>
+                    Sessions in the past will be automatically dimmed with strikethrough.
+                  </div>
+                </div>
+
+                <div>
+                  <label className="ft-label">Exact End Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    className="ft-input"
+                    value={materialFormData.endDate ? materialFormData.endDate.replace(' ', 'T').slice(0, 16) : ''}
+                    onChange={e => setMaterialFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="ft-label">Description / Syllabus / Learning Objectives</label>
+                <textarea
+                  className="ft-input"
+                  rows={4}
+                  dir="auto"
+                  placeholder="Enter detailed description, Arabic points, or session topics..."
+                  value={materialFormData.description}
+                  onChange={e => setMaterialFormData(prev => ({ ...prev, description: e.target.value }))}
+                  style={{ resize: 'vertical' }}
+                />
+              </div>
+
+              {/* Attached Resource File Box (Always Accessible & Separate) */}
+              <div style={{
+                background: '#eff6ff', borderRadius: '14px', padding: '1rem',
+                border: '1.5px solid #bfdbfe'
+              }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 900, color: '#1e40af', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                  <FileText size={16} /> Attached Resource File (Always Accessible & Not Dimmed)
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                  <div>
+                    <label className="ft-label" style={{ fontSize: '0.75rem' }}>File Display Name</label>
+                    <input
+                      type="text"
+                      className="ft-input"
+                      placeholder="e.g. Scriptwriting_Guide_2026.pdf"
+                      value={materialFormData.fileName}
+                      onChange={e => setMaterialFormData(prev => ({ ...prev, fileName: e.target.value }))}
+                      style={{ background: '#ffffff', fontSize: '0.82rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label className="ft-label" style={{ fontSize: '0.75rem' }}>Direct File Link / Cloud URL</label>
+                    <input
+                      type="text"
+                      className="ft-input"
+                      placeholder="https://... (Google Drive, OneDrive, Dropbox, etc.)"
+                      value={materialFormData.fileUrl}
+                      onChange={e => setMaterialFormData(prev => ({ ...prev, fileUrl: e.target.value }))}
+                      style={{ background: '#ffffff', fontSize: '0.82rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '0.65rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <label style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                    background: '#ffffff', border: '1px solid #93c5fd', color: '#2563eb',
+                    padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800,
+                    cursor: 'pointer'
+                  }}>
+                    <Paperclip size={14} /> Upload File Directly
+                    <input type="file" onChange={handleFileUpload} style={{ display: 'none' }} />
+                  </label>
+                  {materialFormData.fileName && (
+                    <span style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 700 }}>
+                      Selected: <strong>{materialFormData.fileName}</strong>
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Online Session / Meeting Link */}
+              <div>
+                <label className="ft-label">Live Session / Meeting Link (Zoom, Teams, Google Meet)</label>
+                <input
+                  type="text"
+                  className="ft-input"
+                  placeholder="https://zoom.us/j/... or Teams meeting link"
+                  value={materialFormData.meetingLink}
+                  onChange={e => setMaterialFormData(prev => ({ ...prev, meetingLink: e.target.value }))}
+                />
+              </div>
+
+              {/* Modal Footer Controls */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0' }}>
+                <div>
+                  {editingMaterial && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteMaterial(editingMaterial)}
+                      disabled={isDeletingMaterial}
+                      style={{
+                        background: '#fef2f2', border: '1px solid #fecdd3', color: '#dc2626',
+                        padding: '0.5rem 0.9rem', borderRadius: '10px', fontWeight: 800, fontSize: '0.8rem',
+                        cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem'
+                      }}
+                    >
+                      <Trash2 size={14} /> {isDeletingMaterial ? 'Deleting...' : 'Delete Material'}
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    className="ft-btn ft-btn-outline"
+                    onClick={() => setShowMaterialModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="ft-btn ft-btn-primary"
+                    disabled={isSavingMaterial}
+                  >
+                    {isSavingMaterial ? 'Saving...' : (editingMaterial ? 'Save Changes' : '+ Create Material')}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

@@ -415,42 +415,110 @@ export const db = new Proxy(rawDb, {
 export async function syncBroadcastMessagesForUser(targetUser) {
   if (!targetUser || (!targetUser.id && !targetUser.username)) return;
   const userId = String(targetUser.id || targetUser.username);
-  const rawTrack = targetUser.registeredTrack || targetUser.track || targetUser.selectedTrack;
-  const userTrack = normalizeTrackKey(rawTrack);
-  const userRole = (targetUser.role || 'competitor').toLowerCase();
-  const isCompetitor = userRole === 'competitor' || userRole === 'student' || !userRole;
+  const username = targetUser.username ? String(targetUser.username) : null;
+  let rawTrack = targetUser.registeredTrack || targetUser.track || targetUser.selectedTrack || targetUser.competitionTrack;
 
   try {
+    // If track is not directly on user doc, check if user belongs to a team
+    if (!rawTrack) {
+      try {
+        const teamsSnap = await getDocs(query(collection(firestore, getCollectionName('ft_teams'))));
+        for (const tDoc of teamsSnap.docs) {
+          const tData = tDoc.data();
+          const isMember = (tData.members || []).some(m => 
+            String(m.userId) === userId || (username && String(m.username) === username)
+          );
+          if (isMember && tData.track) {
+            rawTrack = tData.track;
+            break;
+          }
+        }
+      } catch (teamErr) {
+        console.warn('Team track lookup suppressed:', teamErr);
+      }
+    }
+
+    const userTrack = normalizeTrackKey(rawTrack || 'pop_science');
+    const userRole = (targetUser.role || 'competitor').toLowerCase();
+    const isCompetitor = userRole === 'competitor' || userRole === 'student' || userRole === 'user' || !userRole;
+
     // 1. Fetch all active broadcast campaigns
+    const allCampaigns = [];
     const campaignsSnap = await getDocs(query(collection(firestore, getCollectionName('ft_broadcast_campaigns'))));
-    if (campaignsSnap.empty) return;
+    campaignsSnap.forEach(cDoc => {
+      const data = cDoc.data();
+      if (data.active !== false) {
+        allCampaigns.push({ id: cDoc.id, ...data });
+      }
+    });
+
+    // Also scan ft_messages for legacy/standalone broadcast messages that may not have a campaign doc
+    try {
+      const broadcastMsgsSnap = await getDocs(query(
+        collection(firestore, getCollectionName('ft_messages')),
+        where('isBroadcast', '==', true)
+      ));
+      const seenTexts = new Set(allCampaigns.map(c => c.text));
+      broadcastMsgsSnap.forEach(bDoc => {
+        const bData = bDoc.data();
+        if (bData && bData.text && !seenTexts.has(bData.text)) {
+          seenTexts.add(bData.text);
+          allCampaigns.push({
+            id: bData.broadcastCampaignId || `legacy_campaign_${bDoc.id}`,
+            senderId: bData.senderId || 'admin',
+            senderName: bData.senderName || 'Staff',
+            text: bData.text,
+            attachment: bData.attachment || null,
+            targetTrack: bData.broadcastTrack || 'all',
+            roleFilter: 'all_members',
+            createdAt: bData.createdAt || new Date().toISOString(),
+            active: true
+          });
+        }
+      });
+    } catch (legacyErr) {
+      console.warn('Legacy broadcast scan suppressed:', legacyErr);
+    }
+
+    if (allCampaigns.length === 0) return;
 
     // 2. Fetch existing messages received by this user
+    const receivedCampaignIds = new Set();
+    const receivedTexts = new Set();
+
     const userMsgsSnap = await getDocs(query(
       collection(firestore, getCollectionName('ft_messages')),
       where('receiverId', '==', userId)
     ));
+    userMsgsSnap.forEach(d => {
+      const data = d.data();
+      if (data.broadcastCampaignId) receivedCampaignIds.add(data.broadcastCampaignId);
+      if (data.text) receivedTexts.add(data.text);
+    });
 
-    const receivedCampaignIds = new Set(
-      userMsgsSnap.docs
-        .map(d => d.data().broadcastCampaignId)
-        .filter(Boolean)
-    );
+    if (username && username !== userId) {
+      const userMsgsSnap2 = await getDocs(query(
+        collection(firestore, getCollectionName('ft_messages')),
+        where('receiverId', '==', username)
+      ));
+      userMsgsSnap2.forEach(d => {
+        const data = d.data();
+        if (data.broadcastCampaignId) receivedCampaignIds.add(data.broadcastCampaignId);
+        if (data.text) receivedTexts.add(data.text);
+      });
+    }
 
-    const receivedTexts = new Set(
-      userMsgsSnap.docs.map(d => d.data().text)
-    );
-
-    for (const cDoc of campaignsSnap.docs) {
-      const campaign = { id: cDoc.id, ...cDoc.data() };
-      if (campaign.active === false) continue;
-
-      // Check track matching: 'all' matches everyone; otherwise must match user's track
-      const trackMatch = !campaign.targetTrack || campaign.targetTrack === 'all' || campaign.targetTrack === userTrack;
+    for (const campaign of allCampaigns) {
+      // Check track matching: 'all' or 'both' matches everyone; otherwise must match user's track
+      const cTrack = campaign.targetTrack || campaign.broadcastTrack || 'all';
+      const normCTrack = normalizeTrackKey(cTrack);
+      const isAllTrack = cTrack === 'all' || cTrack === 'both' || normCTrack === 'both' || !cTrack;
+      const trackMatch = isAllTrack || userTrack === 'both' || normCTrack === userTrack;
       if (!trackMatch) continue;
 
       // Check role matching: 'all_members' matches all; 'competitors' matches competitors/students
-      const roleMatch = campaign.roleFilter === 'all_members' || isCompetitor;
+      const roleFilter = campaign.roleFilter || 'competitors';
+      const roleMatch = roleFilter === 'all_members' || roleFilter === 'all' || isCompetitor;
       if (!roleMatch) continue;
 
       // Skip if already received
@@ -465,10 +533,14 @@ export async function syncBroadcastMessagesForUser(targetUser) {
 
       if (receivedTexts.has(personalizedText)) continue;
 
+      // Mark as received in local set to avoid duplicate within loop
+      receivedCampaignIds.add(campaign.id);
+      receivedTexts.add(personalizedText);
+
       // Send the private message
       await db.ft_messages.add({
         text: personalizedText,
-        senderId: String(campaign.senderId),
+        senderId: String(campaign.senderId || 'admin'),
         senderName: campaign.senderName || 'Staff',
         receiverId: userId,
         createdAt: campaign.createdAt || new Date().toISOString(),
