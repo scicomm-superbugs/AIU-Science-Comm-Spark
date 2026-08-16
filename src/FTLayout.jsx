@@ -165,13 +165,18 @@ export default function FTLayout() {
   const resetRequests = useLiveCollection('ft_reset_requests');
   const notifications = useLiveCollection('ft_notifications');
   const teams = useLiveCollection('ft_teams') || [];
-  const rawMessages = useLiveCollection('ft_messages');
-
   const unreadChatCount = useMemo(() => {
-    if (!rawMessages || !user?.id) return 0;
-    const myId = String(user.id);
-    return rawMessages.filter(m => String(m.receiverId) === myId && m.status === 'unread').length;
-  }, [rawMessages, user?.id]);
+    if (!rawMessages || !user) return 0;
+    const myId = String(user.id || '');
+    const myUsername = String(user.username || '');
+    return rawMessages.filter(m => {
+      if (m.status !== 'unread') return false;
+      const isForMe = (myId && String(m.receiverId) === myId) || (myUsername && String(m.receiverId) === myUsername);
+      const isFromMe = (myId && String(m.senderId) === myId) || (myUsername && String(m.senderId) === myUsername);
+      // Only count messages that were sent to me and NOT created by me
+      return isForMe && !isFromMe;
+    }).length;
+  }, [rawMessages, user]);
 
   // Determine if competitor is in a team & calculate effective code
   const myTeam = useMemo(() => {
@@ -739,7 +744,7 @@ export default function FTLayout() {
         return ['team', 'leaderboard'].includes(n.type);
       }
       if (cleanPath === '/dashboard/chat') {
-        return ['chat'].includes(n.type);
+        return unreadChatCount;
       }
       if (cleanPath === '/dashboard') {
         return ['workshop', 'announcement', 'general', 'date_conflict'].includes(n.type);
@@ -755,7 +760,7 @@ export default function FTLayout() {
       extraCount += pendingResets;
     }
 
-    return unreadNotifs.length + extraCount;
+    return (cleanPath === '/dashboard/chat' ? unreadChatCount : unreadNotifs.length) + extraCount;
   };
 
   const handleSectionClick = async (itemPath) => {
@@ -765,6 +770,7 @@ export default function FTLayout() {
     const unreadSectionNotifs = (myNotifications || []).filter(n => {
       if (n.status !== 'unread') return false;
       const cleanLink = n.link ? String(n.link).split('?')[0].split('#')[0].replace(/\/$/, '') : '';
+      if (cleanPath === '/dashboard/chat' && (n.type === 'chat' || n.targetTab === 'chat')) return true;
       return cleanLink === cleanPath || (cleanPath !== '/dashboard' && cleanLink.startsWith(cleanPath));
     });
     for (const notif of unreadSectionNotifs) {
@@ -773,6 +779,16 @@ export default function FTLayout() {
       } catch (e) {
         console.error('Failed to mark section notification read:', e);
       }
+    }
+  };
+
+  const handleOpenChat = async () => {
+    navigate('/dashboard/chat');
+    const chatNotifs = (myNotifications || []).filter(n => n.status === 'unread' && (n.type === 'chat' || n.targetTab === 'chat'));
+    for (const notif of chatNotifs) {
+      try {
+        await db.ft_notifications.update(notif.id, { status: 'read' });
+      } catch (e) {}
     }
   };
 
@@ -845,7 +861,7 @@ export default function FTLayout() {
           {/* Chat Icon Button beside Notification Bell */}
           <button 
             className="ft-theme-toggle" 
-            onClick={() => navigate('/dashboard/chat')} 
+            onClick={handleOpenChat} 
             title="Messages Hub"
             style={{ position: 'relative' }}
           >

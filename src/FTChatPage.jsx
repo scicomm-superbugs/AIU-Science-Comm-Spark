@@ -213,6 +213,7 @@ export default function FTChatPage({ user: userProp }) {
   const myName = user?.name || user?.username || 'User';
 
   const rawMessages = useLiveCollection('ft_messages');
+  const notifications = useLiveCollection('ft_notifications') || [];
   const rawAccounts = useLiveCollection('scientists') || [];
 
   // Default fallback system admin account if not present in collection
@@ -643,17 +644,106 @@ export default function FTChatPage({ user: userProp }) {
     return sorted[sorted.length - 1];
   };
 
-  // Unread Count helper per contact
+  // Robust Unread Count helper per contact
   const getUnreadCount = (recipId) => {
     if (!rawMessages || !user) return 0;
+    const myIdStr = String(user.id || user.username || '');
+    const myUserStr = String(user.username || '');
     const unread = rawMessages.filter(m => {
-      const isIncoming = recipId === 'global' 
-        ? (!m.receiverId || m.receiverId === 'global') && String(m.senderId) !== String(myId)
-        : String(m.senderId) === String(recipId) && String(m.receiverId) === String(myId);
-      return isIncoming && m.status === 'unread';
+      if (m.status !== 'unread') return false;
+      const isForMe = (myIdStr && String(m.receiverId) === myIdStr) || (myUserStr && String(m.receiverId) === myUserStr);
+      const isFromMe = (myIdStr && String(m.senderId) === myIdStr) || (myUserStr && String(m.senderId) === myUserStr);
+      if (isFromMe || !isForMe) return false;
+      if (recipId === 'global') {
+        return !m.receiverId || m.receiverId === 'global';
+      }
+      return String(m.senderId) === String(recipId);
     });
     return unread.length;
   };
+
+  // Total unread messages across all 1-on-1 conversations
+  const totalUnreadMessages = useMemo(() => {
+    if (!rawMessages || !user) return 0;
+    const myIdStr = String(user.id || user.username || '');
+    const myUserStr = String(user.username || '');
+    return rawMessages.filter(m => {
+      if (m.status !== 'unread') return false;
+      const isForMe = (myIdStr && String(m.receiverId) === myIdStr) || (myUserStr && String(m.receiverId) === myUserStr);
+      const isFromMe = (myIdStr && String(m.senderId) === myIdStr) || (myUserStr && String(m.senderId) === myUserStr);
+      return isForMe && !isFromMe;
+    }).length;
+  }, [rawMessages, user]);
+
+  // Mark all unread incoming messages & chat notifications as read
+  const handleMarkAllMessagesRead = async () => {
+    if (!rawMessages || !user) return;
+    const myIdStr = String(user.id || user.username || '');
+    const myUserStr = String(user.username || '');
+    const unreadForMe = rawMessages.filter(m => {
+      if (m.status !== 'unread') return false;
+      const isForMe = (myIdStr && String(m.receiverId) === myIdStr) || (myUserStr && String(m.receiverId) === myUserStr);
+      const isFromMe = (myIdStr && String(m.senderId) === myIdStr) || (myUserStr && String(m.senderId) === myUserStr);
+      return isForMe && !isFromMe;
+    });
+    for (const m of unreadForMe) {
+      try {
+        await db.ft_messages.update(m.id, { status: 'read' });
+      } catch (e) {}
+    }
+    const chatNotifs = (notifications || []).filter(n =>
+      n.status === 'unread' &&
+      (n.type === 'chat' || n.targetTab === 'chat') &&
+      ((myIdStr && n.targetUserId === myIdStr) || (myUserStr && n.targetUserId === myUserStr))
+    );
+    for (const n of chatNotifs) {
+      try {
+        await db.ft_notifications.update(n.id, { status: 'read' });
+      } catch (e) {}
+    }
+  };
+
+  // Automatically mark incoming messages from active conversation as read
+  useEffect(() => {
+    if (!rawMessages || !user || !activeRecipient) return;
+    const myIdStr = String(user.id || user.username || '');
+    const myUserStr = String(user.username || '');
+
+    const unreadInActiveThread = rawMessages.filter(m => {
+      if (m.status !== 'unread') return false;
+      const isForMe = (myIdStr && String(m.receiverId) === myIdStr) || (myUserStr && String(m.receiverId) === myUserStr);
+      const isFromMe = (myIdStr && String(m.senderId) === myIdStr) || (myUserStr && String(m.senderId) === myUserStr);
+      if (isFromMe || !isForMe) return false;
+      if (activeRecipient === 'global') {
+        return !m.receiverId || m.receiverId === 'global';
+      }
+      return String(m.senderId) === String(activeRecipient);
+    });
+
+    if (unreadInActiveThread.length > 0) {
+      unreadInActiveThread.forEach(async (msg) => {
+        try {
+          await db.ft_messages.update(msg.id, { status: 'read' });
+        } catch (err) {
+          console.warn('Failed to mark message as read:', err);
+        }
+      });
+    }
+
+    // Clear matching chat notifications
+    const chatNotifs = (notifications || []).filter(n =>
+      n.status === 'unread' &&
+      (n.type === 'chat' || n.targetTab === 'chat') &&
+      ((myIdStr && n.targetUserId === myIdStr) || (myUserStr && n.targetUserId === myUserStr))
+    );
+    if (chatNotifs.length > 0) {
+      chatNotifs.forEach(async (n) => {
+        try {
+          await db.ft_notifications.update(n.id, { status: 'read' });
+        } catch (e) {}
+      });
+    }
+  }, [activeRecipient, rawMessages, user, notifications]);
 
   // Active recipient account details
   const activeRecipientAcc = activeRecipient === 'global'
@@ -757,6 +847,25 @@ export default function FTChatPage({ user: userProp }) {
               <Plus size={18} />
             </button>
           </div>
+
+          {/* Mark All As Read Bar when unread messages exist */}
+          {totalUnreadMessages > 0 && (
+            <div style={{ padding: '0.35rem 1rem', background: '#fff1f2', borderBottom: '1px solid #fecdd3', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#be123c' }}>
+                {totalUnreadMessages} unread message{totalUnreadMessages > 1 ? 's' : ''}
+              </span>
+              <button
+                type="button"
+                onClick={handleMarkAllMessagesRead}
+                style={{
+                  background: 'none', border: 'none', color: '#be123c', fontSize: '0.74rem',
+                  fontWeight: 800, cursor: 'pointer', textDecoration: 'underline', padding: 0
+                }}
+              >
+                Mark all as read
+              </button>
+            </div>
+          )}
 
           {/* Admin Broadcast Button Bar */}
           {isAdmin && (

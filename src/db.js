@@ -561,6 +561,10 @@ export async function syncBroadcastMessagesForUser(targetUser) {
 
     const userTrack = normalizeTrackKey(rawTrack || 'pop_science');
     const userRole = (targetUser.role || 'competitor').toLowerCase();
+    const isStaff = userRole === 'master' || userRole === 'admin' || userRole === 'super_admin' || targetUser.isAdmin || targetUser.isMaster;
+    // Admins / staff send broadcasts; they should not sync broadcasts to their own inbox
+    if (isStaff) return;
+
     const isCompetitor = userRole === 'competitor' || userRole === 'student' || userRole === 'user' || !userRole;
 
     // 1. Fetch all active broadcast campaigns
@@ -642,8 +646,9 @@ export async function syncBroadcastMessagesForUser(targetUser) {
       const roleMatch = roleFilter === 'all_members' || roleFilter === 'all' || isCompetitor;
       if (!roleMatch) continue;
 
-      // Skip if already received
+      // Skip if already received or if user is the author
       if (receivedCampaignIds.has(campaign.id)) continue;
+      if (userId === String(campaign.senderId) || username === String(campaign.senderId) || String(targetUser.id) === String(campaign.senderId)) continue;
 
       // Personalize name placeholder
       const recipientName = targetUser.name || targetUser.username || 'Competitor';
