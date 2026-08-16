@@ -77,7 +77,6 @@ export default function FTModulesPage() {
   
   const scientists = useLiveCollection('scientists') || [];
   const dynamicWorkshops = useLiveCollection('workshops') || [];
-  const customModules = useLiveCollection('ft_modules') || [];
   const customWeekTitles = useLiveCollection('ft_week_titles') || [];
 
   const isAdmin = ['admin', 'master'].includes(user?.role);
@@ -108,30 +107,11 @@ export default function FTModulesPage() {
   const [editingWeekTitleText, setEditingWeekTitleText] = useState('');
   const [isSavingWeekTitle, setIsSavingWeekTitle] = useState(false);
 
-  // Admin Add/Edit Material Modal State
-  const [showModal, setShowModal] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
-  const [form, setForm] = useState({
-    title: '',
-    weekNumber: 1,
-    weekTitle: '',
-    itemKind: 'workshop', // 'workshop' | 'resource_file'
-    fileName: '',
-    fileUrl: '',
-    meetingLink: '',
-    startDate: '',
-    endDate: '',
-    type: 'pdf',
-    targetTrack: 'both',
-    speakerName: '',
-    description: ''
-  });
-
-  // Quick Attach File Modal State (for workshops that don't have files yet)
-  const [attachModalItem, setAttachModalItem] = useState(null);
-  const [attachFileName, setAttachFileName] = useState('');
-  const [attachFileUrl, setAttachFileUrl] = useState('');
-  const [isSavingAttachment, setIsSavingAttachment] = useState(false);
+  // Add New Week Modal State
+  const [showAddWeekModal, setShowAddWeekModal] = useState(false);
+  const [newWeekNumber, setNewWeekNumber] = useState(1);
+  const [newWeekTitle, setNewWeekTitle] = useState('');
+  const [isSavingNewWeek, setIsSavingNewWeek] = useState(false);
 
   const toggleWeek = (weekKey) => {
     setCollapsedWeeks(prev => ({
@@ -150,12 +130,12 @@ export default function FTModulesPage() {
     setCollapsedWeeks({});
   };
 
-  // Build grouped weeks
+  // Build grouped weeks with automatic workshop mapping and chronological sorting
   const groupedWeeks = useMemo(() => {
     const normTrack = normalizeTrackKey(selectedTrack);
     const allItems = [];
 
-    // Map Workshops
+    // Map Workshops automatically from timeline / workshop settings
     (dynamicWorkshops || []).forEach(ws => {
       const target = normalizeTrackKey(ws.targetTrack || ws.trackKey || 'both');
       if (target === 'both' || target === 'all' || target === normTrack || !ws.targetTrack) {
@@ -166,8 +146,7 @@ export default function FTModulesPage() {
           id: ws.id,
           source: 'workshop',
           title: ws.title,
-          weekNumber: Number(ws.weekNumber) || 1,
-          weekTitle: ws.weekTitle || '',
+          weekNumber: Number(ws.weekNumber) || 0,
           fileName: ws.fileName || (fileUrl ? 'Workshop_Materials_Presentation.pdf' : ''),
           fileUrl: fileUrl,
           hasFile: Boolean(fileUrl),
@@ -179,34 +158,6 @@ export default function FTModulesPage() {
           endDate: ws.endDate || '',
           isPassed,
           description: ws.description || ''
-        });
-      }
-    });
-
-    // Map Custom Modules / Files
-    (customModules || []).forEach(mod => {
-      const target = normalizeTrackKey(mod.targetTrack || 'both');
-      if (target === 'both' || target === 'all' || target === normTrack || !mod.targetTrack) {
-        const fileUrl = mod.fileUrl || '';
-        const isPassed = isEventPassed(mod.startDate, mod.endDate);
-
-        allItems.push({
-          id: mod.id,
-          source: 'custom_module',
-          title: mod.title,
-          weekNumber: Number(mod.weekNumber) || 1,
-          weekTitle: mod.weekTitle || '',
-          fileName: mod.fileName || (fileUrl ? 'Course_Handout.pdf' : ''),
-          fileUrl: fileUrl,
-          hasFile: Boolean(fileUrl),
-          meetingLink: mod.meetingLink || '',
-          type: mod.type || 'pdf',
-          targetTrack: target,
-          speakerName: mod.speakerName || '',
-          startDate: mod.startDate || mod.createdAt || '',
-          endDate: mod.endDate || '',
-          isPassed,
-          description: mod.description || ''
         });
       }
     });
@@ -234,11 +185,12 @@ export default function FTModulesPage() {
 
     const weekMap = {};
 
-    // Initialize with custom titles from Firestore or defaults
+    // Initialize with default weeks unless deleted by admin
     defaultWeeks.forEach(w => {
       const customTitleDoc = customWeekTitles.find(c => c.id === w.weekKey || c.weekKey === w.weekKey);
-      const title = customTitleDoc?.title || w.defaultTitle;
+      if (customTitleDoc?.deleted) return; // Skip deleted weeks
 
+      const title = customTitleDoc?.title || w.defaultTitle;
       weekMap[w.weekKey] = {
         weekNumber: w.weekNumber,
         weekKey: w.weekKey,
@@ -247,21 +199,43 @@ export default function FTModulesPage() {
       };
     });
 
-    // Distribute items into week groups
-    searchFiltered.forEach(item => {
-      let weekNum = item.weekNumber || 1;
+    // Add any custom added weeks from Firestore
+    customWeekTitles.forEach(c => {
+      if (c.deleted) return;
+      const weekKey = c.weekKey || c.id || `week-${c.weekNumber}`;
+      if (!weekMap[weekKey]) {
+        weekMap[weekKey] = {
+          weekNumber: Number(c.weekNumber) || 1,
+          weekKey,
+          weekTitle: c.title || `Week ${c.weekNumber}: Learning Modules`,
+          items: []
+        };
+      } else if (c.title) {
+        weekMap[weekKey].weekTitle = c.title;
+      }
+    });
 
-      // If item has a startDate, calculate week relative to competition start date (Aug 1) if not explicitly set
-      if (!item.weekNumber && item.startDate) {
+    // Distribute workshops automatically into week groups
+    searchFiltered.forEach(item => {
+      let weekNum = item.weekNumber;
+
+      // If item has no explicit weekNumber, automatically calculate from date relative to Aug 1
+      if (!weekNum && item.startDate) {
         try {
           const itemDate = new Date(item.startDate);
           const compStart = new Date('2026-08-01');
           const diffDays = Math.floor((itemDate - compStart) / (1000 * 60 * 60 * 24));
           if (diffDays >= 0) {
             weekNum = Math.min(6, Math.floor(diffDays / 7) + 1);
+          } else {
+            weekNum = 1;
           }
-        } catch {}
+        } catch {
+          weekNum = 1;
+        }
       }
+
+      if (!weekNum) weekNum = 1;
 
       const weekKey = `week-${weekNum}`;
       if (!weekMap[weekKey]) {
@@ -269,7 +243,7 @@ export default function FTModulesPage() {
         weekMap[weekKey] = {
           weekNumber: weekNum,
           weekKey,
-          weekTitle: customTitleDoc?.title || item.weekTitle || `Week ${weekNum}: Training & Learning Modules`,
+          weekTitle: customTitleDoc?.title || `Week ${weekNum}: Training & Learning Modules`,
           items: []
         };
       }
@@ -280,13 +254,13 @@ export default function FTModulesPage() {
     // Sort weeks by weekNumber
     const result = Object.values(weekMap).sort((a, b) => a.weekNumber - b.weekNumber);
 
-    // Sort items within each week chronologically
+    // Sort items within each week chronologically by date and time
     result.forEach(w => {
       w.items.sort((a, b) => new Date(a.startDate || 0) - new Date(b.startDate || 0));
     });
 
     return result;
-  }, [dynamicWorkshops, customModules, customWeekTitles, selectedTrack, searchQuery]);
+  }, [dynamicWorkshops, customWeekTitles, selectedTrack, searchQuery]);
 
   // ── DRAG AND DROP HANDLERS ACROSS WEEKS ──────────────────────────────
   const handleDragStart = (e, item) => {
@@ -326,14 +300,9 @@ export default function FTModulesPage() {
         weekNumber: Number(targetWeekNum),
         updatedAt: new Date().toISOString()
       };
-
-      if (draggedItem.source === 'workshop') {
-        await db.workshops.update(draggedItem.id, updatePayload);
-      } else {
-        await db.ft_modules.update(draggedItem.id, updatePayload);
-      }
+      await db.workshops.update(draggedItem.id, updatePayload);
     } catch (err) {
-      alert('Failed to move item: ' + err.message);
+      alert('Failed to move workshop: ' + err.message);
     } finally {
       setDraggedItem(null);
     }
@@ -348,13 +317,7 @@ export default function FTModulesPage() {
         weekNumber: Number(targetMoveWeek),
         updatedAt: new Date().toISOString()
       };
-
-      if (moveModalItem.source === 'workshop') {
-        await db.workshops.update(moveModalItem.id, updatePayload);
-      } else {
-        await db.ft_modules.update(moveModalItem.id, updatePayload);
-      }
-
+      await db.workshops.update(moveModalItem.id, updatePayload);
       setMoveModalItem(null);
     } catch (err) {
       alert('Failed to move: ' + err.message);
@@ -371,6 +334,7 @@ export default function FTModulesPage() {
         weekKey,
         weekNumber,
         title: editingWeekTitleText.trim(),
+        deleted: false,
         updatedAt: new Date().toISOString(),
         updatedBy: user?.username || user?.email || 'admin'
       });
@@ -382,158 +346,62 @@ export default function FTModulesPage() {
     }
   };
 
-  // Open Edit Modal for a Workshop or Custom Module
-  const handleOpenEditModal = (item) => {
-    setEditingItem(item);
-    
-    // Format datetime-local strings
-    const formatForInput = (dStr) => {
-      if (!dStr) return '';
-      try {
-        const d = new Date(dStr);
-        if (isNaN(d.getTime())) return '';
-        const pad = (n) => String(n).padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      } catch {
-        return '';
-      }
-    };
-
-    setForm({
-      title: item.title || '',
-      weekNumber: item.weekNumber || 1,
-      weekTitle: item.weekTitle || '',
-      itemKind: item.source === 'workshop' ? 'workshop' : 'resource_file',
-      fileName: item.fileName || '',
-      fileUrl: item.fileUrl || '',
-      meetingLink: item.meetingLink || '',
-      startDate: formatForInput(item.startDate),
-      endDate: formatForInput(item.endDate),
-      type: item.type || 'pdf',
-      targetTrack: item.targetTrack || 'both',
-      speakerName: item.speakerName || '',
-      description: item.description || ''
-    });
-    setShowModal(true);
+  // Open Add New Week Modal
+  const handleOpenAddWeekModal = () => {
+    const maxWeek = groupedWeeks.reduce((max, w) => Math.max(max, w.weekNumber), 0);
+    const nextNum = maxWeek + 1;
+    setNewWeekNumber(nextNum);
+    setNewWeekTitle(`Week ${nextNum}: New Learning & Workshop Modules`);
+    setShowAddWeekModal(true);
   };
 
-  // Open Add New Modal
-  const handleOpenAddModal = (defaultWeekNum = 1) => {
-    setEditingItem(null);
-    setForm({
-      title: '',
-      weekNumber: defaultWeekNum,
-      weekTitle: '',
-      itemKind: 'workshop',
-      fileName: '',
-      fileUrl: '',
-      meetingLink: '',
-      startDate: '',
-      endDate: '',
-      type: 'pdf',
-      targetTrack: 'both',
-      speakerName: '',
-      description: ''
-    });
-    setShowModal(true);
-  };
-
-  // Handle Save Module / Workshop Item
-  const handleSaveModule = async (e) => {
+  // Handle Creating New Week
+  const handleCreateNewWeek = async (e) => {
     e.preventDefault();
+    if (!newWeekTitle.trim()) return;
+    setIsSavingNewWeek(true);
     try {
-      const payload = {
-        title: form.title.trim(),
-        weekNumber: Number(form.weekNumber) || 1,
-        fileName: form.fileName ? form.fileName.trim() : '',
-        fileUrl: form.fileUrl ? form.fileUrl.trim() : '',
-        meetingLink: form.meetingLink ? form.meetingLink.trim() : '',
-        type: form.type || 'pdf',
-        targetTrack: form.targetTrack || 'both',
-        trainerName: form.speakerName ? form.speakerName.trim() : '',
-        speakerName: form.speakerName ? form.speakerName.trim() : '',
-        startDate: form.startDate || '',
-        endDate: form.endDate || '',
-        description: form.description ? form.description.trim() : '',
-        updatedAt: new Date().toISOString()
-      };
-
-      if (editingItem) {
-        if (editingItem.source === 'workshop') {
-          await db.workshops.update(editingItem.id, payload);
-        } else {
-          await db.ft_modules.update(editingItem.id, payload);
-        }
-      } else {
-        // Create new item
-        if (form.itemKind === 'workshop') {
-          await db.workshops.add({ ...payload, createdAt: new Date().toISOString() });
-        } else {
-          await db.ft_modules.add({ ...payload, createdAt: new Date().toISOString() });
-        }
-      }
-
-      setShowModal(false);
-      setEditingItem(null);
+      const weekKey = `week-${newWeekNumber}`;
+      await db.ft_week_titles.set(weekKey, {
+        id: weekKey,
+        weekKey,
+        weekNumber: Number(newWeekNumber),
+        title: newWeekTitle.trim(),
+        deleted: false,
+        updatedAt: new Date().toISOString(),
+        updatedBy: user?.username || user?.email || 'admin'
+      });
+      setShowAddWeekModal(false);
+      setNewWeekTitle('');
     } catch (err) {
-      alert('Failed to save: ' + err.message);
-    }
-  };
-
-  // Handle Quick File Attachment to an existing workshop
-  const handleSaveQuickAttachment = async (e) => {
-    e.preventDefault();
-    if (!attachModalItem) return;
-    setIsSavingAttachment(true);
-    try {
-      const updateData = {
-        fileName: attachFileName.trim() || 'Workshop_Materials_Presentation.pdf',
-        fileUrl: attachFileUrl.trim(),
-        updatedAt: new Date().toISOString()
-      };
-
-      if (attachModalItem.source === 'workshop') {
-        await db.workshops.update(attachModalItem.id, updateData);
-      } else {
-        await db.ft_modules.update(attachModalItem.id, updateData);
-      }
-
-      setAttachModalItem(null);
-      setAttachFileName('');
-      setAttachFileUrl('');
-    } catch (err) {
-      alert('Failed to attach file: ' + err.message);
+      alert('Failed to create week: ' + err.message);
     } finally {
-      setIsSavingAttachment(false);
+      setIsSavingNewWeek(false);
     }
   };
 
-  // Handle Delete Item
-  const handleDeleteItem = async (item) => {
-    if (!window.confirm(`Are you sure you want to delete "${item.title}"?`)) return;
-    try {
-      if (item.source === 'custom_module') {
-        await db.ft_modules.delete(item.id);
-      } else if (item.source === 'workshop') {
-        await db.workshops.delete(item.id);
-      }
-    } catch (err) {
-      alert('Failed to delete: ' + err.message);
-    }
-  };
+  // Handle Deleting a Week
+  const handleDeleteWeek = async (weekGroup) => {
+    if (!window.confirm(`Are you sure you want to delete "${weekGroup.weekTitle}"?`)) return;
 
-  // Remove Attached File from a workshop
-  const handleDetachFile = async (item) => {
-    if (!window.confirm(`Remove attached file from "${item.title}"?`)) return;
     try {
-      const updateData = { fileName: '', fileUrl: '', presentationLink: '', updatedAt: new Date().toISOString() };
-      if (item.source === 'workshop') {
-        await db.workshops.update(item.id, updateData);
-      } else {
-        await db.ft_modules.update(item.id, updateData);
+      // Reassign any workshops in this week to week 1 so they are not lost
+      const workshopsInThisWeek = dynamicWorkshops.filter(ws => (Number(ws.weekNumber) || 1) === weekGroup.weekNumber);
+      for (const ws of workshopsInThisWeek) {
+        await db.workshops.update(ws.id, { weekNumber: 1, updatedAt: new Date().toISOString() });
       }
+
+      // Mark week as deleted in Firestore
+      await db.ft_week_titles.set(weekGroup.weekKey, {
+        id: weekGroup.weekKey,
+        weekKey: weekGroup.weekKey,
+        weekNumber: weekGroup.weekNumber,
+        title: weekGroup.weekTitle,
+        deleted: true,
+        updatedAt: new Date().toISOString()
+      });
     } catch (err) {
-      alert('Failed to remove file: ' + err.message);
+      alert('Failed to delete week: ' + err.message);
     }
   };
 
@@ -550,11 +418,11 @@ export default function FTModulesPage() {
               <BookOpen size={28} style={{ color: '#be123c' }} /> Course & Training Modules
             </h1>
             <p style={{ fontSize: '0.9rem', color: '#64748b', margin: '0.35rem 0 0 0', fontWeight: 600 }}>
-              Structured weekly learning modules, live workshops, and downloadable course materials.
+              Structured weekly learning modules and workshops automatically populated from timeline settings.
             </p>
           </div>
 
-          {/* Action Buttons & Controls */}
+          {/* Action Buttons & Controls: Add Week & Collapse */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button
               type="button"
@@ -572,7 +440,7 @@ export default function FTModulesPage() {
             {canManage && (
               <button
                 type="button"
-                onClick={() => handleOpenAddModal(1)}
+                onClick={handleOpenAddWeekModal}
                 style={{
                   padding: '0.65rem 1.25rem', borderRadius: '12px',
                   background: 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)',
@@ -581,7 +449,7 @@ export default function FTModulesPage() {
                   boxShadow: '0 4px 16px rgba(190, 18, 60, 0.35)'
                 }}
               >
-                <Plus size={18} /> + Add Module / Workshop
+                <Plus size={18} /> + Add New Week
               </button>
             )}
           </div>
@@ -663,10 +531,8 @@ export default function FTModulesPage() {
         </div>
 
         {canManage && (
-          <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: '#64748b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <span>💡 <strong>Admin Tip:</strong> You can drag & drop items across weeks using the grip handle</span>
-            <GripVertical size={14} style={{ color: '#be123c' }} />
-            <span>or use the quick Move button on mobile.</span>
+          <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: '#64748b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+            <span>💡 <strong>Note:</strong> Workshops and attached files are automatically populated from Timeline Settings and organized by date/time. You can add or delete weeks here, edit week titles, or drag items between weeks.</span>
           </div>
         )}
       </div>
@@ -784,28 +650,28 @@ export default function FTModulesPage() {
                   )}
                 </div>
 
-                {/* Right Badges & Count */}
+                {/* Right Badges, Item Count & Delete Week Control */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                   <span style={{
                     fontSize: '0.78rem', fontWeight: 800, padding: '0.22rem 0.65rem', borderRadius: '8px',
                     background: itemCount > 0 ? '#eff6ff' : '#f1f5f9', color: itemCount > 0 ? '#2563eb' : '#64748b',
                     border: `1px solid ${itemCount > 0 ? '#bfdbfe' : '#cbd5e1'}`
                   }}>
-                    {itemCount} {itemCount === 1 ? 'Item' : 'Items'}
+                    {itemCount} {itemCount === 1 ? 'Workshop' : 'Workshops'}
                   </span>
 
                   {canManage && (
                     <button
                       type="button"
-                      onClick={() => handleOpenAddModal(weekGroup.weekNumber)}
-                      title="Add item directly to this week"
+                      onClick={() => handleDeleteWeek(weekGroup)}
+                      title={`Delete ${weekGroup.weekTitle}`}
                       style={{
-                        background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px',
-                        padding: '0.3rem 0.65rem', fontSize: '0.75rem', fontWeight: 800, color: '#be123c',
-                        cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
+                        background: '#fef2f2', border: '1px solid #fecdd3', color: '#dc2626',
+                        width: '32px', height: '32px', borderRadius: '8px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
                       }}
                     >
-                      <Plus size={14} /> Add Item
+                      <Trash2 size={13} />
                     </button>
                   )}
 
@@ -818,7 +684,7 @@ export default function FTModulesPage() {
                 <div>
                   {itemCount === 0 ? (
                     <div style={{ padding: '2.5rem 1.5rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem', fontStyle: 'italic', fontWeight: 600 }}>
-                      No modules or workshops scheduled for this week yet. Drag items here or click "+ Add Item".
+                      No workshops scheduled for this week yet. Workshops added in Workshop Timeline Settings will automatically appear here.
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -840,7 +706,7 @@ export default function FTModulesPage() {
                               transition: 'all 0.15s ease'
                             }}
                           >
-                            {/* ── WORKSHOP / MODULE MAIN ROW ── */}
+                            {/* ── WORKSHOP MAIN ROW ── */}
                             <div
                               className="lms-item-row"
                               style={{
@@ -854,7 +720,7 @@ export default function FTModulesPage() {
                                 {canManage && (
                                   <div
                                     className="lms-drag-grip"
-                                    title="Click & Drag to move across weeks"
+                                    title="Click & Drag to move workshop across weeks"
                                     style={{ marginTop: '0.2rem', flexShrink: 0 }}
                                   >
                                     <GripVertical size={18} />
@@ -969,29 +835,9 @@ export default function FTModulesPage() {
 
                                 <CheckCircle2 size={18} style={{ color: isPassed ? '#94a3b8' : '#059669' }} />
 
-                                {/* Admin Management Controls */}
+                                {/* Admin Quick Reassignment */}
                                 {canManage && (
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginLeft: '0.3rem', borderLeft: '1px solid #e2e8f0', paddingLeft: '0.4rem' }}>
-                                    {/* Attach File Button (if no file yet) */}
-                                    {!item.hasFile && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setAttachModalItem(item);
-                                          setAttachFileName('');
-                                          setAttachFileUrl('');
-                                        }}
-                                        title="Attach Lecture PDF / Slides to this workshop"
-                                        style={{
-                                          background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb',
-                                          height: '32px', padding: '0 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800,
-                                          display: 'inline-flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer'
-                                        }}
-                                      >
-                                        <Paperclip size={13} /> + Attach File
-                                      </button>
-                                    )}
-
                                     {/* Quick Move to Week Button */}
                                     <button
                                       type="button"
@@ -999,42 +845,14 @@ export default function FTModulesPage() {
                                         setMoveModalItem(item);
                                         setTargetMoveWeek(item.weekNumber || 1);
                                       }}
-                                      title="Move to another week"
+                                      title="Move workshop to another week"
                                       style={{
                                         background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155',
-                                        height: '32px', padding: '0 0.5rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800,
+                                        height: '32px', padding: '0 0.55rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800,
                                         display: 'inline-flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer'
                                       }}
                                     >
                                       <ArrowRightLeft size={13} /> Move
-                                    </button>
-
-                                    {/* Edit Item */}
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenEditModal(item)}
-                                      title="Edit Everything (Title, Date, Time, Speaker, Description)"
-                                      style={{
-                                        background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155',
-                                        width: '32px', height: '32px', borderRadius: '8px',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
-                                      }}
-                                    >
-                                      <Pencil size={14} />
-                                    </button>
-
-                                    {/* Delete Item */}
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteItem(item)}
-                                      title="Delete Item"
-                                      style={{
-                                        background: '#fef2f2', border: '1px solid #fecdd3', color: '#dc2626',
-                                        width: '32px', height: '32px', borderRadius: '8px',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
-                                      }}
-                                    >
-                                      <Trash2 size={14} />
                                     </button>
                                   </div>
                                 )}
@@ -1072,7 +890,7 @@ export default function FTModulesPage() {
                                   </div>
                                 </div>
 
-                                {/* Right Download / Open File Button & Admin Controls */}
+                                {/* Right Download / Open File Button */}
                                 <div className="lms-attached-file-actions">
                                   <a
                                     href={item.fileUrl}
@@ -1088,40 +906,6 @@ export default function FTModulesPage() {
                                   >
                                     Open File <ExternalLink size={14} />
                                   </a>
-
-                                  {/* Admin Detach / Edit File option */}
-                                  {canManage && (
-                                    <div style={{ display: 'flex', gap: '0.3rem', marginLeft: '0.2rem' }}>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setAttachModalItem(item);
-                                          setAttachFileName(item.fileName || '');
-                                          setAttachFileUrl(item.fileUrl || '');
-                                        }}
-                                        title="Change File Link"
-                                        style={{
-                                          background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155',
-                                          width: '30px', height: '30px', borderRadius: '8px',
-                                          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
-                                        }}
-                                      >
-                                        <Pencil size={12} />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDetachFile(item)}
-                                        title="Remove File Attachment"
-                                        style={{
-                                          background: '#fef2f2', border: '1px solid #fecdd3', color: '#dc2626',
-                                          width: '30px', height: '30px', borderRadius: '8px',
-                                          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
-                                        }}
-                                      >
-                                        <Trash2 size={12} />
-                                      </button>
-                                    </div>
-                                  )}
                                 </div>
                               </div>
                             )}
@@ -1137,8 +921,8 @@ export default function FTModulesPage() {
         })}
       </div>
 
-      {/* ── ADMIN ADD / EDIT MODULE MODAL ──────────────────────────────── */}
-      {showModal && (
+      {/* ── ADD NEW WEEK MODAL ────────────────────────────────────── */}
+      {showAddWeekModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)',
@@ -1146,234 +930,55 @@ export default function FTModulesPage() {
           zIndex: 99999, padding: '0.75rem'
         }}>
           <div style={{
-            background: '#ffffff', borderRadius: '22px', width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto',
+            background: '#ffffff', borderRadius: '22px', width: '100%', maxWidth: '520px',
             padding: '1.75rem', boxShadow: '0 25px 60px rgba(0,0,0,0.25)', position: 'relative'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <h2 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <BookOpen size={22} style={{ color: '#be123c' }} /> {editingItem ? 'Edit Module / Workshop Details' : 'Add Module / Workshop Material'}
+                <Plus size={22} style={{ color: '#be123c' }} /> Add New Course Week
               </h2>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => setShowAddWeekModal(false)}
                 style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
               >
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSaveModule} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+            <form onSubmit={handleCreateNewWeek} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
               <div>
-                <label className="ft-label">Title *</label>
+                <label className="ft-label">Week Number *</label>
                 <input
-                  type="text"
+                  type="number"
+                  min={1}
+                  max={20}
                   className="ft-input"
-                  placeholder="e.g. Orientation Lecture: Competition Rules & Criteria"
-                  value={form.title}
-                  onChange={e => setForm({ ...form, title: e.target.value })}
-                  required
-                />
-              </div>
-
-              {/* Week Assignment & Target Track */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                <div>
-                  <label className="ft-label">Assign to Week *</label>
-                  <select
-                    className="ft-select"
-                    value={form.weekNumber}
-                    onChange={e => setForm({ ...form, weekNumber: Number(e.target.value) })}
-                  >
-                    <option value={1}>Week 1</option>
-                    <option value={2}>Week 2</option>
-                    <option value={3}>Week 3</option>
-                    <option value={4}>Week 4</option>
-                    <option value={5}>Week 5</option>
-                    <option value={6}>Week 6</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="ft-label">Target Track *</label>
-                  <select
-                    className="ft-select"
-                    value={form.targetTrack}
-                    onChange={e => setForm({ ...form, targetTrack: e.target.value })}
-                  >
-                    <option value="both">Both Tracks (Track 1 & Track 2)</option>
-                    <option value="pop_science">Track 1: Pop Science Videos</option>
-                    <option value="science_journalism">Track 2: Science Journalism</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Exact Date & Time */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                <div>
-                  <label className="ft-label">Exact Start Date & Time</label>
-                  <input
-                    type="datetime-local"
-                    className="ft-input"
-                    value={form.startDate}
-                    onChange={e => setForm({ ...form, startDate: e.target.value })}
-                  />
-                  <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '0.2rem' }}>
-                    Auto-scratches & dims if passed.
-                  </span>
-                </div>
-
-                <div>
-                  <label className="ft-label">Exact End Date & Time (Optional)</label>
-                  <input
-                    type="datetime-local"
-                    className="ft-input"
-                    value={form.endDate}
-                    onChange={e => setForm({ ...form, endDate: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              {/* Speaker / Trainer & Live Meeting Link */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                <div>
-                  <label className="ft-label">Speaker / Trainer Name</label>
-                  <input
-                    type="text"
-                    className="ft-input"
-                    placeholder="e.g. Abdullah Amr Maged"
-                    value={form.speakerName}
-                    onChange={e => setForm({ ...form, speakerName: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="ft-label">Live Session Meeting URL (Zoom/Teams)</label>
-                  <input
-                    type="url"
-                    className="ft-input"
-                    placeholder="https://zoom.us/j/..."
-                    value={form.meetingLink}
-                    onChange={e => setForm({ ...form, meetingLink: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              {/* Attached Resource File (Separated Section) */}
-              <div style={{
-                background: '#f8fafc', padding: '1rem', borderRadius: '14px', border: '1.5px solid #e2e8f0',
-                display: 'flex', flexDirection: 'column', gap: '0.85rem'
-              }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Paperclip size={16} style={{ color: '#2563eb' }} /> Attached Resource File (Always Available & Not Dimmed)
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.85rem' }}>
-                  <div>
-                    <label className="ft-label">File Display Name</label>
-                    <input
-                      type="text"
-                      className="ft-input"
-                      placeholder="e.g. Orientation_Presentation.pdf"
-                      value={form.fileName}
-                      onChange={e => setForm({ ...form, fileName: e.target.value })}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="ft-label">File Link / URL (Google Drive / PDF)</label>
-                    <input
-                      type="url"
-                      className="ft-input"
-                      placeholder="https://drive.google.com/... or direct PDF link"
-                      value={form.fileUrl}
-                      onChange={e => setForm({ ...form, fileUrl: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="ft-label">Overview / Description (Arabic & English)</label>
-                <textarea
-                  className="ft-textarea"
-                  rows={3}
-                  placeholder="Key briefing points, topics covered, instructions..."
-                  value={form.description}
-                  onChange={e => setForm({ ...form, description: e.target.value })}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                <button type="button" className="ft-btn ft-btn-outline" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="ft-btn ft-btn-primary">Save Changes</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── QUICK ATTACH FILE MODAL ──────────────────────────────── */}
-      {attachModalItem && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 99999, padding: '0.75rem'
-        }}>
-          <div style={{
-            background: '#ffffff', borderRadius: '22px', width: '100%', maxWidth: '540px',
-            padding: '1.75rem', boxShadow: '0 25px 60px rgba(0,0,0,0.25)', position: 'relative'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <div>
-                <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Paperclip size={20} style={{ color: '#2563eb' }} /> Attach Resource File
-                </h2>
-                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0.25rem 0 0 0', fontWeight: 600 }}>
-                  For: <strong>{attachModalItem.title}</strong>
-                </p>
-              </div>
-              <button
-                onClick={() => setAttachModalItem(null)}
-                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveQuickAttachment} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label className="ft-label">Resource File Name *</label>
-                <input
-                  type="text"
-                  className="ft-input"
-                  placeholder="e.g. Workshop_Presentation.pdf"
-                  value={attachFileName}
-                  onChange={e => setAttachFileName(e.target.value)}
+                  value={newWeekNumber}
+                  onChange={e => setNewWeekNumber(Number(e.target.value))}
                   required
                 />
               </div>
 
               <div>
-                <label className="ft-label">Resource File URL (Google Drive / Direct PDF link) *</label>
+                <label className="ft-label">Week Title / Description *</label>
                 <input
-                  type="url"
+                  type="text"
                   className="ft-input"
-                  placeholder="https://drive.google.com/... or PDF link"
-                  value={attachFileUrl}
-                  onChange={e => setAttachFileUrl(e.target.value)}
+                  placeholder="e.g. Week 6: Post-Production, Pitching & Showcase"
+                  value={newWeekTitle}
+                  onChange={e => setNewWeekTitle(e.target.value)}
                   required
                 />
               </div>
 
               <div style={{ background: '#eff6ff', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #bfdbfe', fontSize: '0.8rem', color: '#1e40af', fontWeight: 600 }}>
-                💡 Attached files remain always accessible and active for competitors even if the live workshop time has passed.
+                💡 Workshops and files added in Workshop Timeline Settings will automatically arrange into this week by their dates.
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                <button type="button" className="ft-btn ft-btn-outline" onClick={() => setAttachModalItem(null)}>Cancel</button>
-                <button type="submit" className="ft-btn ft-btn-primary" disabled={isSavingAttachment}>
-                  {isSavingAttachment ? 'Attaching...' : 'Attach File'}
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button type="button" className="ft-btn ft-btn-outline" onClick={() => setShowAddWeekModal(false)}>Cancel</button>
+                <button type="submit" className="ft-btn ft-btn-primary" disabled={isSavingNewWeek}>
+                  {isSavingNewWeek ? 'Creating...' : '+ Create Week'}
                 </button>
               </div>
             </form>
@@ -1396,10 +1001,10 @@ export default function FTModulesPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <div>
                 <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <ArrowRightLeft size={20} style={{ color: '#be123c' }} /> Move Item to Week
+                  <ArrowRightLeft size={20} style={{ color: '#be123c' }} /> Move Workshop to Week
                 </h2>
                 <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0.25rem 0 0 0', fontWeight: 600 }}>
-                  Item: <strong>{moveModalItem.title}</strong>
+                  Workshop: <strong>{moveModalItem.title}</strong>
                 </p>
               </div>
               <button
@@ -1423,7 +1028,6 @@ export default function FTModulesPage() {
                       {g.weekTitle}
                     </option>
                   ))}
-                  <option value={6}>Week 6: Additional Modules</option>
                 </select>
               </div>
 
