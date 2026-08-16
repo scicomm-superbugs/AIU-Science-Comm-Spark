@@ -165,6 +165,7 @@ export default function FTLayout() {
   const resetRequests = useLiveCollection('ft_reset_requests');
   const notifications = useLiveCollection('ft_notifications');
   const teams = useLiveCollection('ft_teams') || [];
+  const rawMessages = useLiveCollection('ft_messages');
   const unreadChatCount = useMemo(() => {
     if (!rawMessages || !user) return 0;
     const myId = String(user.id || '');
