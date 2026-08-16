@@ -4134,6 +4134,13 @@ body.ft-modal-open {
   text-decoration: underline;
   font-weight: 700;
 }
+.ft-chat-bubble-text {
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  line-height: 1.65 !important;
+  unicode-bidi: plaintext !important;
+  font-family: inherit;
+}
 
 @media (max-width: 768px) {
   /* On mobile chat route: Lock outer page scroll and stretch chat to screen borders */

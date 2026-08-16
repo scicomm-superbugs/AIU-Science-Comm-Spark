@@ -115,7 +115,16 @@ function renderMessageText(text, isMine, accounts) {
 
   return (
     <>
-      <div style={{ wordBreak: 'break-word' }}>
+      <div 
+        dir="auto"
+        className="ft-chat-bubble-text"
+        style={{ 
+          wordBreak: 'break-word', 
+          whiteSpace: 'pre-wrap', 
+          lineHeight: 1.65,
+          unicodeBidi: 'plaintext'
+        }}
+      >
         {parts.map((part, i) => {
           if (!part) return null;
           if (/^https?:\/\//i.test(part)) {
@@ -976,7 +985,9 @@ export default function FTChatPage({ user: userProp }) {
                         boxShadow: isMe
                           ? '0 4px 14px rgba(190, 18, 60, 0.22)'
                           : '0 2px 8px rgba(0,0,0,0.03)',
-                        fontSize: '0.88rem', lineHeight: 1.5, fontWeight: 500
+                        fontSize: '0.88rem', lineHeight: 1.6, fontWeight: 500,
+                        whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                        textAlign: 'start'
                       }}
                     >
                       {/* Message Attachment */}
