@@ -405,15 +405,67 @@ export default function FTDashboard() {
     const diffDays = Math.round((itemZero.getTime() - todayZero.getTime()) / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) {
-      return { en: '🔴 Live Today', ar: 'جاري اليوم', isLive: true, isTomorrow: false };
+      return { en: 'LIVE NOW', ar: 'يحدث الآن', isLive: true, isTomorrow: false };
     }
     if (diffDays === 1) {
-      return { en: '⚡ Tomorrow', ar: 'غداً', isLive: false, isTomorrow: true };
+      return { en: 'Tomorrow', ar: 'غداً', isLive: false, isTomorrow: true };
     }
     if (diffDays > 1 && diffDays <= 7) {
-      return { en: `📅 In ${diffDays} days`, ar: `خلال ${diffDays} أيام`, isLive: false, isTomorrow: false };
+      return { en: `In ${diffDays} days`, ar: `خلال ${diffDays} أيام`, isLive: false, isTomorrow: false };
     }
     return { en: item.deadline || 'Upcoming', ar: item.deadline || 'قادم', isLive: false, isTomorrow: false };
+  };
+
+  const getExactItemSchedule = (item) => {
+    // 1. If workshop with startDate
+    if (item.startDate) {
+      const d = new Date(item.startDate);
+      if (!isNaN(d.getTime())) {
+        const dateEn = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+        const dateAr = d.toLocaleDateString('ar-EG', { weekday: 'short', month: 'short', day: 'numeric' });
+        const hasTime = String(item.startDate).includes('T') || String(item.startDate).includes(':');
+        let timeEn = '';
+        if (hasTime) {
+          const startT = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+          if (item.endDate) {
+            const endD = new Date(item.endDate);
+            if (!isNaN(endD.getTime())) {
+              const endT = endD.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+              timeEn = `${startT} – ${endT}`;
+            } else {
+              timeEn = startT;
+            }
+          } else {
+            timeEn = startT;
+          }
+        }
+        return { dateEn, dateAr, timeEn };
+      }
+    }
+
+    // 2. If submission with openDate & closeDate
+    if (item.openDate) {
+      const openD = new Date(item.openDate);
+      const dateEn = !isNaN(openD.getTime()) 
+        ? openD.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+        : item.openDate;
+      const dateAr = !isNaN(openD.getTime())
+        ? openD.toLocaleDateString('ar-EG', { weekday: 'short', month: 'short', day: 'numeric' })
+        : item.openDate;
+      
+      const timeEn = item.closeDeadline ? `Deadline: ${item.closeDeadline}` : '';
+      return { dateEn, dateAr, timeEn };
+    }
+
+    // 3. Stage milestone with deadline
+    if (item._rawDate && !isNaN(item._rawDate.getTime())) {
+      const d = item._rawDate;
+      const dateEn = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+      const dateAr = d.toLocaleDateString('ar-EG', { weekday: 'short', month: 'short', day: 'numeric' });
+      return { dateEn, dateAr, timeEn: 'Milestone Review' };
+    }
+
+    return { dateEn: item.deadline || 'Date TBA', dateAr: item.deadline || 'الموعد يحدد لاحقاً', timeEn: '' };
   };
 
   const handleAgendaItemClick = (item, trackKey) => {
@@ -698,7 +750,7 @@ export default function FTDashboard() {
           </div>
         </div>
 
-        {/* ── BILINGUAL COMPACT WIDGET: WHAT'S NEXT & RUNNING NOW ── */}
+        {/* ── BILINGUAL COMPACT WIDGET: HAPPENING NOW & UPCOMING AGENDA ── */}
         <div 
           className="ft-agenda-widget"
           style={{
@@ -722,10 +774,10 @@ export default function FTDashboard() {
                 <Zap size={15} style={{ color: '#2563eb' }} />
               </span>
               <div>
-                <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                  <span>⚡ What's Next & Running Now</span>
-                  <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.82rem' }}>|</span>
-                  <span style={{ color: '#334155', fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.88rem' }}>ما التالي وجاري الآن</span>
+                <div style={{ fontWeight: 900, fontSize: '0.98rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <span>⚡ Happening Now & Upcoming Agenda</span>
+                  <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.85rem' }}>|</span>
+                  <span style={{ color: '#be123c', fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.95rem', fontWeight: 900 }}>يحدث الآن والمهام القادمة</span>
                 </div>
               </div>
             </div>
@@ -762,7 +814,7 @@ export default function FTDashboard() {
                 <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <span>📌 Primary To-Do</span>
                   <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>•</span>
-                  <span style={{ fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.8rem' }}>مهام أساسية مطلوبة</span>
+                  <span style={{ fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.82rem', fontWeight: 800 }}>مهام أساسية مطلوبة</span>
                 </div>
                 <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b', background: '#f8fafc', padding: '0.12rem 0.45rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   {primaryTrackKey === 'pop_science' ? 'Track 1 (Videos)' : 'Track 2 (Journalism)'}
@@ -776,43 +828,102 @@ export default function FTDashboard() {
               ) : (
                 primaryUpcoming.map((item, idx) => {
                   const status = getTimeStatus(item);
+                  const sched = getExactItemSchedule(item);
+
                   return (
                     <div
                       key={item.id || idx}
                       onClick={() => handleAgendaItemClick(item, primaryTrackKey)}
                       style={{
-                        padding: '0.65rem 0.8rem', borderRadius: '12px',
+                        padding: '0.75rem 0.85rem', borderRadius: '12px',
                         background: status.isLive ? '#fff1f2' : '#f8fafc',
-                        border: status.isLive ? '1.5px solid #fecdd3' : '1px solid #e2e8f0',
+                        border: status.isLive ? '1.5px solid #f87171' : '1px solid #e2e8f0',
                         cursor: 'pointer', transition: 'all 0.15s ease',
-                        display: 'flex', flexDirection: 'column', gap: '0.35rem'
+                        display: 'flex', flexDirection: 'column', gap: '0.45rem',
+                        boxShadow: status.isLive ? '0 4px 14px rgba(220, 38, 38, 0.08)' : 'none'
                       }}
                       className="ft-agenda-item-hover"
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{
-                          fontSize: '0.68rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '9999px',
-                          background: status.isLive ? '#dc2626' : (status.isTomorrow ? '#ea580c' : '#eff6ff'),
-                          color: status.isLive || status.isTomorrow ? '#ffffff' : '#2563eb',
-                          display: 'inline-flex', alignItems: 'center', gap: '0.25rem'
-                        }}>
-                          {status.en} • {status.ar}
-                        </span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        {status.isLive ? (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.45rem',
+                            background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                            color: '#ffffff',
+                            fontSize: '0.72rem',
+                            fontWeight: 900,
+                            padding: '0.22rem 0.7rem',
+                            borderRadius: '9999px',
+                            boxShadow: '0 0 12px rgba(220, 38, 38, 0.45)',
+                            border: '1.5px solid #f87171'
+                          }}>
+                            <span style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              background: '#ffffff',
+                              boxShadow: '0 0 8px #ffffff',
+                              display: 'inline-block',
+                              animation: 'pulseLiveBeacon 1.2s infinite'
+                            }} />
+                            <span>LIVE NOW • يحدث الآن</span>
+                          </span>
+                        ) : status.isTomorrow ? (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                            background: '#fff7ed', color: '#c2410c', border: '1.5px solid #fdba74',
+                            fontSize: '0.72rem', fontWeight: 900, padding: '0.2rem 0.65rem', borderRadius: '9999px'
+                          }}>
+                            <span>⚡ Tomorrow • غداً</span>
+                          </span>
+                        ) : (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                            background: '#eff6ff', color: '#1d4ed8', border: '1.5px solid #93c5fd',
+                            fontSize: '0.72rem', fontWeight: 900, padding: '0.2rem 0.65rem', borderRadius: '9999px'
+                          }}>
+                            <span>📅 {status.en} • {status.ar}</span>
+                          </span>
+                        )}
+
                         <span style={{
                           fontSize: '0.68rem', fontWeight: 700, color: item.color || '#475569',
-                          background: item.bgColor || '#f1f5f9', padding: '0.1rem 0.45rem', borderRadius: '6px'
+                          background: item.bgColor || '#f1f5f9', padding: '0.12rem 0.5rem', borderRadius: '6px',
+                          border: `1px solid ${item.bgColor ? '#cbd5e1' : '#e2e8f0'}`
                         }}>
                           {item.badge || (item.type === 'submission_open' ? 'Submission' : 'Workshop')}
                         </span>
                       </div>
 
-                      <div style={{ fontWeight: 800, fontSize: '0.86rem', color: '#0f172a', lineHeight: 1.3 }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a', lineHeight: 1.35 }}>
                         {item.title}
                       </div>
 
+                      {/* Exact Date & Time Schedule Row */}
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap',
+                        background: status.isLive ? '#fee2e2' : '#ffffff',
+                        padding: '0.35rem 0.65rem', borderRadius: '8px',
+                        fontSize: '0.74rem', fontWeight: 700,
+                        border: `1px solid ${status.isLive ? '#fca5a5' : '#e2e8f0'}`
+                      }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#0f172a' }}>
+                          <Calendar size={13} style={{ color: '#2563eb', flexShrink: 0 }} />
+                          <span>{sched.dateEn} ({sched.dateAr})</span>
+                        </span>
+                        {sched.timeEn && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#047857' }}>
+                            <Clock size={13} style={{ color: '#059669', flexShrink: 0 }} />
+                            <strong>{sched.timeEn}</strong>
+                          </span>
+                        )}
+                      </div>
+
                       <div style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>{item.sub || (item.deadline ? `Date: ${item.deadline}` : '')}</span>
-                        <span style={{ color: '#2563eb', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.15rem' }}>
+                        <span>{item.sub || (item.trainerName ? `Trainer: ${item.trainerName}` : '')}</span>
+                        <span style={{ color: '#2563eb', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.15rem' }}>
                           View ➔
                         </span>
                       </div>
@@ -832,7 +943,7 @@ export default function FTDashboard() {
                 <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#2563eb', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <span>✨ Optional To-Do</span>
                   <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>•</span>
-                  <span style={{ fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.8rem' }}>أنشطة اختيارية ومسارات أخرى</span>
+                  <span style={{ fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.82rem', fontWeight: 800 }}>أنشطة اختيارية ومسارات أخرى</span>
                 </div>
                 <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b', background: '#f8fafc', padding: '0.12rem 0.45rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   {secondaryTrackKey === 'pop_science' ? 'Track 1 (Videos)' : 'Track 2 (Journalism)'}
@@ -846,43 +957,102 @@ export default function FTDashboard() {
               ) : (
                 optionalUpcoming.map((item, idx) => {
                   const status = getTimeStatus(item);
+                  const sched = getExactItemSchedule(item);
+
                   return (
                     <div
                       key={item.id || idx}
                       onClick={() => handleAgendaItemClick(item, secondaryTrackKey)}
                       style={{
-                        padding: '0.65rem 0.8rem', borderRadius: '12px',
-                        background: '#f8fafc',
-                        border: '1px solid #e2e8f0',
+                        padding: '0.75rem 0.85rem', borderRadius: '12px',
+                        background: status.isLive ? '#fff1f2' : '#f8fafc',
+                        border: status.isLive ? '1.5px solid #f87171' : '1px solid #e2e8f0',
                         cursor: 'pointer', transition: 'all 0.15s ease',
-                        display: 'flex', flexDirection: 'column', gap: '0.35rem'
+                        display: 'flex', flexDirection: 'column', gap: '0.45rem',
+                        boxShadow: status.isLive ? '0 4px 14px rgba(220, 38, 38, 0.08)' : 'none'
                       }}
                       className="ft-agenda-item-hover"
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{
-                          fontSize: '0.68rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '9999px',
-                          background: status.isLive ? '#dc2626' : (status.isTomorrow ? '#ea580c' : '#eff6ff'),
-                          color: status.isLive || status.isTomorrow ? '#ffffff' : '#2563eb',
-                          display: 'inline-flex', alignItems: 'center', gap: '0.25rem'
-                        }}>
-                          {status.en} • {status.ar}
-                        </span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        {status.isLive ? (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.45rem',
+                            background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                            color: '#ffffff',
+                            fontSize: '0.72rem',
+                            fontWeight: 900,
+                            padding: '0.22rem 0.7rem',
+                            borderRadius: '9999px',
+                            boxShadow: '0 0 12px rgba(220, 38, 38, 0.45)',
+                            border: '1.5px solid #f87171'
+                          }}>
+                            <span style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              background: '#ffffff',
+                              boxShadow: '0 0 8px #ffffff',
+                              display: 'inline-block',
+                              animation: 'pulseLiveBeacon 1.2s infinite'
+                            }} />
+                            <span>LIVE NOW • يحدث الآن</span>
+                          </span>
+                        ) : status.isTomorrow ? (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                            background: '#fff7ed', color: '#c2410c', border: '1.5px solid #fdba74',
+                            fontSize: '0.72rem', fontWeight: 900, padding: '0.2rem 0.65rem', borderRadius: '9999px'
+                          }}>
+                            <span>⚡ Tomorrow • غداً</span>
+                          </span>
+                        ) : (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                            background: '#eff6ff', color: '#1d4ed8', border: '1.5px solid #93c5fd',
+                            fontSize: '0.72rem', fontWeight: 900, padding: '0.2rem 0.65rem', borderRadius: '9999px'
+                          }}>
+                            <span>📅 {status.en} • {status.ar}</span>
+                          </span>
+                        )}
+
                         <span style={{
                           fontSize: '0.68rem', fontWeight: 700, color: '#475569',
-                          background: '#f1f5f9', padding: '0.1rem 0.45rem', borderRadius: '6px'
+                          background: '#f1f5f9', padding: '0.12rem 0.5rem', borderRadius: '6px',
+                          border: '1px solid #e2e8f0'
                         }}>
                           {item.badge || 'Workshop'}
                         </span>
                       </div>
 
-                      <div style={{ fontWeight: 800, fontSize: '0.86rem', color: '#0f172a', lineHeight: 1.3 }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a', lineHeight: 1.35 }}>
                         {item.title}
                       </div>
 
+                      {/* Exact Date & Time Schedule Row */}
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap',
+                        background: status.isLive ? '#fee2e2' : '#ffffff',
+                        padding: '0.35rem 0.65rem', borderRadius: '8px',
+                        fontSize: '0.74rem', fontWeight: 700,
+                        border: `1px solid ${status.isLive ? '#fca5a5' : '#e2e8f0'}`
+                      }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#0f172a' }}>
+                          <Calendar size={13} style={{ color: '#2563eb', flexShrink: 0 }} />
+                          <span>{sched.dateEn} ({sched.dateAr})</span>
+                        </span>
+                        {sched.timeEn && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#047857' }}>
+                            <Clock size={13} style={{ color: '#059669', flexShrink: 0 }} />
+                            <strong>{sched.timeEn}</strong>
+                          </span>
+                        )}
+                      </div>
+
                       <div style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>{item.sub || (item.deadline ? `Date: ${item.deadline}` : '')}</span>
-                        <span style={{ color: '#2563eb', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.15rem' }}>
+                        <span>{item.sub || (item.trainerName ? `Trainer: ${item.trainerName}` : '')}</span>
+                        <span style={{ color: '#2563eb', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.15rem' }}>
                           Optional ➔
                         </span>
                       </div>
