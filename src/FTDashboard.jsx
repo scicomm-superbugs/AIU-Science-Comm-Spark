@@ -410,7 +410,7 @@ export default function FTDashboard() {
 
   const getTimeStatus = (item) => {
     if (!item._rawDate || isNaN(item._rawDate.getTime())) {
-      return { en: 'Scheduled', ar: 'مجدول', isLive: false, isTomorrow: false };
+      return { en: 'Scheduled', ar: 'مجدول', isLive: false, isTomorrow: false, diffDays: 999, relativeAr: '' };
     }
     const now = new Date();
     const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
@@ -418,15 +418,15 @@ export default function FTDashboard() {
     const diffDays = Math.round((itemZero.getTime() - todayZero.getTime()) / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) {
-      return { en: 'LIVE NOW', ar: 'مباشر الآن', isLive: true, isTomorrow: false };
+      return { en: 'LIVE NOW', ar: 'مباشر الآن', isLive: true, isTomorrow: false, diffDays: 0, relativeAr: '⏳ يبدأ اليوم' };
     }
     if (diffDays === 1) {
-      return { en: 'Tomorrow', ar: 'غداً', isLive: false, isTomorrow: true };
+      return { en: 'Tomorrow', ar: 'غداً', isLive: false, isTomorrow: true, diffDays: 1, relativeAr: '⏳ يبدأ غدًا' };
     }
     if (diffDays > 1 && diffDays <= 7) {
-      return { en: `In ${diffDays} days`, ar: `خلال ${diffDays} أيام`, isLive: false, isTomorrow: false };
+      return { en: `In ${diffDays} days`, ar: `خلال ${diffDays} أيام`, isLive: false, isTomorrow: false, diffDays, relativeAr: `⏳ يبدأ بعد ${diffDays} أيام` };
     }
-    return { en: item.deadline || 'Upcoming', ar: item.deadline || 'قادم', isLive: false, isTomorrow: false };
+    return { en: item.deadline || 'Upcoming', ar: item.deadline || 'قادم', isLive: false, isTomorrow: false, diffDays, relativeAr: '' };
   };
 
   const getExactItemSchedule = (item) => {
@@ -760,211 +760,161 @@ export default function FTDashboard() {
           </div>
         </div>
 
-        {/* ── BILINGUAL COMPACT WIDGET: HAPPENING NOW & UPCOMING AGENDA ── */}
+        {/* ── REDESIGNED AGENDA WIDGET: ما يحدث الآن والفعاليات القادمة ── */}
         <div 
           className="ft-agenda-widget"
           style={{
             marginTop: '1.25rem',
-            padding: '1.25rem 1.4rem',
+            padding: '1.15rem 1.25rem',
             background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-            border: '1.5px solid #e2e8f0',
-            borderRadius: '20px',
+            border: '1px solid #e2e8f0',
+            borderRadius: '18px',
             boxShadow: '0 4px 20px rgba(15, 23, 42, 0.04)',
             textAlign: 'left'
           }}
         >
-          {/* Header Bar */}
-          <div className="ft-agenda-header-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.6rem', marginBottom: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: '28px', height: '28px', borderRadius: '50%',
-                background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe'
-              }}>
-                <Zap size={15} style={{ color: '#2563eb' }} />
-              </span>
-              <div>
-                <div className="ft-agenda-title-text" style={{ fontWeight: 900, fontSize: '0.98rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <span>⚡ Happening Now & Upcoming Events</span>
-                  <span style={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.85rem' }}>|</span>
-                  <span style={{ color: '#be123c', fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.95rem', fontWeight: 900 }}>ما يحدث الآن والفعاليات القادمة</span>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <span style={{
-                background: primaryTrackKey === 'pop_science' ? '#fff1f2' : '#eff6ff',
-                color: primaryTrackKey === 'pop_science' ? '#be123c' : '#2563eb',
-                fontSize: '0.74rem', fontWeight: 800, padding: '0.2rem 0.65rem', borderRadius: '8px',
-                border: `1px solid ${primaryTrackKey === 'pop_science' ? '#fecdd3' : '#bfdbfe'}`
-              }}>
-                {primaryTrackKey === 'pop_science' ? '🎥 Track 1: Pop Science Videos' : '📰 Track 2: Science Journalism'}
-              </span>
+          {/* Header */}
+          <div className="ft-agenda-header-bar">
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: '26px', height: '26px', borderRadius: '50%',
+              background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', flexShrink: 0
+            }}>
+              <Zap size={14} style={{ color: '#2563eb' }} />
+            </span>
+            <div className="ft-agenda-title-text">
+              <span>⚡ ما يحدث الآن والفعاليات القادمة</span>
             </div>
           </div>
 
-          {/* 2-Column Desktop Grid / Horizontal Mobile Swipe Banner */}
+          {/* 2-Column Grid (desktop) / Vertical Stack (mobile) */}
           <div className="ft-agenda-grid-container">
             
-            {/* 1. PRIMARY TO-DO (REQUIRED IN YOUR REGISTERED TRACK) */}
-            <div className="ft-agenda-banner-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.15rem' }}>
-                <div style={{ fontWeight: 800, fontSize: '0.84rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <span>📌 Primary To-Do</span>
-                  <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>•</span>
-                  <span style={{ fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.84rem', fontWeight: 800 }}>مهام أساسية مطلوبة</span>
-                </div>
-                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#be123c', background: '#fff1f2', padding: '0.15rem 0.6rem', borderRadius: '6px', border: '1px solid #fecdd3' }}>
-                  {primaryTrackKey === 'pop_science' ? 'Track 1: Pop Science Videos' : 'Track 2: Science Journalism'}
+            {/* ── COLUMN 1: 📌 مهام أساسية (Required) ── */}
+            <div>
+              <div className="ft-agenda-section-label required-label">
+                <span>📌</span>
+                <span>مهام أساسية</span>
+                <span className={`ft-agenda-track-badge track-primary`}>
+                  {primaryTrackKey === 'pop_science' ? '🎥 المسار الأول — الفيديوهات العلمية' : '📰 المسار الثاني — الصحافة العلمية'}
                 </span>
               </div>
 
               {primaryUpcoming.length === 0 ? (
-                <div style={{ padding: '1rem', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', color: '#16a34a', fontSize: '0.85rem', fontWeight: 700 }}>
-                  🎉 All current track deliverables & workshops completed!
+                <div className="ft-agenda-empty" style={{ color: '#16a34a' }}>
+                  🎉 تم إنجاز جميع المهام الحالية!
                 </div>
               ) : (
                 primaryUpcoming.map((item, idx) => {
                   const status = getTimeStatus(item);
                   const sched = getExactItemSchedule(item);
                   const isSubmission = item.type === 'submission_open' || item.badge === 'Submission';
+                  const cardClass = `ft-agenda-banner-card${status.isLive ? ' is-live' : ''}`;
+
+                  // Get Arabic activity type
+                  const getActivityTypeAr = (item) => {
+                    if (isSubmission) return 'تسليم مرحلي';
+                    const badge = (item.badge || '').toLowerCase();
+                    if (badge === 'workshop' || !item.badge) return 'ورشة تدريبية';
+                    if (badge === 'orientation') return 'جلسة تعريفية';
+                    if (badge === 'lecture') return 'محاضرة';
+                    if (badge === 'office hours') return 'ساعات مكتبية';
+                    if (badge === 'stage milestone') return 'مرحلة رئيسية';
+                    if (badge === 'submission') return 'تسليم مرحلي';
+                    return item.badge;
+                  };
+
+                  // Arabic date formatting
+                  const getArabicDateDisplay = (sched, status) => {
+                    if (status.isLive) return 'اليوم';
+                    return sched.dateAr || sched.dateEn;
+                  };
+
+                  // Arabic time formatting
+                  const getArabicTimeDisplay = (sched) => {
+                    if (!sched.timeEn) return '';
+                    return sched.timeEn;
+                  };
 
                   return (
-                    <div
-                      key={item.id || idx}
-                      style={{
-                        padding: '0.85rem 1rem', borderRadius: '14px',
-                        background: status.isLive ? '#fff1f2' : '#f8fafc',
-                        border: status.isLive ? '1.5px solid #f87171' : '1px solid #e2e8f0',
-                        display: 'flex', flexDirection: 'column', gap: '0.6rem',
-                        boxShadow: status.isLive ? '0 4px 14px rgba(220, 38, 38, 0.08)' : 'none'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <div key={item.id || idx} className={cardClass}>
+                      {/* Row 1: Status + Track (inline) */}
+                      <div className="ft-agenda-card-toprow">
                         {status.isLive ? (
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.45rem',
-                            background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-                            color: '#ffffff',
-                            fontSize: '0.74rem',
-                            fontWeight: 900,
-                            padding: '0.24rem 0.75rem',
-                            borderRadius: '9999px',
-                            boxShadow: '0 0 12px rgba(220, 38, 38, 0.45)',
-                            border: '1.5px solid #f87171'
-                          }}>
-                            <span style={{
-                              width: '8px',
-                              height: '8px',
-                              borderRadius: '50%',
-                              background: '#ffffff',
-                              boxShadow: '0 0 8px #ffffff',
-                              display: 'inline-block',
-                              animation: 'pulseLiveBeacon 1.2s infinite'
-                            }} />
-                            <span>LIVE NOW • مباشر الآن</span>
+                          <span className="ft-agenda-status-badge live">
+                            <span className="ft-agenda-live-dot" />
+                            <span>🔴 مباشر الآن</span>
                           </span>
                         ) : status.isTomorrow ? (
-                          <span style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                            background: '#fff7ed', color: '#c2410c', border: '1.5px solid #fdba74',
-                            fontSize: '0.72rem', fontWeight: 900, padding: '0.2rem 0.65rem', borderRadius: '9999px'
-                          }}>
-                            <span>⚡ Tomorrow • غداً</span>
+                          <span className="ft-agenda-status-badge tomorrow">
+                            <span>⏳ يبدأ غدًا</span>
+                          </span>
+                        ) : status.diffDays > 1 && status.diffDays <= 7 ? (
+                          <span className="ft-agenda-status-badge required">
+                            <span>{status.relativeAr}</span>
                           </span>
                         ) : (
-                          <span style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                            background: '#eff6ff', color: '#1d4ed8', border: '1.5px solid #93c5fd',
-                            fontSize: '0.72rem', fontWeight: 900, padding: '0.2rem 0.65rem', borderRadius: '9999px'
-                          }}>
-                            <span>📅 {status.en} • {status.ar}</span>
+                          <span className="ft-agenda-status-badge required">
+                            <span>📌 المهمة القادمة</span>
                           </span>
                         )}
-
-                        <span style={{
-                          fontSize: '0.72rem', fontWeight: 800, color: item.color || '#475569',
-                          background: item.bgColor || '#f1f5f9', padding: '0.15rem 0.6rem', borderRadius: '6px',
-                          border: `1px solid ${item.bgColor ? '#cbd5e1' : '#e2e8f0'}`
-                        }}>
-                          {isSubmission ? 'تسليم مرحلي' : (item.badge === 'Workshop' || !item.badge ? 'محاضرة تدريبية' : item.badge)}
-                        </span>
+                        <span className="ft-agenda-type-badge">{getActivityTypeAr(item)}</span>
                       </div>
 
-                      <div style={{ fontWeight: 900, fontSize: '0.94rem', color: '#0f172a', lineHeight: 1.35 }}>
-                        {item.title}
-                      </div>
+                      {/* Row 2: Title */}
+                      <div className="ft-agenda-card-title">{item.title}</div>
 
-                      {/* Exact Date & Time Schedule Row */}
-                      <div style={{
-                        display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap',
-                        background: status.isLive ? '#fee2e2' : '#ffffff',
-                        padding: '0.4rem 0.7rem', borderRadius: '8px',
-                        fontSize: '0.75rem', fontWeight: 700,
-                        border: `1px solid ${status.isLive ? '#fca5a5' : '#e2e8f0'}`
-                      }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#0f172a' }}>
-                          <Calendar size={13} style={{ color: '#2563eb', flexShrink: 0 }} />
-                          <span>{sched.dateEn} ({sched.dateAr})</span>
+                      {/* Row 3: Date & Time */}
+                      <div className={`ft-agenda-datetime${status.isLive ? ' is-live' : ''}`}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Calendar size={12} style={{ color: status.isLive ? '#dc2626' : '#2563eb', flexShrink: 0 }} />
+                          <span>📅 {getArabicDateDisplay(sched, status)}</span>
                         </span>
-                        {sched.timeEn && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#047857' }}>
-                            <Clock size={13} style={{ color: '#059669', flexShrink: 0 }} />
-                            <strong>{sched.timeEn}</strong>
+                        {getArabicTimeDisplay(sched) && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <span>·</span>
+                            <Clock size={12} style={{ color: '#059669', flexShrink: 0 }} />
+                            <span>🕘 {getArabicTimeDisplay(sched)}</span>
                           </span>
                         )}
                       </div>
 
-                      {/* Action Buttons Row */}
-                      <div style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
-                        {item.meetingLink ? (
+                      {/* Row 4: Action Buttons */}
+                      <div className="ft-agenda-actions">
+                        {status.isLive && item.meetingLink ? (
                           <a
                             href={item.meetingLink}
                             target="_blank"
                             rel="noreferrer"
-                            className="ft-btn"
-                            style={{
-                              background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-                              color: '#ffffff', fontWeight: 900, fontSize: '0.78rem',
-                              padding: '0.45rem 0.85rem', borderRadius: '10px', textDecoration: 'none',
-                              display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
-                            }}
+                            className="ft-agenda-btn-primary live-join"
                           >
-                            <Mic size={14} /> Join Live Session • دخول للمحاضرة
+                            🔴 ادخل الآن
+                          </a>
+                        ) : item.meetingLink ? (
+                          <a
+                            href={item.meetingLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="ft-agenda-btn-primary session-join"
+                          >
+                            <Mic size={13} /> دخول للمحاضرة
                           </a>
                         ) : isSubmission ? (
                           <button
                             type="button"
                             onClick={() => navigate('/my-competition')}
-                            className="ft-btn"
-                            style={{
-                              background: 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)',
-                              color: '#ffffff', fontWeight: 900, fontSize: '0.78rem',
-                              padding: '0.45rem 0.85rem', borderRadius: '10px', border: 'none', cursor: 'pointer',
-                              display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                              boxShadow: '0 2px 8px rgba(225, 29, 72, 0.3)'
-                            }}
+                            className="ft-agenda-btn-primary submit-btn"
                           >
-                            <Upload size={14} /> Submit Deliverables • تسليم العمل
+                            <Upload size={13} /> تسليم العمل
                           </button>
                         ) : null}
 
                         <button
                           type="button"
                           onClick={() => handleAgendaItemClick(item)}
-                          className="ft-btn"
-                          style={{
-                            background: '#ffffff', border: '1.5px solid #cbd5e1',
-                            color: '#334155', fontWeight: 800, fontSize: '0.78rem',
-                            padding: '0.45rem 0.75rem', borderRadius: '10px', cursor: 'pointer',
-                            display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
-                          }}
+                          className="ft-agenda-btn-details"
                         >
-                          View Details • التفاصيل ➔
+                          التفاصيل →
                         </button>
                       </div>
                     </div>
@@ -973,149 +923,120 @@ export default function FTDashboard() {
               )}
             </div>
 
-            {/* 2. OPTIONAL TO-DO (CROSS-TRACK WORKSHOPS & OPEN SESSIONS) */}
-            <div className="ft-agenda-banner-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.15rem' }}>
-                <div style={{ fontWeight: 800, fontSize: '0.84rem', color: '#2563eb', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <span>✨ Optional To-Do</span>
-                  <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>•</span>
-                  <span style={{ fontFamily: "'Cairo', 'IBM Plex Sans Arabic', sans-serif", fontSize: '0.84rem', fontWeight: 800 }}>أنشطة اختيارية ومسارات أخرى</span>
-                </div>
-                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#2563eb', background: '#eff6ff', padding: '0.15rem 0.6rem', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
-                  {secondaryTrackKey === 'pop_science' ? 'Track 1: Pop Science Videos' : 'Track 2: Science Journalism'}
+            {/* ── COLUMN 2: ✨ أنشطة إضافية (Optional) ── */}
+            <div>
+              <div className="ft-agenda-section-label optional-label">
+                <span>✨</span>
+                <span>أنشطة إضافية</span>
+                <span className={`ft-agenda-track-badge track-secondary`}>
+                  {secondaryTrackKey === 'pop_science' ? '🎥 المسار الأول — الفيديوهات العلمية' : '📰 المسار الثاني — الصحافة العلمية'}
                 </span>
               </div>
 
               {optionalUpcoming.length === 0 ? (
-                <div style={{ padding: '1rem', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', color: '#64748b', fontSize: '0.85rem', fontWeight: 600 }}>
-                  No optional cross-track events currently scheduled.
+                <div className="ft-agenda-empty" style={{ color: '#64748b' }}>
+                  لا توجد أنشطة إضافية مجدولة حالياً
                 </div>
               ) : (
                 optionalUpcoming.map((item, idx) => {
                   const status = getTimeStatus(item);
                   const sched = getExactItemSchedule(item);
                   const isSubmission = item.type === 'submission_open' || item.badge === 'Submission';
+                  const cardClass = `ft-agenda-banner-card is-optional${status.isLive ? ' is-live' : ''}`;
+
+                  const getActivityTypeAr = (item) => {
+                    if (isSubmission) return 'تسليم مرحلي';
+                    const badge = (item.badge || '').toLowerCase();
+                    if (badge === 'workshop' || !item.badge) return 'ورشة تدريبية';
+                    if (badge === 'orientation') return 'جلسة تعريفية';
+                    if (badge === 'lecture') return 'محاضرة';
+                    if (badge === 'office hours') return 'ساعات مكتبية';
+                    if (badge === 'stage milestone') return 'مرحلة رئيسية';
+                    if (badge === 'submission') return 'تسليم مرحلي';
+                    return item.badge;
+                  };
+
+                  const getArabicDateDisplay = (sched, status) => {
+                    if (status.isLive) return 'اليوم';
+                    return sched.dateAr || sched.dateEn;
+                  };
+
+                  const getArabicTimeDisplay = (sched) => {
+                    if (!sched.timeEn) return '';
+                    return sched.timeEn;
+                  };
 
                   return (
-                    <div
-                      key={item.id || idx}
-                      style={{
-                        padding: '0.85rem 1rem', borderRadius: '14px',
-                        background: status.isLive ? '#fff1f2' : '#f8fafc',
-                        border: status.isLive ? '1.5px solid #f87171' : '1px solid #e2e8f0',
-                        display: 'flex', flexDirection: 'column', gap: '0.6rem',
-                        boxShadow: status.isLive ? '0 4px 14px rgba(220, 38, 38, 0.08)' : 'none'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <div key={item.id || idx} className={cardClass}>
+                      {/* Row 1: Status + Track (inline) */}
+                      <div className="ft-agenda-card-toprow">
                         {status.isLive ? (
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.45rem',
-                            background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-                            color: '#ffffff',
-                            fontSize: '0.74rem',
-                            fontWeight: 900,
-                            padding: '0.22rem 0.7rem',
-                            borderRadius: '9999px',
-                            boxShadow: '0 0 12px rgba(220, 38, 38, 0.45)',
-                            border: '1.5px solid #f87171'
-                          }}>
-                            <span style={{
-                              width: '8px',
-                              height: '8px',
-                              borderRadius: '50%',
-                              background: '#ffffff',
-                              boxShadow: '0 0 8px #ffffff',
-                              display: 'inline-block',
-                              animation: 'pulseLiveBeacon 1.2s infinite'
-                            }} />
-                            <span>LIVE NOW • مباشر الآن</span>
+                          <span className="ft-agenda-status-badge live">
+                            <span className="ft-agenda-live-dot" />
+                            <span>🔴 مباشر الآن</span>
                           </span>
                         ) : status.isTomorrow ? (
-                          <span style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                            background: '#fff7ed', color: '#c2410c', border: '1.5px solid #fdba74',
-                            fontSize: '0.72rem', fontWeight: 900, padding: '0.2rem 0.65rem', borderRadius: '9999px'
-                          }}>
-                            <span>⚡ Tomorrow • غداً</span>
+                          <span className="ft-agenda-status-badge tomorrow">
+                            <span>⏳ يبدأ غدًا</span>
+                          </span>
+                        ) : status.diffDays > 1 && status.diffDays <= 7 ? (
+                          <span className="ft-agenda-status-badge optional">
+                            <span>{status.relativeAr}</span>
                           </span>
                         ) : (
-                          <span style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                            background: '#eff6ff', color: '#1d4ed8', border: '1.5px solid #93c5fd',
-                            fontSize: '0.72rem', fontWeight: 900, padding: '0.2rem 0.65rem', borderRadius: '9999px'
-                          }}>
-                            <span>📅 {status.en} • {status.ar}</span>
+                          <span className="ft-agenda-status-badge optional">
+                            <span>✨ نشاط إضافي</span>
                           </span>
                         )}
-
-                        <span style={{
-                          fontSize: '0.72rem', fontWeight: 800, color: '#475569',
-                          background: '#f1f5f9', padding: '0.15rem 0.6rem', borderRadius: '6px',
-                          border: '1px solid #e2e8f0'
-                        }}>
-                          {item.badge === 'Workshop' || !item.badge ? 'محاضرة تدريبية' : item.badge}
-                        </span>
+                        <span className="ft-agenda-type-badge">{getActivityTypeAr(item)}</span>
                       </div>
 
-                      <div style={{ fontWeight: 900, fontSize: '0.94rem', color: '#0f172a', lineHeight: 1.35 }}>
-                        {item.title}
-                      </div>
+                      {/* Row 2: Title */}
+                      <div className="ft-agenda-card-title">{item.title}</div>
 
-                      {/* Exact Date & Time Schedule Row */}
-                      <div style={{
-                        display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap',
-                        background: status.isLive ? '#fee2e2' : '#ffffff',
-                        padding: '0.4rem 0.7rem', borderRadius: '8px',
-                        fontSize: '0.75rem', fontWeight: 700,
-                        border: `1px solid ${status.isLive ? '#fca5a5' : '#e2e8f0'}`
-                      }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#0f172a' }}>
-                          <Calendar size={13} style={{ color: '#2563eb', flexShrink: 0 }} />
-                          <span>{sched.dateEn} ({sched.dateAr})</span>
+                      {/* Row 3: Date & Time */}
+                      <div className={`ft-agenda-datetime${status.isLive ? ' is-live' : ''}`}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Calendar size={12} style={{ color: status.isLive ? '#dc2626' : '#2563eb', flexShrink: 0 }} />
+                          <span>📅 {getArabicDateDisplay(sched, status)}</span>
                         </span>
-                        {sched.timeEn && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#047857' }}>
-                            <Clock size={13} style={{ color: '#059669', flexShrink: 0 }} />
-                            <strong>{sched.timeEn}</strong>
+                        {getArabicTimeDisplay(sched) && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <span>·</span>
+                            <Clock size={12} style={{ color: '#059669', flexShrink: 0 }} />
+                            <span>🕘 {getArabicTimeDisplay(sched)}</span>
                           </span>
                         )}
                       </div>
 
-                      {/* Action Buttons Row */}
-                      <div style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
-                        {item.meetingLink ? (
+                      {/* Row 4: Action Buttons */}
+                      <div className="ft-agenda-actions">
+                        {status.isLive && item.meetingLink ? (
                           <a
                             href={item.meetingLink}
                             target="_blank"
                             rel="noreferrer"
-                            className="ft-btn"
-                            style={{
-                              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                              color: '#ffffff', fontWeight: 900, fontSize: '0.78rem',
-                              padding: '0.45rem 0.85rem', borderRadius: '10px', textDecoration: 'none',
-                              display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                              boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)'
-                            }}
+                            className="ft-agenda-btn-primary live-join"
                           >
-                            <Mic size={14} /> Join Session • دخول للمحاضرة
+                            🔴 ادخل الآن
+                          </a>
+                        ) : item.meetingLink ? (
+                          <a
+                            href={item.meetingLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="ft-agenda-btn-primary session-join"
+                          >
+                            <Mic size={13} /> دخول للمحاضرة
                           </a>
                         ) : null}
 
                         <button
                           type="button"
                           onClick={() => handleAgendaItemClick(item)}
-                          className="ft-btn"
-                          style={{
-                            background: '#ffffff', border: '1.5px solid #cbd5e1',
-                            color: '#334155', fontWeight: 800, fontSize: '0.78rem',
-                            padding: '0.45rem 0.75rem', borderRadius: '10px', cursor: 'pointer',
-                            display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
-                          }}
+                          className="ft-agenda-btn-details"
                         >
-                          View Details • التفاصيل ➔
+                          التفاصيل →
                         </button>
                       </div>
                     </div>
@@ -1124,11 +1045,6 @@ export default function FTDashboard() {
               )}
             </div>
 
-          </div>
-
-          {/* Swipe Hint on Mobile */}
-          <div className="ft-agenda-swipe-hint">
-            <span>↔ اسحب أفقياً للمسار الآخر • Swipe for other track</span>
           </div>
         </div>
       </div>
