@@ -3,7 +3,8 @@ import { db, firestore, getCollectionName, useLiveCollection } from './db';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { 
   Settings, Save, Search, UserCheck, UserPlus, Plus, Trash2, Award, Key, 
-  CheckCircle2, ShieldCheck, Clock, Lock, Users, Edit3, X, Sparkles, Check, User 
+  CheckCircle2, ShieldCheck, Clock, Lock, Users, Edit3, X, Sparkles, Check, User,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 import { DEFAULT_JUDGING_CRITERIA, FT_DEPARTMENTS, FT_ROLE_LABELS, FT_ROLE_COLORS, getUserRoleLabel } from './ftConstants';
 import { logActivity } from './activityLogger';
@@ -34,7 +35,8 @@ export default function FTAdminSettings() {
   const liveScientists = useLiveCollection('scientists') || [];
 
   const [requestsSearch, setRequestsSearch] = useState('');
-  const [requestsFilter, setRequestsFilter] = useState('all'); // 'all' | 'pending' | 'accounts' | 'teams' | 'resets' | 'approved'
+  const [requestsFilter, setRequestsFilter] = useState('pending'); // Default to 'pending' to show pending items immediately!
+  const [showApprovedGroup, setShowApprovedGroup] = useState(false); // Collapsed by default for clean view!
 
   // Competition Tracks State
   const [newTrackTitle, setNewTrackTitle] = useState('');
@@ -502,6 +504,383 @@ export default function FTAdminSettings() {
     }
   };
 
+  // ── REUSABLE RENDERER FOR REQUEST CARDS ──────────────────────────────────
+  const renderRequestCard = (item) => {
+    // ── A. RENDER NEW ACCOUNT REGISTRATION & APPROVAL CARD ──
+    if (item.reqType === 'new_account') {
+      const isApproved = item.status === 'approved';
+      const roleColor = FT_ROLE_COLORS[item.role] || '#2563eb';
+      const trackLabel = item.registeredTrack === 'science_journalism' ? 'Track 2: Science Journalism' : 'Track 1: Pop Science';
+
+      return (
+        <div
+          key={item.id}
+          style={{
+            padding: '1.25rem 1.5rem',
+            borderRadius: '16px',
+            background: isApproved ? '#f0fdf4' : '#fffbeb',
+            border: isApproved ? '1.5px solid #86efac' : '2px solid #fde68a',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1.25rem'
+          }}
+        >
+          {/* Left: User details */}
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flex: 1, minWidth: '280px' }}>
+            <img
+              src={item.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.username || 'user'}`}
+              alt={item.name}
+              style={{
+                width: '52px', height: '52px', borderRadius: '50%',
+                objectFit: 'cover', border: `2px solid ${isApproved ? '#16a34a' : roleColor}`,
+                flexShrink: 0, background: '#f1f5f9'
+              }}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 900, fontSize: '1.05rem', color: '#0f172a' }}>
+                  {item.name}
+                </span>
+                <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>
+                  @{item.username}
+                </span>
+                <span style={{
+                  fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.55rem', borderRadius: '6px',
+                  background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd'
+                }}>
+                  👤 New Account
+                </span>
+                <span style={{
+                  fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.55rem', borderRadius: '6px',
+                  background: `${roleColor}18`, color: roleColor, border: `1px solid ${roleColor}40`
+                }}>
+                  {getUserRoleLabel({ role: item.role })}
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.6rem', borderRadius: '9999px',
+                    background: isApproved ? '#dcfce7' : '#fef3c7', color: isApproved ? '#15803d' : '#d97706',
+                    border: `1px solid ${isApproved ? '#86efac' : '#fde68a'}`
+                  }}
+                >
+                  {isApproved ? 'Active / Approved ✅' : 'Pending Review ⏳'}
+                </span>
+              </div>
+
+              <div style={{ fontSize: '0.84rem', color: '#475569', fontWeight: 500, display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem' }}>
+                <span>📧 <strong>{item.email || 'No email'}</strong></span>
+                {item.phone && <span>📱 {item.phone}</span>}
+                <span>🎯 Track: <strong>{trackLabel}</strong></span>
+                <span>👥 Mode: <strong>{item.participationMode === 'team' ? 'Team Mode' : 'Solo Competitor'}</strong></span>
+                {item.institutionName && <span>🏛️ {item.institutionName}</span>}
+                {item.universityId && <span>🎓 ID: {item.universityId}</span>}
+                {item.nationalId && <span>🪪 NID: {item.nationalId}</span>}
+              </div>
+
+              <div style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.15rem' }}>
+                <Clock size={13} /> Registered: {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Recently'}
+                {isApproved && item.approvedAt && (
+                  <span style={{ color: '#16a34a', marginLeft: '0.5rem' }}>
+                    • Approved: {new Date(item.approvedAt).toLocaleString()}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Action Buttons */}
+          <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexShrink: 0 }}>
+            {!isApproved ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleApproveUser(item.userId, item.rawUser)}
+                  className="ft-btn"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 1.15rem',
+                    background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff',
+                    border: 'none', borderRadius: '10px', fontWeight: 900, fontSize: '0.84rem',
+                    cursor: 'pointer', boxShadow: '0 4px 14px rgba(22, 163, 74, 0.25)'
+                  }}
+                >
+                  <Check size={16} /> Approve Account
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRejectUser(item.userId, item.rawUser)}
+                  className="ft-btn"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 0.95rem',
+                    background: '#ffffff', border: '1.5px solid #fca5a5', color: '#dc2626',
+                    borderRadius: '10px', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer'
+                  }}
+                >
+                  <Trash2 size={15} /> Reject
+                </button>
+              </>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <CheckCircle2 size={16} /> Active Account
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ── B. RENDER TEAM NAME CHANGE REQUEST CARD ──
+    if (item.reqType === 'team_name_change') {
+      const isApproved = item.status === 'approved';
+      const trackName = item.track === 'pop_science' ? 'Track 1: Pop Science' : 'Track 2: Science Journalism';
+
+      return (
+        <div
+          key={item.id}
+          style={{
+            padding: '1.35rem 1.5rem',
+            borderRadius: '16px',
+            background: isApproved ? '#f0fdf4' : '#fffbeb',
+            border: isApproved ? '1.5px solid #86efac' : '2px solid #fde68a',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1.25rem'
+          }}
+        >
+          {/* Left: Team Info & Proposed Name Box */}
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flex: 1, minWidth: '280px' }}>
+            <div style={{
+              width: '52px', height: '52px', borderRadius: '14px',
+              background: isApproved ? '#dcfce7' : '#fef3c7',
+              border: isApproved ? '2px solid #86efac' : '2px solid #fde68a',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: isApproved ? '#16a34a' : '#b45309', flexShrink: 0
+            }}>
+              <Users size={26} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 900, fontSize: '1.1rem', color: '#0f172a' }}>
+                  👥 Team: {item.currentTeamName}
+                </span>
+                <span style={{
+                  fontSize: '0.74rem', fontWeight: 800, padding: '0.15rem 0.55rem', borderRadius: '6px',
+                  background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe'
+                }}>
+                  ID: {item.teamCode}
+                </span>
+                <span style={{
+                  fontSize: '0.74rem', fontWeight: 800, padding: '0.15rem 0.55rem', borderRadius: '6px',
+                  background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1'
+                }}>
+                  {trackName}
+                </span>
+                <span style={{
+                  fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.6rem', borderRadius: '9999px',
+                  background: isApproved ? '#dcfce7' : '#fef3c7', color: isApproved ? '#15803d' : '#d97706',
+                  border: `1px solid ${isApproved ? '#86efac' : '#fde68a'}`
+                }}>
+                  {isApproved ? 'Approved ✅' : 'Pending Name Change ⏳'}
+                </span>
+              </div>
+
+              {/* Proposed Name Highlight Banner */}
+              <div style={{
+                background: '#ffffff', border: '1.5px solid #fde68a', borderRadius: '12px',
+                padding: '0.75rem 1rem', marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.25rem'
+              }}>
+                <div style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: 700 }}>
+                  ⚡ Requested New Name: <strong style={{ color: '#b45309', fontSize: '1.05rem', background: '#fef3c7', padding: '0.15rem 0.6rem', borderRadius: '8px' }}>"{item.requestedName}"</strong>
+                </div>
+                <div style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 500 }}>
+                  👤 Requested by: <strong>{item.requestedBy}</strong> · Members: {item.members?.length || 1}/3
+                </div>
+                {item.reason && (
+                  <div style={{ fontSize: '0.82rem', color: '#78350f', fontStyle: 'italic', background: '#fffbeb', padding: '0.35rem 0.6rem', borderRadius: '6px' }}>
+                    📝 Note from Leader: "{item.reason}"
+                  </div>
+                )}
+                <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 700, marginTop: '0.15rem' }}>
+                  🛡️ Guaranteed: Points, leaderboard rank, submitted files, and team member records will NOT be modified.
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                <Clock size={13} /> Requested: {item.requestedAt ? new Date(item.requestedAt).toLocaleString() : 'Recently'}
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Actions */}
+          <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => handleApproveTeamNameChange(item)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 1.15rem',
+                background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff',
+                border: 'none', borderRadius: '10px', fontWeight: 900, fontSize: '0.84rem', cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(22, 163, 74, 0.25)'
+              }}
+            >
+              <Check size={16} /> Approve Name
+            </button>
+            <button
+              type="button"
+              onClick={() => handleRejectTeamNameChange(item)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 1rem',
+                background: '#ffffff', border: '1.5px solid #fca5a5', color: '#dc2626',
+                borderRadius: '10px', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer'
+              }}
+            >
+              <X size={16} /> Refuse
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ── C. RENDER PASSWORD RESET REQUEST CARD ──
+    const req = item.rawReq || item;
+    const matchedUser = (users || []).find(u => 
+      (u.username && req.username && u.username.toLowerCase() === req.username.toLowerCase()) ||
+      (u.email && req.email && u.email.toLowerCase() === req.email.toLowerCase())
+    );
+    const isApproved = req.status === 'approved';
+
+    return (
+      <div
+        key={req.id}
+        style={{
+          padding: '1.25rem 1.5rem',
+          borderRadius: '16px',
+          background: isApproved ? '#f0fdf4' : '#ffffff',
+          border: isApproved ? '1.5px solid #86efac' : '1.5px solid #cbd5e1',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1.25rem'
+        }}
+      >
+        {/* Left: User & Request info */}
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flex: 1, minWidth: '280px' }}>
+          <img
+            src={matchedUser?.avatarUrl || matchedUser?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.username || 'user'}`}
+            alt={req.username}
+            style={{
+              width: '52px', height: '52px', borderRadius: '50%',
+              objectFit: 'cover', border: isApproved ? '2px solid #16a34a' : '2px solid #2563eb',
+              flexShrink: 0, background: '#f1f5f9'
+            }}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 900, fontSize: '1.05rem', color: '#0f172a' }}>
+                {matchedUser?.name || req.username}
+              </span>
+              <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>
+                @{req.username}
+              </span>
+              <span style={{
+                fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.55rem', borderRadius: '6px',
+                background: '#f3e8ff', color: '#7c3aed', border: '1px solid #d8b4fe'
+              }}>
+                🔑 Password Reset
+              </span>
+              <span
+                style={{
+                  fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.6rem', borderRadius: '9999px',
+                  background: isApproved ? '#dcfce7' : '#fef3c7', color: isApproved ? '#15803d' : '#d97706',
+                  border: `1px solid ${isApproved ? '#86efac' : '#fde68a'}`
+                }}
+              >
+                {isApproved ? 'Approved ✅' : 'Pending Approval ⏳'}
+              </span>
+            </div>
+
+            <div style={{ fontSize: '0.84rem', color: '#475569', fontWeight: 500 }}>
+              📧 <strong>{req.email}</strong>
+              {matchedUser?.role && ` · Role: ${getUserRoleLabel(matchedUser)}`}
+              {matchedUser?.universityId && ` · University ID: ${matchedUser.universityId}`}
+              {matchedUser?.registeredTrack && ` · Track: ${matchedUser.registeredTrack === 'pop_science' ? 'Pop Science' : 'Science Journalism'}`}
+            </div>
+
+            <div style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Clock size={13} /> Requested: {req.createdAt ? new Date(req.createdAt).toLocaleString() : 'Recently'}
+              {isApproved && req.approvedAt && (
+                <span style={{ color: '#16a34a', marginLeft: '0.5rem' }}>
+                  • Approved: {new Date(req.approvedAt).toLocaleString()}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Actions */}
+        <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexShrink: 0 }}>
+          {!isApproved ? (
+            <>
+              <button
+                type="button"
+                onClick={() => handleApproveReset(req.id, req)}
+                className="ft-btn"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 1.1rem',
+                  background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff',
+                  border: 'none', borderRadius: '10px', fontWeight: 800, fontSize: '0.84rem',
+                  cursor: 'pointer', boxShadow: '0 4px 14px rgba(22, 163, 74, 0.25)'
+                }}
+              >
+                <CheckCircle2 size={16} /> Approve Reset
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRejectReset(req.id)}
+                className="ft-btn"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 0.95rem',
+                  background: '#ffffff', border: '1.5px solid #fca5a5', color: '#dc2626',
+                  borderRadius: '10px', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer'
+                }}
+              >
+                <Trash2 size={15} /> Reject
+              </button>
+            </>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                <CheckCircle2 size={16} /> Ready for User to Reset
+              </span>
+              <button
+                type="button"
+                onClick={() => handleRejectReset(req.id)}
+                title="Delete/Dismiss approved reset token"
+                style={{
+                  background: '#ffffff', border: '1.5px solid #cbd5e1', color: '#64748b',
+                  borderRadius: '8px', padding: '0.4rem 0.6rem', cursor: 'pointer',
+                  fontSize: '0.78rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
+                }}
+              >
+                <Trash2 size={14} /> Remove
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="ft-animate-in">
       <div className="ft-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
@@ -642,388 +1021,109 @@ export default function FTAdminSettings() {
           <div style={{ padding: '2.5rem 1rem', textAlign: 'center', background: '#f8fafc', borderRadius: '16px', border: '1.5px dashed #cbd5e1', color: '#64748b' }}>
             <Sparkles size={36} style={{ color: '#94a3b8', margin: '0 auto 0.5rem auto' }} />
             <div style={{ fontWeight: 800, fontSize: '1rem', color: '#334155' }}>
-              {requestsSearch ? 'No requests match your search.' : 'No requests currently in this list.'}
+              {requestsSearch ? 'No requests match your search.' : 'No requests currently in this view.'}
             </div>
             <div style={{ fontSize: '0.84rem', marginTop: '0.35rem', color: '#64748b' }}>
-              New account registrations, team name changes, and password reset requests will appear here for one-click admin review.
+              Pending user registrations, team name changes, and password reset requests will appear here for one-click admin review.
             </div>
           </div>
-        ) : (
+        ) : requestsFilter === 'approved' ? (
+          /* Explicit Approved Tab: Render all approved items */
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {filteredRequests.map(item => {
-              // ── A. RENDER NEW ACCOUNT REGISTRATION & APPROVAL CARD ──
-              if (item.reqType === 'new_account') {
-                const isApproved = item.status === 'approved';
-                const roleColor = FT_ROLE_COLORS[item.role] || '#2563eb';
-                const trackLabel = item.registeredTrack === 'science_journalism' ? 'Track 2: Science Journalism' : 'Track 1: Pop Science';
+            {filteredRequests.map(item => renderRequestCard(item))}
+          </div>
+        ) : (
+          /* Pending / All / Category Tabs: Prominently show Pending, and Collapse Approved */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {(() => {
+              const pendingItems = filteredRequests.filter(item => item.status === 'pending');
+              const approvedItems = filteredRequests.filter(item => item.status === 'approved');
 
-                return (
-                  <div
-                    key={item.id}
-                    style={{
-                      padding: '1.25rem 1.5rem',
-                      borderRadius: '16px',
-                      background: isApproved ? '#f0fdf4' : '#fffbeb',
-                      border: isApproved ? '1.5px solid #86efac' : '2px solid #fde68a',
-                      boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      flexWrap: 'wrap',
-                      gap: '1.25rem'
-                    }}
-                  >
-                    {/* Left: User details */}
-                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flex: 1, minWidth: '280px' }}>
-                      <img
-                        src={item.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.username || 'user'}`}
-                        alt={item.name}
-                        style={{
-                          width: '52px', height: '52px', borderRadius: '50%',
-                          objectFit: 'cover', border: `2px solid ${isApproved ? '#16a34a' : roleColor}`,
-                          flexShrink: 0, background: '#f1f5f9'
-                        }}
-                      />
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 900, fontSize: '1.05rem', color: '#0f172a' }}>
-                            {item.name}
-                          </span>
-                          <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>
-                            @{item.username}
-                          </span>
-                          <span style={{
-                            fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.55rem', borderRadius: '6px',
-                            background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd'
-                          }}>
-                            👤 New Account
-                          </span>
-                          <span style={{
-                            fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.55rem', borderRadius: '6px',
-                            background: `${roleColor}18`, color: roleColor, border: `1px solid ${roleColor}40`
-                          }}>
-                            {getUserRoleLabel({ role: item.role })}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.6rem', borderRadius: '9999px',
-                              background: isApproved ? '#dcfce7' : '#fef3c7', color: isApproved ? '#15803d' : '#d97706',
-                              border: `1px solid ${isApproved ? '#86efac' : '#fde68a'}`
-                            }}
-                          >
-                            {isApproved ? 'Active / Approved ✅' : 'Pending Review ⏳'}
-                          </span>
+              return (
+                <>
+                  {/* 1. Pending Section (Always Expanded & Front/Center) */}
+                  {pendingItems.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.2rem' }}>
+                        <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#b45309', display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                          <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#d97706', boxShadow: '0 0 8px #d97706' }} />
+                          Action Required ({pendingItems.length} Pending Review)
+                        </span>
+                      </div>
+                      {pendingItems.map(item => renderRequestCard(item))}
+                    </div>
+                  ) : (
+                    <div style={{
+                      padding: '1.25rem 1.5rem', background: '#f0fdf4', border: '1.5px solid #86efac',
+                      borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#166534'
+                    }}>
+                      <CheckCircle2 size={22} style={{ color: '#16a34a', flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '0.92rem' }}>
+                          All caught up! No pending requests in this section.
                         </div>
-
-                        <div style={{ fontSize: '0.84rem', color: '#475569', fontWeight: 500, display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem' }}>
-                          <span>📧 <strong>{item.email || 'No email'}</strong></span>
-                          {item.phone && <span>📱 {item.phone}</span>}
-                          <span>🎯 Track: <strong>{trackLabel}</strong></span>
-                          <span>👥 Mode: <strong>{item.participationMode === 'team' ? 'Team Mode' : 'Solo Competitor'}</strong></span>
-                          {item.institutionName && <span>🏛️ {item.institutionName}</span>}
-                          {item.universityId && <span>🎓 ID: {item.universityId}</span>}
-                          {item.nationalId && <span>🪪 NID: {item.nationalId}</span>}
-                        </div>
-
-                        <div style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.15rem' }}>
-                          <Clock size={13} /> Registered: {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Recently'}
-                          {isApproved && item.approvedAt && (
-                            <span style={{ color: '#16a34a', marginLeft: '0.5rem' }}>
-                              • Approved: {new Date(item.approvedAt).toLocaleString()}
-                            </span>
-                          )}
+                        <div style={{ fontSize: '0.78rem', color: '#15803d', marginTop: '0.15rem' }}>
+                          Any new registrations, team name change requests, or password resets will immediately appear here.
                         </div>
                       </div>
                     </div>
+                  )}
 
-                    {/* Right: Action Buttons */}
-                    <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexShrink: 0 }}>
-                      {!isApproved ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleApproveUser(item.userId, item.rawUser)}
-                            className="ft-btn"
-                            style={{
-                              display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 1.15rem',
-                              background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff',
-                              border: 'none', borderRadius: '10px', fontWeight: 900, fontSize: '0.84rem',
-                              cursor: 'pointer', boxShadow: '0 4px 14px rgba(22, 163, 74, 0.25)'
-                            }}
-                          >
-                            <Check size={16} /> Approve Account
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRejectUser(item.userId, item.rawUser)}
-                            className="ft-btn"
-                            style={{
-                              display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 0.95rem',
-                              background: '#ffffff', border: '1.5px solid #fca5a5', color: '#dc2626',
-                              borderRadius: '10px', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer'
-                            }}
-                          >
-                            <Trash2 size={15} /> Reject
-                          </button>
-                        </>
-                      ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                            <CheckCircle2 size={16} /> Active Account
+                  {/* 2. Approved / Handled Section (Collapsible Accordion) */}
+                  {approvedItems.length > 0 && (
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowApprovedGroup(prev => !prev)}
+                        style={{
+                          width: '100%',
+                          padding: '0.85rem 1.25rem',
+                          background: '#f8fafc',
+                          border: '1.5px solid #cbd5e1',
+                          borderRadius: '14px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          cursor: 'pointer',
+                          fontWeight: 800,
+                          fontSize: '0.88rem',
+                          color: '#334155',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <CheckCircle2 size={18} style={{ color: '#16a34a' }} />
+                          <span>Approved & Completed Records ({approvedItems.length})</span>
+                          <span style={{
+                            fontSize: '0.72rem', fontWeight: 800,
+                            background: showApprovedGroup ? '#e0f2fe' : '#dcfce7',
+                            color: showApprovedGroup ? '#0369a1' : '#15803d',
+                            padding: '0.15rem 0.55rem', borderRadius: '9999px'
+                          }}>
+                            {showApprovedGroup ? 'Expanded ▾' : 'Collapsed ▸'}
                           </span>
+                        </span>
+
+                        <span style={{ fontSize: '0.82rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700 }}>
+                          {showApprovedGroup ? (
+                            <><span>Hide Approved Records</span> <ChevronUp size={16} /></>
+                          ) : (
+                            <><span>Show Approved Records</span> <ChevronDown size={16} /></>
+                          )}
+                        </span>
+                      </button>
+
+                      {showApprovedGroup && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '1rem' }}>
+                          {approvedItems.map(item => renderRequestCard(item))}
                         </div>
                       )}
                     </div>
-                  </div>
-                );
-              }
-              // ── A. RENDER TEAM NAME CHANGE REQUEST CARD ──
-              if (item.reqType === 'team_name_change') {
-                const isApproved = item.status === 'approved';
-                const trackName = item.track === 'pop_science' ? 'Track 1: Pop Science' : 'Track 2: Science Journalism';
-
-                return (
-                  <div
-                    key={item.id}
-                    style={{
-                      padding: '1.35rem 1.5rem',
-                      borderRadius: '16px',
-                      background: isApproved ? '#f0fdf4' : '#fffbeb',
-                      border: isApproved ? '1.5px solid #86efac' : '2px solid #fde68a',
-                      boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      flexWrap: 'wrap',
-                      gap: '1.25rem'
-                    }}
-                  >
-                    {/* Left: Team Info & Proposed Name Box */}
-                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flex: 1, minWidth: '280px' }}>
-                      <div style={{
-                        width: '52px', height: '52px', borderRadius: '14px',
-                        background: isApproved ? '#dcfce7' : '#fef3c7',
-                        border: isApproved ? '2px solid #86efac' : '2px solid #fde68a',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: isApproved ? '#16a34a' : '#b45309', flexShrink: 0
-                      }}>
-                        <Users size={26} />
-                      </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 900, fontSize: '1.1rem', color: '#0f172a' }}>
-                            👥 Team: {item.currentTeamName}
-                          </span>
-                          <span style={{
-                            fontSize: '0.74rem', fontWeight: 800, padding: '0.15rem 0.55rem', borderRadius: '6px',
-                            background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe'
-                          }}>
-                            ID: {item.teamCode}
-                          </span>
-                          <span style={{
-                            fontSize: '0.74rem', fontWeight: 800, padding: '0.15rem 0.55rem', borderRadius: '6px',
-                            background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1'
-                          }}>
-                            {trackName}
-                          </span>
-                          <span style={{
-                            fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.6rem', borderRadius: '9999px',
-                            background: isApproved ? '#dcfce7' : '#fef3c7', color: isApproved ? '#15803d' : '#d97706',
-                            border: `1px solid ${isApproved ? '#86efac' : '#fde68a'}`
-                          }}>
-                            {isApproved ? 'Approved ✅' : 'Pending Name Change ⏳'}
-                          </span>
-                        </div>
-
-                        {/* Proposed Name Highlight Banner */}
-                        <div style={{
-                          background: '#ffffff', border: '1.5px solid #fde68a', borderRadius: '12px',
-                          padding: '0.75rem 1rem', marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.25rem'
-                        }}>
-                          <div style={{ fontSize: '0.92rem', color: '#0f172a', fontWeight: 700 }}>
-                            ⚡ Requested New Name: <strong style={{ color: '#b45309', fontSize: '1.05rem', background: '#fef3c7', padding: '0.15rem 0.6rem', borderRadius: '8px' }}>"{item.requestedName}"</strong>
-                          </div>
-                          <div style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 500 }}>
-                            👤 Requested by: <strong>{item.requestedBy}</strong> · Members: {item.members?.length || 1}/3
-                          </div>
-                          {item.reason && (
-                            <div style={{ fontSize: '0.82rem', color: '#78350f', fontStyle: 'italic', background: '#fffbeb', padding: '0.35rem 0.6rem', borderRadius: '6px' }}>
-                              📝 Note from Leader: "{item.reason}"
-                            </div>
-                          )}
-                          <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 700, marginTop: '0.15rem' }}>
-                            🛡️ Guaranteed: Points, leaderboard rank, submitted files, and team member records will NOT be modified.
-                          </div>
-                        </div>
-
-                        <div style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
-                          <Clock size={13} /> Requested: {item.requestedAt ? new Date(item.requestedAt).toLocaleString() : 'Recently'}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right: Actions */}
-                    <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexShrink: 0 }}>
-                      <button
-                        type="button"
-                        onClick={() => handleApproveTeamNameChange(item)}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 1.15rem',
-                          background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff',
-                          border: 'none', borderRadius: '10px', fontWeight: 900, fontSize: '0.84rem', cursor: 'pointer',
-                          boxShadow: '0 4px 14px rgba(22, 163, 74, 0.25)'
-                        }}
-                      >
-                        <Check size={16} /> Approve Name
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleRejectTeamNameChange(item)}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 1rem',
-                          background: '#ffffff', border: '1.5px solid #fca5a5', color: '#dc2626',
-                          borderRadius: '10px', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer'
-                        }}
-                      >
-                        <X size={16} /> Refuse
-                      </button>
-                    </div>
-                  </div>
-                );
-              }
-
-              // ── B. RENDER PASSWORD RESET REQUEST CARD ──
-              const req = item.rawReq || item;
-              const matchedUser = users.find(u => 
-                (u.username && req.username && u.username.toLowerCase() === req.username.toLowerCase()) ||
-                (u.email && req.email && u.email.toLowerCase() === req.email.toLowerCase())
+                  )}
+                </>
               );
-              const isApproved = req.status === 'approved';
-
-              return (
-                <div
-                  key={req.id}
-                  style={{
-                    padding: '1.25rem 1.5rem',
-                    borderRadius: '16px',
-                    background: isApproved ? '#f0fdf4' : '#ffffff',
-                    border: isApproved ? '1.5px solid #86efac' : '1.5px solid #cbd5e1',
-                    boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '1.25rem'
-                  }}
-                >
-                  {/* Left: User & Request info */}
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flex: 1, minWidth: '280px' }}>
-                    <img
-                      src={matchedUser?.avatarUrl || matchedUser?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.username || 'user'}`}
-                      alt={req.username}
-                      style={{
-                        width: '52px', height: '52px', borderRadius: '50%',
-                        objectFit: 'cover', border: isApproved ? '2px solid #16a34a' : '2px solid #2563eb',
-                        flexShrink: 0, background: '#f1f5f9'
-                      }}
-                    />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 900, fontSize: '1.05rem', color: '#0f172a' }}>
-                          {matchedUser?.name || req.username}
-                        </span>
-                        <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>
-                          @{req.username}
-                        </span>
-                        <span style={{
-                          fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.55rem', borderRadius: '6px',
-                          background: '#f3e8ff', color: '#7c3aed', border: '1px solid #d8b4fe'
-                        }}>
-                          🔑 Password Reset
-                        </span>
-                        <span
-                          style={{
-                            fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.6rem', borderRadius: '9999px',
-                            background: isApproved ? '#dcfce7' : '#fef3c7', color: isApproved ? '#15803d' : '#d97706',
-                            border: `1px solid ${isApproved ? '#86efac' : '#fde68a'}`
-                          }}
-                        >
-                          {isApproved ? 'Approved ✅' : 'Pending Approval ⏳'}
-                        </span>
-                      </div>
-
-                      <div style={{ fontSize: '0.84rem', color: '#475569', fontWeight: 500 }}>
-                        📧 <strong>{req.email}</strong>
-                        {matchedUser?.role && ` · Role: ${getUserRoleLabel(matchedUser)}`}
-                        {matchedUser?.universityId && ` · University ID: ${matchedUser.universityId}`}
-                        {matchedUser?.registeredTrack && ` · Track: ${matchedUser.registeredTrack === 'pop_science' ? 'Pop Science' : 'Science Journalism'}`}
-                      </div>
-
-                      <div style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <Clock size={13} /> Requested: {req.createdAt ? new Date(req.createdAt).toLocaleString() : 'Recently'}
-                        {isApproved && req.approvedAt && (
-                          <span style={{ color: '#16a34a', marginLeft: '0.5rem' }}>
-                            • Approved: {new Date(req.approvedAt).toLocaleString()}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Actions */}
-                  <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexShrink: 0 }}>
-                    {!isApproved ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => handleApproveReset(req.id, req)}
-                          className="ft-btn"
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 1.1rem',
-                            background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff',
-                            border: 'none', borderRadius: '10px', fontWeight: 800, fontSize: '0.84rem',
-                            cursor: 'pointer', boxShadow: '0 4px 14px rgba(22, 163, 74, 0.25)'
-                          }}
-                        >
-                          <CheckCircle2 size={16} /> Approve Reset
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRejectReset(req.id)}
-                          className="ft-btn"
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 0.95rem',
-                            background: '#ffffff', border: '1.5px solid #fca5a5', color: '#dc2626',
-                            borderRadius: '10px', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer'
-                          }}
-                        >
-                          <Trash2 size={15} /> Reject
-                        </button>
-                      </>
-                    ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                          <CheckCircle2 size={16} /> Ready for User to Reset
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleRejectReset(req.id)}
-                          title="Delete/Dismiss approved reset token"
-                          style={{
-                            background: '#ffffff', border: '1.5px solid #cbd5e1', color: '#64748b',
-                            borderRadius: '8px', padding: '0.4rem 0.6rem', cursor: 'pointer',
-                            fontSize: '0.78rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
-                          }}
-                        >
-                          <Trash2 size={14} /> Remove
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            })()}
           </div>
         )}
       </div>
