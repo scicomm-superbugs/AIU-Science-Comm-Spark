@@ -2,10 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { db, firestore, getCollectionName, useLiveCollection } from './db';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { 
-  Settings, Save, Search, UserCheck, Plus, Trash2, Award, Key, 
-  CheckCircle2, ShieldCheck, Clock, Lock, Users, Edit3, X, Sparkles, Check 
+  Settings, Save, Search, UserCheck, UserPlus, Plus, Trash2, Award, Key, 
+  CheckCircle2, ShieldCheck, Clock, Lock, Users, Edit3, X, Sparkles, Check, User 
 } from 'lucide-react';
-import { DEFAULT_JUDGING_CRITERIA, FT_DEPARTMENTS, FT_ROLE_LABELS, getUserRoleLabel } from './ftConstants';
+import { DEFAULT_JUDGING_CRITERIA, FT_DEPARTMENTS, FT_ROLE_LABELS, FT_ROLE_COLORS, getUserRoleLabel } from './ftConstants';
 import { logActivity } from './activityLogger';
 import { useAuth } from './context/AuthContext';
 import WorkshopManager from './WorkshopManager';
@@ -31,9 +31,10 @@ export default function FTAdminSettings() {
   const resetRequests = useLiveCollection('ft_reset_requests') || [];
   const teams = useLiveCollection('ft_teams') || [];
   const customTracks = useLiveCollection('ft_tracks') || [];
+  const liveScientists = useLiveCollection('scientists') || [];
 
   const [requestsSearch, setRequestsSearch] = useState('');
-  const [requestsFilter, setRequestsFilter] = useState('all'); // 'all' | 'pending' | 'teams' | 'resets' | 'approved'
+  const [requestsFilter, setRequestsFilter] = useState('all'); // 'all' | 'pending' | 'accounts' | 'teams' | 'resets' | 'approved'
 
   // Competition Tracks State
   const [newTrackTitle, setNewTrackTitle] = useState('');
@@ -162,27 +163,59 @@ export default function FTAdminSettings() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleApproveUser = async (userId) => {
+  const handleApproveUser = async (userId, userObj) => {
     try {
-      await db.scientists.update(userId, { accountStatus: 'active' });
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, accountStatus: 'active' } : u));
-      setToast({ type: 'success', msg: 'Account approved successfully!' });
+      await db.scientists.update(userId, { 
+        accountStatus: 'active',
+        approvedAt: new Date().toISOString()
+      });
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, accountStatus: 'active', approvedAt: new Date().toISOString() } : u));
+
+      // Send welcome notification to user
+      try {
+        await db.ft_notifications.add({
+          title: 'Account Approved! 🎉',
+          message: 'Welcome to SciComm Spark! Your account has been reviewed and approved by the administrators.',
+          type: 'account_approved',
+          status: 'unread',
+          targetUserId: userId,
+          createdAt: new Date().toISOString(),
+          link: '/dashboard'
+        });
+      } catch (nErr) {}
+
+      logActivity({
+        category: 'AUTH',
+        action: 'Approved User Account',
+        details: `Admin approved registration for @${userObj?.username || userId} (${userObj?.name || 'User'}, Role: ${userObj?.role || 'competitor'}).`,
+        user: authUser || { role: 'admin', username: 'admin' }
+      });
+
+      setToast({ type: 'success', msg: `✅ Account approved for ${userObj?.name || userObj?.username || 'User'}!` });
     } catch (err) {
       setToast({ type: 'error', msg: 'Approval failed: ' + err.message });
     }
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 3500);
   };
 
-  const handleRejectUser = async (userId) => {
-    if (!window.confirm("Are you sure you want to reject and delete this registration?")) return;
+  const handleRejectUser = async (userId, userObj) => {
+    if (!window.confirm(`Are you sure you want to reject and delete the registration for "${userObj?.name || userObj?.username || 'User'}"?`)) return;
     try {
       await db.scientists.delete(userId);
       setUsers(prev => prev.filter(u => u.id !== userId));
-      setToast({ type: 'success', msg: 'Registration rejected and deleted.' });
+
+      logActivity({
+        category: 'AUTH',
+        action: 'Rejected User Registration',
+        details: `Admin rejected and removed registration for @${userObj?.username || userId} (${userObj?.name || 'User'}).`,
+        user: authUser || { role: 'admin', username: 'admin' }
+      });
+
+      setToast({ type: 'success', msg: 'Registration rejected and account deleted.' });
     } catch (err) {
       setToast({ type: 'error', msg: 'Rejection failed: ' + err.message });
     }
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 3500);
   };
 
   const handleApproveReset = async (reqId, req) => {
@@ -232,7 +265,43 @@ export default function FTAdminSettings() {
   const pendingJudges = (users || []).filter(u => (u.role === 'judge' || u.role === 'trainer_judge') && u.accountStatus === 'pending');
   const allJudgesAndTrainers = (users || []).filter(u => u.role === 'judge' || u.role === 'trainer' || u.role === 'trainer_judge');
 
-  // ── 1. Team Name Change Requests (From ft_teams) ──────────────────────────
+  const effectiveScientists = useMemo(() => {
+    return liveScientists && liveScientists.length > 0 ? liveScientists : users;
+  }, [liveScientists, users]);
+
+  // ── 1. New Account Registration & Approval Requests (From scientists) ───────
+  const newAccountRequests = useMemo(() => {
+    return (effectiveScientists || [])
+      .filter(s => s.role !== 'master' && s.username !== 'admin' && s.username !== 'admin_sys_1')
+      .map(s => {
+        const isPending = s.accountStatus === 'pending' || s.status === 'pending' || s.isPendingApproval;
+        return {
+          id: `account_${s.id || s.username}`,
+          reqType: 'new_account',
+          userId: s.id || s.username,
+          username: s.username || '',
+          name: s.name || s.username || 'User',
+          email: s.email || '',
+          phone: s.phone || '',
+          role: s.role || 'competitor',
+          registeredTrack: s.registeredTrack || s.track || 'pop_science',
+          participationMode: s.participationMode || 'team',
+          nationalId: s.nationalId || '',
+          institutionName: s.institutionName || (s.isAlameinStudent ? 'Alamein International University' : ''),
+          isAlameinStudent: !!s.isAlameinStudent,
+          universityId: s.universityId || '',
+          title: s.title || '',
+          department: s.department || '',
+          avatar: s.avatarUrl || s.avatar,
+          status: isPending ? 'pending' : 'approved',
+          createdAt: s.createdAt || s.registeredAt || new Date().toISOString(),
+          approvedAt: s.approvedAt,
+          rawUser: s
+        };
+      });
+  }, [effectiveScientists]);
+
+  // ── 2. Team Name Change Requests (From ft_teams) ──────────────────────────
   const teamNameChangeRequests = useMemo(() => {
     return (teams || [])
       .filter(t => t.pendingNameChange && t.pendingNameChange.requestedName)
@@ -258,7 +327,7 @@ export default function FTAdminSettings() {
       });
   }, [teams]);
 
-  // ── 2. Password Reset Requests (From ft_reset_requests) ──────────────────
+  // ── 3. Password Reset Requests (From ft_reset_requests) ──────────────────
   const passwordResetList = useMemo(() => {
     return (resetRequests || []).map(r => ({
       id: r.id,
@@ -274,29 +343,46 @@ export default function FTAdminSettings() {
 
   // Combined and sorted requests list
   const unifiedRequestsList = useMemo(() => {
-    const list = [...teamNameChangeRequests, ...passwordResetList];
+    const list = [...newAccountRequests, ...teamNameChangeRequests, ...passwordResetList];
     return list.sort((a, b) => {
+      // Pending requests come first
+      if (a.status === 'pending' && b.status !== 'pending') return -1;
+      if (a.status !== 'pending' && b.status === 'pending') return 1;
       const timeA = new Date(a.requestedAt || a.createdAt || 0).getTime();
       const timeB = new Date(b.requestedAt || b.createdAt || 0).getTime();
       return timeB - timeA;
     });
-  }, [teamNameChangeRequests, passwordResetList]);
+  }, [newAccountRequests, teamNameChangeRequests, passwordResetList]);
 
   const pendingCount = useMemo(() => {
-    return unifiedRequestsList.filter(r => r.status !== 'approved').length;
+    return unifiedRequestsList.filter(r => r.status === 'pending' || r.status !== 'approved').length;
   }, [unifiedRequestsList]);
 
   // Filtered requests by Tab and Search query
   const filteredRequests = useMemo(() => {
     return unifiedRequestsList.filter(item => {
-      if (requestsFilter === 'pending') return item.status !== 'approved';
+      if (requestsFilter === 'pending') return item.status === 'pending' || item.status !== 'approved';
       if (requestsFilter === 'approved') return item.status === 'approved';
+      if (requestsFilter === 'accounts') return item.reqType === 'new_account';
       if (requestsFilter === 'teams') return item.reqType === 'team_name_change';
       if (requestsFilter === 'resets') return item.reqType === 'password_reset';
       return true; // 'all'
     }).filter(item => {
       if (!requestsSearch.trim()) return true;
       const q = requestsSearch.toLowerCase();
+      if (item.reqType === 'new_account') {
+        return (
+          (item.name && item.name.toLowerCase().includes(q)) ||
+          (item.username && item.username.toLowerCase().includes(q)) ||
+          (item.email && item.email.toLowerCase().includes(q)) ||
+          (item.phone && item.phone.toLowerCase().includes(q)) ||
+          (item.nationalId && item.nationalId.toLowerCase().includes(q)) ||
+          (item.institutionName && item.institutionName.toLowerCase().includes(q)) ||
+          (item.universityId && item.universityId.toLowerCase().includes(q)) ||
+          (item.role && item.role.toLowerCase().includes(q)) ||
+          (item.registeredTrack && item.registeredTrack.toLowerCase().includes(q))
+        );
+      }
       if (item.reqType === 'team_name_change') {
         return (
           (item.currentTeamName && item.currentTeamName.toLowerCase().includes(q)) ||
@@ -451,7 +537,7 @@ export default function FTAdminSettings() {
               <Sparkles size={24} style={{ color: '#be123c' }} /> Requests & Approvals Center ({unifiedRequestsList.length})
             </h2>
             <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '0.35rem', marginBottom: 0, fontWeight: 500 }}>
-              Review, approve, or reject team name change proposals, password reset requests, and user inquiries across the platform.
+              Review and approve new user account registrations, team name change proposals, and password reset requests across the platform.
             </p>
           </div>
 
@@ -482,6 +568,19 @@ export default function FTAdminSettings() {
               }}
             >
               Pending ⏳ ({pendingCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setRequestsFilter('accounts')}
+              style={{
+                background: requestsFilter === 'accounts' ? '#ffffff' : 'transparent',
+                color: requestsFilter === 'accounts' ? '#0284c7' : '#64748b',
+                fontWeight: 800, fontSize: '0.8rem', padding: '0.4rem 0.8rem',
+                borderRadius: '9px', border: 'none', cursor: 'pointer',
+                boxShadow: requestsFilter === 'accounts' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
+              }}
+            >
+              👤 New Accounts ({newAccountRequests.length})
             </button>
             <button
               type="button"
@@ -532,7 +631,7 @@ export default function FTAdminSettings() {
             type="text"
             className="ft-input"
             style={{ paddingLeft: '2.5rem', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }}
-            placeholder="Search all requests by username, team name, requested name, email, or track..."
+            placeholder="Search all requests by name, username, email, phone, institution, team name, or track..."
             value={requestsSearch}
             onChange={e => setRequestsSearch(e.target.value)}
           />
@@ -546,12 +645,138 @@ export default function FTAdminSettings() {
               {requestsSearch ? 'No requests match your search.' : 'No requests currently in this list.'}
             </div>
             <div style={{ fontSize: '0.84rem', marginTop: '0.35rem', color: '#64748b' }}>
-              Team name changes submitted by team leaders and password reset requests will appear here for one-click admin review.
+              New account registrations, team name changes, and password reset requests will appear here for one-click admin review.
             </div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {filteredRequests.map(item => {
+              // ── A. RENDER NEW ACCOUNT REGISTRATION & APPROVAL CARD ──
+              if (item.reqType === 'new_account') {
+                const isApproved = item.status === 'approved';
+                const roleColor = FT_ROLE_COLORS[item.role] || '#2563eb';
+                const trackLabel = item.registeredTrack === 'science_journalism' ? 'Track 2: Science Journalism' : 'Track 1: Pop Science';
+
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      padding: '1.25rem 1.5rem',
+                      borderRadius: '16px',
+                      background: isApproved ? '#f0fdf4' : '#fffbeb',
+                      border: isApproved ? '1.5px solid #86efac' : '2px solid #fde68a',
+                      boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '1.25rem'
+                    }}
+                  >
+                    {/* Left: User details */}
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flex: 1, minWidth: '280px' }}>
+                      <img
+                        src={item.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.username || 'user'}`}
+                        alt={item.name}
+                        style={{
+                          width: '52px', height: '52px', borderRadius: '50%',
+                          objectFit: 'cover', border: `2px solid ${isApproved ? '#16a34a' : roleColor}`,
+                          flexShrink: 0, background: '#f1f5f9'
+                        }}
+                      />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 900, fontSize: '1.05rem', color: '#0f172a' }}>
+                            {item.name}
+                          </span>
+                          <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>
+                            @{item.username}
+                          </span>
+                          <span style={{
+                            fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.55rem', borderRadius: '6px',
+                            background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd'
+                          }}>
+                            👤 New Account
+                          </span>
+                          <span style={{
+                            fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.55rem', borderRadius: '6px',
+                            background: `${roleColor}18`, color: roleColor, border: `1px solid ${roleColor}40`
+                          }}>
+                            {getUserRoleLabel({ role: item.role })}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '0.72rem', fontWeight: 800, padding: '0.15rem 0.6rem', borderRadius: '9999px',
+                              background: isApproved ? '#dcfce7' : '#fef3c7', color: isApproved ? '#15803d' : '#d97706',
+                              border: `1px solid ${isApproved ? '#86efac' : '#fde68a'}`
+                            }}
+                          >
+                            {isApproved ? 'Active / Approved ✅' : 'Pending Review ⏳'}
+                          </span>
+                        </div>
+
+                        <div style={{ fontSize: '0.84rem', color: '#475569', fontWeight: 500, display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem' }}>
+                          <span>📧 <strong>{item.email || 'No email'}</strong></span>
+                          {item.phone && <span>📱 {item.phone}</span>}
+                          <span>🎯 Track: <strong>{trackLabel}</strong></span>
+                          <span>👥 Mode: <strong>{item.participationMode === 'team' ? 'Team Mode' : 'Solo Competitor'}</strong></span>
+                          {item.institutionName && <span>🏛️ {item.institutionName}</span>}
+                          {item.universityId && <span>🎓 ID: {item.universityId}</span>}
+                          {item.nationalId && <span>🪪 NID: {item.nationalId}</span>}
+                        </div>
+
+                        <div style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.15rem' }}>
+                          <Clock size={13} /> Registered: {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Recently'}
+                          {isApproved && item.approvedAt && (
+                            <span style={{ color: '#16a34a', marginLeft: '0.5rem' }}>
+                              • Approved: {new Date(item.approvedAt).toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Action Buttons */}
+                    <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexShrink: 0 }}>
+                      {!isApproved ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleApproveUser(item.userId, item.rawUser)}
+                            className="ft-btn"
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 1.15rem',
+                              background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff',
+                              border: 'none', borderRadius: '10px', fontWeight: 900, fontSize: '0.84rem',
+                              cursor: 'pointer', boxShadow: '0 4px 14px rgba(22, 163, 74, 0.25)'
+                            }}
+                          >
+                            <Check size={16} /> Approve Account
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRejectUser(item.userId, item.rawUser)}
+                            className="ft-btn"
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 0.95rem',
+                              background: '#ffffff', border: '1.5px solid #fca5a5', color: '#dc2626',
+                              borderRadius: '10px', fontWeight: 800, fontSize: '0.84rem', cursor: 'pointer'
+                            }}
+                          >
+                            <Trash2 size={15} /> Reject
+                          </button>
+                        </>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <CheckCircle2 size={16} /> Active Account
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              }
               // ── A. RENDER TEAM NAME CHANGE REQUEST CARD ──
               if (item.reqType === 'team_name_change') {
                 const isApproved = item.status === 'approved';
