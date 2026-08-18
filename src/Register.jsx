@@ -122,6 +122,7 @@ export default function Register() {
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [modalTab, setModalTab] = useState('presets'); // 'presets' | 'upload'
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
@@ -300,8 +301,6 @@ export default function Register() {
       setIsRegistering(false);
     }
   };
-
-  const [currentStep, setCurrentStep] = useState(1);
 
   const handleNextStep = (e) => {
     e.preventDefault();

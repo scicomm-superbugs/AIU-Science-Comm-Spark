@@ -229,12 +229,8 @@ export default function FTAdminSettings() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  if (!loaded) {
-    return <div style={{ padding: '3rem', textAlign: 'center' }}>Loading competition settings...</div>;
-  }
-
-  const pendingJudges = users.filter(u => (u.role === 'judge' || u.role === 'trainer_judge') && u.accountStatus === 'pending');
-  const allJudgesAndTrainers = users.filter(u => u.role === 'judge' || u.role === 'trainer' || u.role === 'trainer_judge');
+  const pendingJudges = (users || []).filter(u => (u.role === 'judge' || u.role === 'trainer_judge') && u.accountStatus === 'pending');
+  const allJudgesAndTrainers = (users || []).filter(u => u.role === 'judge' || u.role === 'trainer' || u.role === 'trainer_judge');
 
   // ── 1. Team Name Change Requests (From ft_teams) ──────────────────────────
   const teamNameChangeRequests = useMemo(() => {
@@ -316,6 +312,10 @@ export default function FTAdminSettings() {
       );
     });
   }, [unifiedRequestsList, requestsFilter, requestsSearch]);
+
+  if (!loaded) {
+    return <div style={{ padding: '3rem', textAlign: 'center' }}>Loading competition settings...</div>;
+  }
 
   // ── ADMIN APPROVE TEAM NAME CHANGE (PRESERVES 100% OF POINTS & RECORDS) ──
   const handleApproveTeamNameChange = async (reqItem) => {
