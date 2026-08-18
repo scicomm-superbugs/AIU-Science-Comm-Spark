@@ -10,6 +10,7 @@ import FTSchedulePage from './FTSchedulePage';
 import FTAdminPlaces from './FTAdminPlaces';
 import FTAdminCompetitors from './FTAdminCompetitors';
 import FTAdminSettings from './FTAdminSettings';
+import FTRequestsPage from './FTRequestsPage';
 import FTAdminSubmissionAssignments from './FTAdminSubmissionAssignments';
 import FTJudgeDashboard from './FTJudgeDashboard';
 import FTProtectedRoute from './FTProtectedRoute';
@@ -109,6 +110,7 @@ function App() {
 
               {/* Admin configuration settings */}
               <Route element={<FTProtectedRoute requireRole={['master', 'admin']} />}>
+                <Route path="requests" element={<FTRequestsPage />} />
                 <Route path="settings" element={<FTAdminSettings />} />
                 <Route path="timeline-manage" element={<FTTimelineManagement />} />
                 <Route path="evaluation-management" element={<FTEvaluationManagement />} />
@@ -129,6 +131,7 @@ function App() {
           <Route path="/my-competition" element={<Navigate to="/dashboard/my-competition" replace />} />
           <Route path="/our-team" element={<Navigate to="/dashboard/our-team" replace />} />
           <Route path="/competitors" element={<Navigate to="/dashboard/competitors" replace />} />
+          <Route path="/requests" element={<Navigate to="/dashboard/requests" replace />} />
           <Route path="/settings" element={<Navigate to="/dashboard/settings" replace />} />
           <Route path="/timeline-manage" element={<Navigate to="/dashboard/timeline-manage" replace />} />
           <Route path="/evaluation-management" element={<Navigate to="/dashboard/evaluation-management" replace />} />

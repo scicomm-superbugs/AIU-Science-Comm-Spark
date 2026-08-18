@@ -4,7 +4,7 @@ import { useAuth } from './context/AuthContext';
 import { db, firestore, getCollectionName, useLiveCollection, getFirebaseAuth, uploadFile, syncBroadcastMessagesForUser } from './db';
 import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { MapPin, BookOpen, Users, Settings, ClipboardCheck, LayoutDashboard, LogOut, Moon, Sun, Menu, X, ChevronDown, GraduationCap, Bell, AlertTriangle, Calendar, FileText, Globe, Camera, TestTube, RotateCcw, MessageSquare, Pencil, Activity } from 'lucide-react';
+import { MapPin, BookOpen, Users, Settings, ClipboardCheck, LayoutDashboard, LogOut, Moon, Sun, Menu, X, ChevronDown, GraduationCap, Bell, AlertTriangle, Calendar, FileText, Globe, Camera, TestTube, RotateCcw, MessageSquare, Pencil, Activity, Sparkles } from 'lucide-react';
 import { FT_FACULTY, FT_ROLE_LABELS, FT_ROLE_COLORS, isFacultyRole, isJudgeRole, isCompetitorRole, FT_DEFAULT_REQUIRED_HOURS } from './ftConstants';
 import { getUserConflicts } from './ftConflictUtils';
 import { initGlobalActivityTracker } from './activityLogger';
@@ -165,6 +165,7 @@ export default function FTLayout() {
   const resetRequests = useLiveCollection('ft_reset_requests');
   const notifications = useLiveCollection('ft_notifications');
   const teams = useLiveCollection('ft_teams') || [];
+  const liveScientists = useLiveCollection('scientists') || [];
   const rawMessages = useLiveCollection('ft_messages');
   const unreadChatCount = useMemo(() => {
     if (!rawMessages || !user) return 0;
@@ -694,6 +695,7 @@ export default function FTLayout() {
       { path: '/dashboard/judge', icon: <ClipboardCheck size={20} />, label: 'Judge & Trainer Portal', roles: ['judge', 'trainer_judge', 'academic_judge', 'scicomm_judge'] },
       { section: 'Management', roles: ['master', 'admin'] },
       { path: '/dashboard/competitors', icon: <Users size={20} />, label: 'Users & Roles', roles: ['master', 'admin'] },
+      { path: '/dashboard/requests', icon: <Sparkles size={20} />, label: 'Requests & Approvals', roles: ['master', 'admin'] },
       { path: '/dashboard/timeline-manage', icon: <Calendar size={20} />, label: 'Timeline Management', roles: ['master', 'admin'] },
       { path: '/dashboard/evaluation-management', icon: <ClipboardCheck size={20} />, label: 'Evaluation Management', roles: ['master', 'admin'] },
       { path: '/dashboard/activity-logs', icon: <Activity size={20} />, label: 'Activity Logs & Audit', roles: ['master', 'admin'] },
@@ -738,6 +740,9 @@ export default function FTLayout() {
       if (cleanPath === '/dashboard/competitors') {
         return ['registration', 'user', 'role'].includes(n.type);
       }
+      if (cleanPath === '/dashboard/requests') {
+        return ['registration_request', 'team_name_change', 'password_reset', 'registration'].includes(n.type);
+      }
       if (cleanPath === '/dashboard/evaluation-management') {
         return ['submission'].includes(n.type);
       }
@@ -756,6 +761,12 @@ export default function FTLayout() {
     let extraCount = 0;
 
     // 2. Extra section-specific pending action counters (for admins/judges)
+    if (cleanPath === '/dashboard/requests' && (userRole === 'admin' || userRole === 'master')) {
+      const pendingAccounts = (liveScientists || []).filter(s => s.role !== 'master' && s.username !== 'admin' && s.username !== 'admin_sys_1' && (s.accountStatus === 'pending' || s.status === 'pending' || s.isPendingApproval)).length;
+      const pendingTeams = (teams || []).filter(t => t.pendingNameChange && t.pendingNameChange.requestedName && t.pendingNameChange.status !== 'approved').length;
+      const pendingResets = (resetRequests || []).filter(r => r.status === 'pending').length;
+      extraCount += (pendingAccounts + pendingTeams + pendingResets);
+    }
     if (cleanPath === '/dashboard/competitors' && (userRole === 'admin' || userRole === 'master')) {
       const pendingResets = (resetRequests || []).filter(r => r.status === 'pending').length;
       extraCount += pendingResets;

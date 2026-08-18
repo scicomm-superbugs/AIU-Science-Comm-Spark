@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { db, firestore, getCollectionName, useLiveCollection } from './db';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { 
   Settings, Save, Search, UserCheck, UserPlus, Plus, Trash2, Award, Key, 
   CheckCircle2, ShieldCheck, Clock, Lock, Users, Edit3, X, Sparkles, Check, User,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, ArrowRight
 } from 'lucide-react';
 import { DEFAULT_JUDGING_CRITERIA, FT_DEPARTMENTS, FT_ROLE_LABELS, FT_ROLE_COLORS, getUserRoleLabel } from './ftConstants';
 import { logActivity } from './activityLogger';
@@ -903,229 +904,44 @@ export default function FTAdminSettings() {
         </div>
       )}
 
-      {/* ── UNIFIED SYSTEM & COMPETITOR REQUESTS & APPROVALS CENTER ── */}
+      {/* ── SHORTCUT BANNER TO DEDICATED REQUESTS & APPROVALS CENTER ── */}
       <div className="ft-card" style={{
-        padding: '2rem', marginBottom: '2rem',
-        border: pendingCount > 0 ? '2px solid #3b82f6' : '1.5px solid #e2e8f0',
-        background: '#ffffff',
-        boxShadow: pendingCount > 0 ? '0 8px 30px rgba(59, 130, 246, 0.08)' : '0 2px 10px rgba(0,0,0,0.02)'
+        padding: '1.5rem 2rem', marginBottom: '2rem',
+        border: '1.5px solid #cbd5e1',
+        background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem',
+        boxShadow: '0 4px 14px rgba(0,0,0,0.03)'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{
+            width: '48px', height: '48px', borderRadius: '14px',
+            background: '#fee2e2', border: '2px solid #fca5a5',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#be123c', flexShrink: 0
+          }}>
+            <Sparkles size={24} />
+          </div>
           <div>
-            <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.35rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#0f172a' }}>
-              <Sparkles size={24} style={{ color: '#be123c' }} /> Requests & Approvals Center ({unifiedRequestsList.length})
-            </h2>
-            <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '0.35rem', marginBottom: 0, fontWeight: 500 }}>
-              Review and approve new user account registrations, team name change proposals, and password reset requests across the platform.
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
+              Requests & Approvals Center
+            </h3>
+            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.86rem', color: '#64748b' }}>
+              Account approvals, team name changes, and password reset requests have moved to their dedicated management page in the sidebar.
             </p>
           </div>
-
-          {/* Filter Tabs */}
-          <div style={{ display: 'flex', gap: '0.45rem', background: '#f1f5f9', padding: '0.35rem', borderRadius: '14px', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={() => setRequestsFilter('all')}
-              style={{
-                background: requestsFilter === 'all' ? '#ffffff' : 'transparent',
-                color: requestsFilter === 'all' ? '#0f172a' : '#64748b',
-                fontWeight: 800, fontSize: '0.8rem', padding: '0.4rem 0.8rem',
-                borderRadius: '9px', border: 'none', cursor: 'pointer',
-                boxShadow: requestsFilter === 'all' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
-              }}
-            >
-              All ({unifiedRequestsList.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setRequestsFilter('pending')}
-              style={{
-                background: requestsFilter === 'pending' ? '#ffffff' : 'transparent',
-                color: requestsFilter === 'pending' ? '#d97706' : '#64748b',
-                fontWeight: 800, fontSize: '0.8rem', padding: '0.4rem 0.8rem',
-                borderRadius: '9px', border: 'none', cursor: 'pointer',
-                boxShadow: requestsFilter === 'pending' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
-              }}
-            >
-              Pending ⏳ ({pendingCount})
-            </button>
-            <button
-              type="button"
-              onClick={() => setRequestsFilter('accounts')}
-              style={{
-                background: requestsFilter === 'accounts' ? '#ffffff' : 'transparent',
-                color: requestsFilter === 'accounts' ? '#0284c7' : '#64748b',
-                fontWeight: 800, fontSize: '0.8rem', padding: '0.4rem 0.8rem',
-                borderRadius: '9px', border: 'none', cursor: 'pointer',
-                boxShadow: requestsFilter === 'accounts' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
-              }}
-            >
-              👤 New Accounts ({newAccountRequests.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setRequestsFilter('teams')}
-              style={{
-                background: requestsFilter === 'teams' ? '#ffffff' : 'transparent',
-                color: requestsFilter === 'teams' ? '#2563eb' : '#64748b',
-                fontWeight: 800, fontSize: '0.8rem', padding: '0.4rem 0.8rem',
-                borderRadius: '9px', border: 'none', cursor: 'pointer',
-                boxShadow: requestsFilter === 'teams' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
-              }}
-            >
-              👥 Team Name Changes ({teamNameChangeRequests.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setRequestsFilter('resets')}
-              style={{
-                background: requestsFilter === 'resets' ? '#ffffff' : 'transparent',
-                color: requestsFilter === 'resets' ? '#7c3aed' : '#64748b',
-                fontWeight: 800, fontSize: '0.8rem', padding: '0.4rem 0.8rem',
-                borderRadius: '9px', border: 'none', cursor: 'pointer',
-                boxShadow: requestsFilter === 'resets' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
-              }}
-            >
-              🔑 Password Resets ({passwordResetList.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setRequestsFilter('approved')}
-              style={{
-                background: requestsFilter === 'approved' ? '#ffffff' : 'transparent',
-                color: requestsFilter === 'approved' ? '#16a34a' : '#64748b',
-                fontWeight: 800, fontSize: '0.8rem', padding: '0.4rem 0.8rem',
-                borderRadius: '9px', border: 'none', cursor: 'pointer',
-                boxShadow: requestsFilter === 'approved' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none'
-              }}
-            >
-              Approved ✅ ({unifiedRequestsList.filter(r => r.status === 'approved').length})
-            </button>
-          </div>
         </div>
 
-        {/* Search */}
-        <div style={{ position: 'relative', marginBottom: '1.25rem' }}>
-          <Search size={18} style={{ position: 'absolute', left: 14, top: 12, color: '#94a3b8' }} />
-          <input
-            type="text"
-            className="ft-input"
-            style={{ paddingLeft: '2.5rem', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 600 }}
-            placeholder="Search all requests by name, username, email, phone, institution, team name, or track..."
-            value={requestsSearch}
-            onChange={e => setRequestsSearch(e.target.value)}
-          />
-        </div>
-
-        {/* Requests Cards List */}
-        {filteredRequests.length === 0 ? (
-          <div style={{ padding: '2.5rem 1rem', textAlign: 'center', background: '#f8fafc', borderRadius: '16px', border: '1.5px dashed #cbd5e1', color: '#64748b' }}>
-            <Sparkles size={36} style={{ color: '#94a3b8', margin: '0 auto 0.5rem auto' }} />
-            <div style={{ fontWeight: 800, fontSize: '1rem', color: '#334155' }}>
-              {requestsSearch ? 'No requests match your search.' : 'No requests currently in this view.'}
-            </div>
-            <div style={{ fontSize: '0.84rem', marginTop: '0.35rem', color: '#64748b' }}>
-              Pending user registrations, team name changes, and password reset requests will appear here for one-click admin review.
-            </div>
-          </div>
-        ) : requestsFilter === 'approved' ? (
-          /* Explicit Approved Tab: Render all approved items */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {filteredRequests.map(item => renderRequestCard(item))}
-          </div>
-        ) : (
-          /* Pending / All / Category Tabs: Prominently show Pending, and Collapse Approved */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {(() => {
-              const pendingItems = filteredRequests.filter(item => item.status === 'pending');
-              const approvedItems = filteredRequests.filter(item => item.status === 'approved');
-
-              return (
-                <>
-                  {/* 1. Pending Section (Always Expanded & Front/Center) */}
-                  {pendingItems.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.2rem' }}>
-                        <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#b45309', display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
-                          <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#d97706', boxShadow: '0 0 8px #d97706' }} />
-                          Action Required ({pendingItems.length} Pending Review)
-                        </span>
-                      </div>
-                      {pendingItems.map(item => renderRequestCard(item))}
-                    </div>
-                  ) : (
-                    <div style={{
-                      padding: '1.25rem 1.5rem', background: '#f0fdf4', border: '1.5px solid #86efac',
-                      borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#166534'
-                    }}>
-                      <CheckCircle2 size={22} style={{ color: '#16a34a', flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: '0.92rem' }}>
-                          All caught up! No pending requests in this section.
-                        </div>
-                        <div style={{ fontSize: '0.78rem', color: '#15803d', marginTop: '0.15rem' }}>
-                          Any new registrations, team name change requests, or password resets will immediately appear here.
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 2. Approved / Handled Section (Collapsible Accordion) */}
-                  {approvedItems.length > 0 && (
-                    <div style={{ marginTop: '0.5rem' }}>
-                      <button
-                        type="button"
-                        onClick={() => setShowApprovedGroup(prev => !prev)}
-                        style={{
-                          width: '100%',
-                          padding: '0.85rem 1.25rem',
-                          background: '#f8fafc',
-                          border: '1.5px solid #cbd5e1',
-                          borderRadius: '14px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          cursor: 'pointer',
-                          fontWeight: 800,
-                          fontSize: '0.88rem',
-                          color: '#334155',
-                          boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                          <CheckCircle2 size={18} style={{ color: '#16a34a' }} />
-                          <span>Approved & Completed Records ({approvedItems.length})</span>
-                          <span style={{
-                            fontSize: '0.72rem', fontWeight: 800,
-                            background: showApprovedGroup ? '#e0f2fe' : '#dcfce7',
-                            color: showApprovedGroup ? '#0369a1' : '#15803d',
-                            padding: '0.15rem 0.55rem', borderRadius: '9999px'
-                          }}>
-                            {showApprovedGroup ? 'Expanded ▾' : 'Collapsed ▸'}
-                          </span>
-                        </span>
-
-                        <span style={{ fontSize: '0.82rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700 }}>
-                          {showApprovedGroup ? (
-                            <><span>Hide Approved Records</span> <ChevronUp size={16} /></>
-                          ) : (
-                            <><span>Show Approved Records</span> <ChevronDown size={16} /></>
-                          )}
-                        </span>
-                      </button>
-
-                      {showApprovedGroup && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginTop: '1rem' }}>
-                          {approvedItems.map(item => renderRequestCard(item))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-          </div>
-        )}
+        <Link
+          to="/dashboard/requests"
+          className="ft-btn ft-btn-primary"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+            padding: '0.65rem 1.25rem', borderRadius: '10px', fontWeight: 800, fontSize: '0.88rem', textDecoration: 'none'
+          }}
+        >
+          <span>Open Requests Center</span>
+          <ArrowRight size={16} />
+        </Link>
       </div>
 
       {/* Role Management (Trainer & Judge / Admin / Competitor) */}
